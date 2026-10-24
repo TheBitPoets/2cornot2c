@@ -553,6 +553,34 @@ def test_flow_rejects_reused_token_in_new_session_generation(tmp_path) -> None:
     assert transport.exchange_calls == []
 
 
+@pytest.mark.parametrize("generation_part", ["expires_at", "audience_source"])
+def test_flow_rejects_changes_to_complete_session_generation(
+    tmp_path, generation_part
+) -> None:
+    service, _storage, flows, transport, established, _clock = make_service(tmp_path)
+    state, cookie, _started = start(service, established.context)
+    if generation_part == "expires_at":
+        changes = {
+            "expires_at": established.context.session.expires_at + timedelta(hours=1)
+        }
+    else:
+        changes = {"audience": "tui", "source_pairing_id": "pairing-01"}
+    replacement_context = replace(
+        established.context,
+        authenticated=replace(
+            established.context.authenticated,
+            session=replace(established.context.session, **changes),
+        ),
+    )
+
+    with pytest.raises(GitHubLinkStateError):
+        service.complete_link(
+            callback(state), cookie_header=cookie, context=replacement_context
+        )
+    assert flows.pending_count() == 1
+    assert transport.exchange_calls == []
+
+
 def test_persisted_session_generation_change_cannot_persist_link(tmp_path) -> None:
     service, storage, flows, _transport, established, _clock = make_service(tmp_path)
     state, cookie, _started = start(service, established.context)
@@ -569,6 +597,45 @@ def test_persisted_session_generation_change_cannot_persist_link(tmp_path) -> No
         service.complete_link(
             callback(state), cookie_header=cookie, context=established.context
         )
+    assert flows.pending_count() == 0
+    assert storage.read_external_identity("github", "123456") is None
+
+
+def test_provider_delay_session_replacement_cannot_persist_link(tmp_path) -> None:
+    class ReplaceGenerationDuringProfile(FakeTransport):
+        replacement = None
+
+        def read_user(self, **kwargs):
+            result = super().read_user(**kwargs)
+            self.replacement()
+            return result
+
+    transport = ReplaceGenerationDuringProfile()
+    service, storage, flows, _transport, established, _clock = make_service(
+        tmp_path, transport=transport
+    )
+    state, cookie, _started = start(service, established.context)
+
+    def replace_generation():
+        with storage._transaction("replace_callback_session_generation") as connection:
+            connection.execute(
+                "DELETE FROM sessions WHERE session_id = ?",
+                (established.context.session.session_id,),
+            )
+        storage.create_session(
+            replace(
+                established.context.session,
+                expires_at=established.context.session.expires_at
+                + timedelta(hours=1),
+            )
+        )
+
+    transport.replacement = replace_generation
+    with pytest.raises(GitHubLinkIdentityConflictError):
+        service.complete_link(
+            callback(state), cookie_header=cookie, context=established.context
+        )
+
     assert flows.pending_count() == 0
     assert storage.read_external_identity("github", "123456") is None
 

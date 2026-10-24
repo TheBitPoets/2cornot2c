@@ -29,6 +29,11 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts import ai_secret_store
+
 SECRET_PATH = ROOT / ".secrets" / "ai.secret"
 
 PROVIDERS = {
@@ -57,18 +62,8 @@ PROVIDERS = {
 
 
 def read_secret_env() -> dict[str, str]:
-    """Read local key-value pairs from .secrets/ai.secret."""
-
-    values: dict[str, str] = {}
-    if not SECRET_PATH.is_file():
-        return values
-    for line in SECRET_PATH.read_text(encoding="utf-8-sig").splitlines():
-        line = line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, value = line.split("=", 1)
-        values[key.strip()] = value.strip()
-    return values
+    """Read the configured external AI file or the compatible local file."""
+    return ai_secret_store.read_env(SECRET_PATH)
 
 
 def secret_value(key: str) -> str:
@@ -256,7 +251,7 @@ def main() -> int:
     provider = PROVIDERS[args.provider]
     api_key = secret_value(provider["secret_key"])
     if not api_key:
-        print(f"Errore: manca {provider['secret_key']} in ambiente o in .secrets/ai.secret.", file=sys.stderr)
+        print(f"Errore: manca {provider['secret_key']} in ambiente o nel file AI configurato.", file=sys.stderr)
         return 2
 
     model = args.model or secret_value(provider["model_key"]) or provider["default_model"]

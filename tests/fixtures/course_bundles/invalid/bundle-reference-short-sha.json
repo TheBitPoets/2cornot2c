@@ -1,0 +1,9 @@
+{
+  "schema_version": "1.0.0",
+  "bundle_id": "tpsi-quarto-2026",
+  "version": "1.0.0",
+  "source_type": "git",
+  "source_url": "https://github.com/TheBitPoets/tpsi-quarto-docente",
+  "tag": "v1.0.0",
+  "expected_commit_sha": "89abcdef"
+}

@@ -139,7 +139,18 @@ def test_windows_launcher_hides_technical_start_commands() -> None:
 
     assert "selected-provider.txt" in launcher
     assert "student_dev_shell.py" in launcher
-    assert "invoke-vagrant-virtualbox-windows.ps1" in launcher
+    assert "setup-vm.ps1" in launcher
+    setup_vm = (ROOT / "scripts" / "setup-vm.ps1").read_text(encoding="utf-8")
+    assert '"Vagrant\\bin\\vagrant.exe"' in setup_vm
+    assert '"Oracle\\VirtualBox\\VBoxManage.exe"' in setup_vm
+    assert "Invoke-Checked $VagrantCommand" in setup_vm
+    assert ".classroom-box" in launcher
+    assert "classroom-releases.lock.json" in launcher
+    assert "windows-amd64-virtualbox" in launcher
+    assert 'Join-Path $InstallDir ".vagrant\\machines"' in launcher
+    assert '$ImageState -eq "pending"' in launcher
+    assert 'if ($ImageState -ne "pending")' in launcher
+    assert "avvio Bento transitorio" in launcher
     assert "AMBIENTE NON ANCORA PRONTO" in launcher
     assert "Find-ExistingProvider" in launcher
     assert 'Record.key -eq "student-image"' in launcher
@@ -161,8 +172,14 @@ def test_windows_virtualbox_boot_has_bounded_automatic_recovery() -> None:
     assert '"/VirtualBox/GuestAdd/Version"' in recovery
     assert "$RecoveryAttempted = $true" in recovery
     assert "finally" in recovery
+    assert '[string]$VagrantCommand' in recovery
+    assert '[string]$VBoxManageCommand' in recovery
+    assert '"Vagrant\\bin\\vagrant.exe"' in recovery
+    assert '"Oracle\\VirtualBox\\VBoxManage.exe"' in recovery
     assert recovery.count("controlvm $MachineId pause") == 1
-    assert setup.count("invoke-vagrant-virtualbox-windows.ps1") == 2
+    assert setup.count("invoke-vagrant-virtualbox-windows.ps1") == 1
+    assert setup.count('"-VagrantCommand", $VagrantCommand') == 2
+    assert setup.count('"-VBoxManageCommand", $VBoxManageCommand') == 2
 
 
 def test_wsl_preparation_is_elevated_and_resumes_after_restart() -> None:

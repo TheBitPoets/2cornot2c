@@ -114,13 +114,17 @@ def execute_plan(
             break
         if progress is not None:
             progress("started", index, total, step.label)
-        if step.key not in missing:
+        if step.key not in missing and not step.always_run:
             result = StepResult(step.key, step.label, "skipped", "già presente")
         elif step.command is None:
             result = StepResult(step.key, step.label, "blocked", step.detail)
         else:
             returncode, output = runner(step.command)
-            detail = output.strip().splitlines()[-1][:300] if output.strip() else ""
+            # Keep the cause and its diagnostic log path, not just PowerShell's
+            # final FullyQualifiedErrorId line. Also persist it in installer.jsonl.
+            clean_output = output.replace("\x00", "").strip()
+            detail = (f"exit code {returncode}; {clean_output}"[:4000]
+                      if returncode else clean_output[:4000])
             result = StepResult(
                 step.key,
                 step.label,

@@ -21,6 +21,15 @@ python -m pip install -r requirements-auth.txt
 
 `requirements-auth.txt` installa `google-auth` e le dipendenze crittografiche necessarie ai test del verifier Google OIDC; non ometterlo quando si valida l'intera suite.
 
+Per costruire la documentazione API Sphinx:
+
+```bash
+python -m pip install -r requirements-docs.txt
+python -m sphinx -W --keep-going -c doc/sphinx doc/sphinx doc/sphinx/_build/html
+```
+
+Il test `tests/test_documentation_closeout.py` controlla guide, link, diagrammi, indice Sphinx e docstring dei moduli principali.
+
 I test del renderer opzionale `utui` richiedono Python 3.11 o successivo e la dipendenza fissata:
 
 ```bash
@@ -50,6 +59,7 @@ I test attivi sono:
 | `tests/test_generate_course_plan.py` | Verifica la generazione del Markdown del percorso didattico a partire da fixture JSON minimali. |
 | `tests/test_validate_activity.py` | Verifica la validazione delle schede JSON di attivita TheBitLab. |
 | `tests/test_create_activity.py` | Verifica la creazione guidata/scriptata delle schede di attivita. |
+| `tests/test_course_activity_import.py` | Import GitHub con trasporto simulato: commit fissato, limiti, percorsi e separazione asset, anteprima, pubblicazione atomica, autenticazione HTTP e scaffold studente. |
 | `tests/test_grade_activity.py` | Verifica il grading deterministico, i casi non supportati, la generazione dei report e la costruzione del comando Docker della sandbox. |
 
 Per lanciare un solo file di test:
@@ -118,7 +128,7 @@ Le GitHub Actions attive sono:
 
 | Workflow | Quando parte | Cosa esegue | Comando locale equivalente |
 |---|---|---|---|
-| `.github/workflows/quality.yml` | PR e push su `main` quando cambiano `scripts/**`, `tests/**`, `activities/**`, documenti del percorso didattico o configurazione test | Installa le dipendenze, esegue `pytest`, poi controlla il Markdown del percorso didattico | `python -m pytest` e `python scripts/generate_course_plan.py --check` |
+| `.github/workflows/quality.yml` | PR e push su `main` quando cambiano `scripts/**`, `tests/**`, `activities/**`, documenti del percorso didattico, diagrammi d'architettura o configurazione test | Installa le dipendenze, esegue `pytest`, controlla il Markdown del percorso didattico e verifica che i diagrammi Mermaid siano renderizzabili | `python -m pytest`, `python scripts/generate_course_plan.py --check` e `bash scripts/render_architecture_diagrams.sh` |
 | `.github/workflows/lab-snippets.yml` | PR e push su `main` quando cambiano `README.md`, `TEMPLATES.md`, `lab/**`, `scripts/update_lab_snippets.py` o il workflow | Controlla che snippet, codice lab e output inseriti nei documenti siano aggiornati | `python scripts/update_lab_snippets.py --check` |
 | `.github/workflows/lab-outputs.yml` | PR e push su `main` quando cambiano sorgenti/header lab, manifest JSON, output versionati, script output o il workflow | Installa la toolchain C e verifica che gli output dei lab siano aggiornati | `python scripts/update_lab_outputs.py --check` |
 | `.github/workflows/assignment-runner-docker.yml` | PR e push su `main` quando cambiano Dockerfile, script di grading o workflow | Verifica che l'immagine Docker del runner di grading venga costruita e riesca a correggere un sorgente C minimo | `docker build -t thebitlab-assignment-runner -f docker/assignment-runner/Dockerfile .` e smoke test con `python scripts/grade_activity.py --docker` |
@@ -129,7 +139,8 @@ Le GitHub Actions attive sono:
 La workflow `.github/workflows/quality.yml` esegue:
 
 - test Python con `pytest`;
-- controllo `python scripts/generate_course_plan.py --check`.
+- controllo `python scripts/generate_course_plan.py --check`;
+- smoke test dei diagrammi Mermaid d'architettura (verifica che siano renderizzabili e producano un SVG per ogni sorgente).
 
 Si puo lanciare manualmente da GitHub con `workflow_dispatch`.
 
@@ -205,5 +216,13 @@ Se vuoi solo controllare senza modificare file:
 python scripts/update_lab_outputs.py --check
 python scripts/update_lab_snippets.py --check
 ```
+
+Se hai modificato diagrammi d'architettura in `doc/architecture/diagrams/*.mmd`:
+
+```bash
+bash scripts/render_architecture_diagrams.sh
+```
+
+Poi committa anche gli SVG aggiornati.
 
 Se hai modificato solo testi fuori dai marker dei lab, in genere non serve rigenerare output o snippet.

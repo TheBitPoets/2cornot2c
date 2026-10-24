@@ -187,6 +187,7 @@ def test_assignment_overview_lists_student_rows(tmp_path) -> None:
             "source_path": None,
             "attempt_id": None,
             "report_selection": None,
+            "report_authority": None,
             "final_selected": False,
             "grading_provisional": True,
             "grading_status": "graded_passed",

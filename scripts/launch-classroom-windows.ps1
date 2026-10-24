@@ -1,3 +1,8 @@
+param(
+    [ValidateSet("docker", "virtualbox")]
+    [string]$Provider
+)
+
 $ErrorActionPreference = "Stop"
 
 $StateDir = Join-Path $HOME ".2cornot2c"
@@ -14,6 +19,33 @@ if (Test-Path $StatePath) {
         }
     } catch {
         Write-Warning "Configurazione precedente non leggibile."
+    }
+}
+
+function Get-WindowsImageState {
+    $LockPath = Join-Path $InstallDir "packer\classroom-releases.lock.json"
+    if (-not (Test-Path $LockPath)) {
+        return ""
+    }
+    try {
+        $Lock = Get-Content $LockPath -Raw | ConvertFrom-Json
+        if ($Lock.schema_version -ne
+            "2cornot2c.classroom-release-lock.v1") {
+            return ""
+        }
+        $Target = $Lock.targets.'windows-amd64-virtualbox'
+        if ($null -eq $Target) {
+            return ""
+        }
+        if ($null -ne $Target.active_release) {
+            return "active"
+        }
+        if ([string]$Target.candidate_version) {
+            return "pending"
+        }
+        return ""
+    } catch {
+        return ""
     }
 }
 
@@ -68,13 +100,29 @@ function Find-ExistingProvider {
         }
     }
 
-    if (Test-Path (Join-Path $InstallDir ".vagrant")) {
+    $MachinesPath = Join-Path $InstallDir ".vagrant\machines"
+    $HasVirtualBoxVm = $false
+    if (Test-Path $MachinesPath) {
+        $HasVirtualBoxVm = @(
+            Get-ChildItem -LiteralPath $MachinesPath -Filter id -File -Recurse `
+                -ErrorAction SilentlyContinue | Where-Object {
+                    ([string](Get-Content -LiteralPath $_.FullName -Raw `
+                        -ErrorAction SilentlyContinue)).Trim()
+                }
+        ).Count -gt 0
+    }
+    $HasPackerMarkers = (
+        (Test-Path (Join-Path $InstallDir ".classroom-box")) -and
+        (Test-Path (Join-Path $InstallDir ".classroom-provider"))
+    )
+    $ImageState = Get-WindowsImageState
+    if ($HasVirtualBoxVm -and ($HasPackerMarkers -or $ImageState -eq "pending")) {
         return "virtualbox"
     }
     return $null
 }
 
-if (-not (Test-Path $ProviderPath)) {
+if (-not $Provider -and -not (Test-Path $ProviderPath)) {
     $ExistingProvider = Find-ExistingProvider
     if ($ExistingProvider) {
         New-Item -ItemType Directory -Force -Path $StateDir | Out-Null
@@ -92,17 +140,40 @@ if (-not (Test-Path $ProviderPath)) {
     }
 }
 
-$Provider = (Get-Content $ProviderPath -Raw).Trim()
+if (-not $Provider) {
+    $Provider = (Get-Content $ProviderPath -Raw).Trim()
+}
 Push-Location $InstallDir
 try {
     if ($Provider -eq "docker") {
+        $DockerBin = Join-Path $env:ProgramFiles "Docker\Docker\resources\bin"
+        if (Test-Path $DockerBin) {
+            $env:Path = $DockerBin + ";" + $env:Path
+        }
         $Python = Join-Path $InstallDir ".installer-venv\Scripts\python.exe"
         & $Python (Join-Path $InstallDir "scripts\student_dev_shell.py")
         exit $LASTEXITCODE
     }
     if ($Provider -eq "virtualbox") {
-        & (Join-Path $InstallDir `
-            "scripts\invoke-vagrant-virtualbox-windows.ps1") -Action up
+        $BoxPath = Join-Path $InstallDir ".classroom-box"
+        $ProjectProviderPath = Join-Path $InstallDir ".classroom-provider"
+        if (-not (Test-Path $BoxPath) -or
+            -not (Test-Path $ProjectProviderPath)) {
+            $ImageState = Get-WindowsImageState
+            if ($ImageState -ne "pending") {
+                Write-Host "ERRORE E25 - Box Packer non configurata" `
+                    -ForegroundColor Red
+                Write-Host (
+                    "Apri Ambiente 2cornot2c e scegli " +
+                    "Installa, completa o ripara."
+                ) -ForegroundColor Yellow
+                exit 1
+            }
+            Write-Host (
+                "Prima release Packer in attesa: avvio Bento transitorio."
+            ) -ForegroundColor Yellow
+        }
+        & (Join-Path $InstallDir "scripts\setup-vm.ps1")
         exit $LASTEXITCODE
     }
     Write-Host "ERRORE E31 - Ambiente da avviare non riconosciuto" `

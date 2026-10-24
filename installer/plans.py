@@ -4,16 +4,33 @@ from __future__ import annotations
 
 import sys
 
-from installer.model import Check, Host, InstallPlan, Provider, Step
+from installer.classroom_release_lock import (
+    ClassroomReleaseLockError,
+    target_release,
+)
+from installer.model import CHECK_TIMEOUT_SECONDS, Check, Host, InstallPlan, Provider, Step
 from installer.student_dev import immutable_reference
 from installer.tool_versions import MINIMUM_TOOL_VERSIONS
+
+
+NETWORK_CHECK_URL = "https://raw.githubusercontent.com/TheBitPoets/2cornot2c/main/README.md"
+NETWORK_REQUEST_TIMEOUT_SECONDS = 15
+
+
+def classroom_images_active(host: Host, provider: Provider) -> bool:
+    """Require Packer only for a target activated in the reviewed lock."""
+
+    try:
+        return target_release(host, provider).active
+    except ClassroomReleaseLockError as error:
+        raise RuntimeError(str(error)) from error
 
 
 def _winget_ensure(package_id: str) -> tuple[str, ...]:
     """Aggiorna un pacchetto esistente oppure lo installa se assente."""
 
     agreements = (
-        "--accept-package-agreements --accept-source-agreements"
+        "--source winget --accept-package-agreements --accept-source-agreements"
     )
     command = (
         f"winget upgrade --id '{package_id}' --exact --silent {agreements}; "
@@ -35,7 +52,7 @@ def supported_providers(host: Host) -> tuple[Provider, ...]:
     """Restituisce solo i provider ufficialmente supportati per l'host."""
 
     if host is Host.MACOS_ARM64:
-        return (Provider.VMWARE, Provider.VIRTUALBOX, Provider.DOCKER)
+        return (Provider.VMWARE, Provider.DOCKER)
     if host is Host.WINDOWS_AMD64:
         return (Provider.VIRTUALBOX, Provider.DOCKER)
     raise ValueError(f"Host non supportato: {host}")
@@ -74,8 +91,11 @@ def install_plan(host: Host, provider: Provider) -> InstallPlan:
                 "--silent",
                 "--show-error",
                 "--head",
-                "https://raw.githubusercontent.com/"
-                "TheBitPoets/2cornot2c/main/README.md",
+                NETWORK_CHECK_URL,
+            ),
+            failure_context=(
+                f"URL: {NETWORK_CHECK_URL}; metodo: HEAD; "
+                f"limite controllo: {CHECK_TIMEOUT_SECONDS} s."
             ),
         )
         if host is Host.MACOS_ARM64
@@ -87,17 +107,57 @@ def install_plan(host: Host, provider: Provider) -> InstallPlan:
                 "-NoProfile",
                 "-NonInteractive",
                 "-Command",
-                "Invoke-WebRequest -UseBasicParsing -Method Head -TimeoutSec 15 "
-                "'https://raw.githubusercontent.com/"
-                "TheBitPoets/2cornot2c/main/README.md' | Out-Null",
+                "try { Invoke-WebRequest -UseBasicParsing -Method Head "
+                f"-TimeoutSec {NETWORK_REQUEST_TIMEOUT_SECONDS} -ErrorAction Stop "
+                f"'{NETWORK_CHECK_URL}' | Out-Null }} catch {{ "
+                "if ($_.Exception.Status -eq [System.Net.WebExceptionStatus]::Timeout) { "
+                "[Console]::Error.WriteLine('CLASSROOM_NETWORK_TIMEOUT: ' + $_.Exception.Message) "
+                "} else { [Console]::Error.WriteLine($_.Exception.Message) }; exit 1 }",
+            ),
+            failure_context=(
+                f"URL: {NETWORK_CHECK_URL}; metodo: HEAD; "
+                f"timeout richiesta: {NETWORK_REQUEST_TIMEOUT_SECONDS} s; "
+                f"limite controllo: {CHECK_TIMEOUT_SECONDS} s."
             ),
         )
     )
+    checks = (resources, connectivity, *plan.checks)
+    steps = plan.steps
+    if (
+        provider in {Provider.VMWARE, Provider.VIRTUALBOX}
+        and classroom_images_active(host, provider)
+    ):
+        image_command = (
+            sys.executable,
+            "-m",
+            "installer.classroom_images",
+            "--provider",
+            provider.value,
+            "--host",
+            host.value,
+        )
+        checks = (
+            *checks,
+            Check(
+                "classroom-image",
+                "Box Packer preconfigurata",
+                (*image_command, "--check"),
+            ),
+        )
+        steps = (
+            *steps,
+            Step(
+                "classroom-image",
+                "Verifica e reimporta la box Packer",
+                (*image_command, "--install"),
+                always_run=True,
+            ),
+        )
     return InstallPlan(
         plan.host,
         plan.provider,
-        (resources, connectivity, *plan.checks),
-        plan.steps,
+        checks,
+        steps,
     )
 
 

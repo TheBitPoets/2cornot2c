@@ -24,6 +24,8 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from scripts import (
+    student_delivery_client,
+    student_help_auth,
     student_help_service,
     student_lab_layout,
     student_lab_runner,
@@ -36,8 +38,10 @@ from scripts import (
 InputFn = Callable[[str], str]
 PrintFn = Callable[[str], None]
 DEFAULT_SERVER_URL = "http://127.0.0.1:8765"
+_USER_AGENT = "TheBitLab-TUI/1.0"
 HELP_REQUEST_TIMEOUT_SECONDS = 150
-MAX_STUDENT_API_RESPONSE_BYTES = 2 * 1024 * 1024
+MAX_STUDENT_API_RESPONSE_BYTES = 12 * 1024 * 1024
+MAX_STUDENT_API_WORKER_BYTES = 17 * 1024 * 1024
 TUI_RENDERERS = {"auto", "legacy", "utui"}
 
 
@@ -586,6 +590,7 @@ def render_assignment_detail(
         "  t  Storico e tentativo definitivo",
         "  o  Apri workspace",
         "  v  Apri editor",
+        "  c  Apri terminale",
         "  l  Modifica layout pannelli",
         "",
         "Altri comandi",
@@ -701,7 +706,7 @@ def render_utui_detail_commands() -> str:
     return "\n".join(
         (
             "Navigazione: j = scorri giu | k = scorri su | l = modifica layout",
-            "Azioni: e = test/report | t = tentativi | a = aiuto | o = workspace | v = editor",
+            "Azioni: e = test/report | t = tentativi | a = aiuto | o = workspace | v = editor | c = terminale",
             "Altri: h = storico aiuti | b/invio = lista | q = esci",
         )
     )
@@ -944,6 +949,7 @@ def record_help_from_tui(
         headers={
             "Content-Type": "application/json; charset=utf-8",
             "Authorization": f"Bearer {credential.value.strip()}",
+            "User-Agent": _USER_AGENT,
         },
         method="POST",
     )
@@ -1008,7 +1014,10 @@ def fetch_help_history_from_server(
     query = urllib.parse.urlencode({"assignment_id": assignment_id})
     request = urllib.request.Request(
         f"{safe_server_url}/api/student-lab/help-history?{query}",
-        headers={"Authorization": f"Bearer {credential.value.strip()}"},
+        headers={
+            "Authorization": f"Bearer {credential.value.strip()}",
+            "User-Agent": _USER_AGENT,
+        },
         method="GET",
     )
     payload = None
@@ -1049,6 +1058,11 @@ def select_final_attempt_from_server(
 ) -> dict[str, Any]:
     """Select one final attempt through the authenticated student API."""
 
+    if isinstance(assignment.get("delivery"), dict):
+        return student_delivery_client.request("delivery-final", server_url=server_url,
+            server_token=server_token, allow_insecure_http=allow_insecure_http,
+            payload={"assignment_id": assignment["assignment_id"], "attempt_id": attempt_id,
+                     "expected_revision": assignment["delivery"]["revision"]})
     credential = _MemoryBearer(server_token)
     server_token = ""
     assignment_id = clean_text(assignment.get("assignment_id"), "")
@@ -1070,6 +1084,7 @@ def select_final_attempt_from_server(
         headers={
             "Content-Type": "application/json; charset=utf-8",
             "Authorization": f"Bearer {credential.value.strip()}",
+            "User-Agent": _USER_AGENT,
         },
         method="POST",
     )
@@ -1211,8 +1226,8 @@ def _run_student_api_worker() -> int:
     raw = None
     outcome = ["error", None]
     try:
-        raw = sys.stdin.buffer.read(65537)
-        if len(raw) > 65536:
+        raw = sys.stdin.buffer.read(MAX_STUDENT_API_WORKER_BYTES + 1)
+        if len(raw) > MAX_STUDENT_API_WORKER_BYTES:
             raise ValueError("specification")
         specification = json.loads(raw.decode("utf-8"), object_pairs_hook=_unique_json_object)
         if type(specification) is not dict or set(specification) != {
@@ -1332,19 +1347,77 @@ def supports_color(no_color: bool = False) -> bool:
     return sys.stdout.isatty()
 
 
-def open_workspace(path_value: str, root: Path = PROJECT_ROOT) -> bool:
-    """Open a workspace folder with the platform file manager."""
+_FOLDER_CAPABLE_EDITORS = frozenset(
+    {
+        "code",
+        "code-insiders",
+        "code-oss",
+        "codium",
+        "vscodium",
+        "cursor",
+        "zed",
+        "fleet",
+        "subl",
+        "atom",
+        "gedit",
+        "kate",
+        "mousepad",
+        "notepadqq",
+        "geany",
+        "brackets",
+    }
+)
+
+
+def _is_folder_capable_editor(command: list[str]) -> bool:
+    if not command:
+        return False
+    basename = Path(command[0]).stem.lower()
+    return basename in _FOLDER_CAPABLE_EDITORS
+
+
+def _open_file_manager(path: Path) -> None:
+    """Open a folder with the platform file manager."""
+
+    if os.name == "nt":
+        os.startfile(path)  # type: ignore[attr-defined]
+        return
+    opener = "open" if sys.platform == "darwin" else "xdg-open"
+    subprocess.Popen([opener, str(path)])
+
+
+def open_workspace(
+    path_value: str,
+    root: Path = PROJECT_ROOT,
+    workspace_editor: str | None = None,
+) -> tuple[bool, str]:
+    """Open a workspace folder with the configured editor or the file manager."""
 
     raw_path = Path(path_value)
     path = raw_path if raw_path.is_absolute() else (root / raw_path).resolve(strict=False)
     if not path.is_dir():
-        return False
-    if os.name == "nt":
-        os.startfile(path)  # type: ignore[attr-defined]
-        return True
-    opener = "open" if sys.platform == "darwin" else "xdg-open"
-    subprocess.Popen([opener, str(path)])
-    return True
+        return False, "Workspace non disponibile."
+
+    explicit_workspace_editor = str(
+        workspace_editor or os.environ.get("THEBITLAB_WORKSPACE_EDITOR", "")
+    ).strip()
+    explicit_editor = str(os.environ.get("THEBITLAB_EDITOR", "")).strip()
+
+    for candidate in (explicit_workspace_editor, explicit_editor):
+        if not candidate:
+            continue
+        command = editor_command(candidate)
+        if command is None:
+            continue
+        if _is_folder_capable_editor(command):
+            try:
+                subprocess.run([*command, str(path)], cwd=str(path), check=False)
+                return True, f"Aperto in {command[0]}."
+            except OSError as error:
+                return False, f"Editor non avviabile: {error}"
+
+    _open_file_manager(path)
+    return True, "Cartella aperta."
 
 
 EDITOR_CANDIDATES = ("micro", "nvim", "vim", "hx", "nano")
@@ -1370,6 +1443,88 @@ def editor_command(editor: str | None = None) -> list[str] | None:
     return None
 
 
+def _first_openable_source(workspace: Path) -> Path | None:
+    """Return a reasonable source file to open when no explicit source is given."""
+
+    if not workspace.is_dir():
+        return None
+    preferred = ("README.md", "readme.md", "main.c", "main.py")
+    for name in preferred:
+        candidate = workspace / name
+        if candidate.is_file():
+            return candidate
+    for candidate in sorted(workspace.iterdir()):
+        if candidate.is_file() and not candidate.name.startswith("."):
+            return candidate
+    return None
+
+
+def _windows_terminal_command(path: Path) -> tuple[list[str], dict[str, str], str]:
+    wt = shutil.which("wt") or shutil.which("wt.exe")
+    if wt:
+        return [wt, "-d", str(path)], {}, "windows-terminal"
+    # /k keeps the window open after changing directory.
+    return ["cmd", "/k"], {"cwd": str(path)}, "cmd"
+
+
+def _macos_terminal_command(path: Path) -> tuple[list[str], dict[str, str], str]:
+    return ["open", "-a", "Terminal", "."], {"cwd": str(path)}, "Terminal"
+
+
+def _linux_terminal_commands(path: Path) -> list[tuple[list[str], dict[str, str], str]]:
+    return [
+        (["gnome-terminal", "--working-directory", str(path)], {"cwd": str(path)}, "gnome-terminal"),
+        (["konsole", "--workdir", str(path)], {"cwd": str(path)}, "konsole"),
+        (["xfce4-terminal", "--working-directory", str(path)], {"cwd": str(path)}, "xfce4-terminal"),
+        (["kitty", "--directory", str(path)], {"cwd": str(path)}, "kitty"),
+        (["alacritty", "--working-directory", str(path)], {"cwd": str(path)}, "alacritty"),
+        (["xterm", "-cd", str(path)], {"cwd": str(path)}, "xterm"),
+    ]
+
+
+def _terminal_family() -> str:
+    """Return the current platform family for terminal selection."""
+    if os.name == "nt":
+        return "nt"
+    if sys.platform == "darwin":
+        return "darwin"
+    return "posix"
+
+
+def open_terminal(path_value: str, root: Path = PROJECT_ROOT) -> tuple[bool, str]:
+    """Open a terminal in the workspace directory.
+
+    On Windows prefer Windows Terminal (`wt -d <dir>`); fall back to cmd.
+    On macOS open Terminal.app; on Linux try common terminal emulators.
+    """
+
+    raw_path = Path(path_value)
+    path = raw_path if raw_path.is_absolute() else (root / raw_path).resolve(strict=False)
+    if not path.is_dir():
+        return False, "Workspace non disponibile."
+
+    family = _terminal_family()
+    if family == "nt":
+        command, kwargs, name = _windows_terminal_command(path)
+    elif family == "darwin":
+        command, kwargs, name = _macos_terminal_command(path)
+    else:
+        for command, kwargs, name in _linux_terminal_commands(path):
+            if shutil.which(command[0]):
+                try:
+                    subprocess.Popen(command, **kwargs)
+                    return True, f"Terminale aperto ({name})."
+                except OSError:
+                    continue
+        return False, "Nessun terminale disponibile."
+
+    try:
+        subprocess.Popen(command, **kwargs)
+        return True, f"Terminale aperto ({name})."
+    except OSError as error:
+        return False, f"Terminale non avviabile: {error}"
+
+
 def open_editor(
     workspace_path: str,
     source_name: str = "",
@@ -1386,9 +1541,11 @@ def open_editor(
     if command is None:
         return False, "Nessun editor disponibile. Imposta THEBITLAB_EDITOR o installa micro."
     source = clean_text(source_name, "")
-    target = workspace / source if source else workspace
-    if target != workspace and not target.is_file():
-        target = workspace
+    target = workspace / source if source else None
+    if target is None or not target.is_file():
+        target = _first_openable_source(workspace)
+    if target is None:
+        return False, "Nessun file sorgente apribile nel workspace."
     try:
         subprocess.run([*command, str(target)], cwd=str(workspace), check=False)
     except OSError as error:
@@ -1425,7 +1582,10 @@ def fetch_student_lab_payload(
     suffix = f"?{query}" if query else ""
     request = urllib.request.Request(
         f"{safe_server_url}/api/student-lab/assignments{suffix}",
-        headers={"Authorization": f"Bearer {credential.value.strip()}"},
+        headers={
+            "Authorization": f"Bearer {credential.value.strip()}",
+            "User-Agent": _USER_AGENT,
+        },
     )
     payload = None
     failure = None
@@ -1475,6 +1635,10 @@ def load_current_payload(
             now=now,
             allow_insecure_http=allow_insecure_http,
         )
+        if remote_payload.get("delivery_api") is True:
+            return student_delivery_client.enrich_payload(remote_payload, root=root,
+                server_url=server_url, server_token=credential.value,
+                allow_insecure_http=allow_insecure_http)
         try:
             local_payload = load_payload(root, student_id, now)
         except Exception:  # Local paths are an optional operational enhancement.
@@ -1636,6 +1800,9 @@ def run_tui(
                 selected_renderer = "legacy"
             if actual_renderer == "utui":
                 print_fn(render_utui_detail_commands())
+            if assignment.get("delivery"):
+                print_fn("Consegna: i = invia / riprova | n = nuovo invio | t = storico server e definitivo")
+                print_fn("Valutazione docente: Da valutare" if assignment.get("submitted") else "Nessuna consegna ricevuta")
             action = input_fn("\nDettaglio: ").strip().lower()
             if action in {"", "b", "back", "indietro"}:
                 break
@@ -1647,10 +1814,28 @@ def run_tui(
             if actual_renderer == "utui" and action in {"k", "up", "su"}:
                 dashboard_offset = max(0, dashboard_offset - 5)
                 continue
+            if action in {"i", "n"} and assignment.get("delivery"):
+                if action == "n" and input_fn("Conservare il tentativo in attesa e inviare i sorgenti attuali? s/N: ").strip().lower() != "s":
+                    continue
+                try:
+                    receipt = student_delivery_client.send_assignment(assignment, root=root,
+                        server_url=server_url, server_token=memory_bearer.value,
+                        allow_insecure_http=allow_insecure_http, new_snapshot=action == "n")
+                    print_fn(f"Consegna ricevuta dal docente: {receipt['attempt_id']}. Da valutare.")
+                    payload = load_current_payload(root=root, student_id=student_id, now=now,
+                        server_url=server_url, server_token=memory_bearer.value,
+                        allow_insecure_http=allow_insecure_http)
+                except (ValueError, OSError) as error:
+                    print_fn(f"Invio o aggiornamento non completato:\n{error}")
+                input_fn("Premi invio per continuare...")
+                continue
             if action == "o":
                 workspace = assignment.get("workspace") if isinstance(assignment.get("workspace"), dict) else {}
-                if not open_workspace(clean_text(workspace.get("path"), ""), root=root):
-                    print_fn("Workspace non disponibile.")
+                ok, message = open_workspace(clean_text(workspace.get("path"), ""), root=root)
+                if not ok:
+                    print_fn(message or "Workspace non disponibile.")
+                else:
+                    print_fn(message)
                 input_fn("Premi invio per continuare...")
                 continue
             if action == "v":
@@ -1662,6 +1847,15 @@ def run_tui(
                     root=root,
                 )
                 print_fn(message)
+                input_fn("Premi invio per continuare...")
+                continue
+            if action == "c":
+                workspace = assignment.get("workspace") if isinstance(assignment.get("workspace"), dict) else {}
+                ok, message = open_terminal(clean_text(workspace.get("path"), ""), root=root)
+                if not ok:
+                    print_fn(message or "Terminale non disponibile.")
+                else:
+                    print_fn(message)
                 input_fn("Premi invio per continuare...")
                 continue
             if action in {"l", "layout"}:
@@ -1826,11 +2020,33 @@ def run_tui(
                 input_fn("Premi invio per continuare...")
 
 
+def _fetch_student_id(server_url: str, server_token: str) -> str:
+    """Ask the server for the authenticated student's identifier."""
+
+    url = validated_server_url(server_url) + "/api/student-lab/me"
+    request = urllib.request.Request(
+        url,
+        headers={"Authorization": "Bearer " + server_token, "User-Agent": _USER_AGENT},
+    )
+    with urllib.request.urlopen(request, timeout=15) as response:
+        payload = json.loads(response.read().decode("utf-8"))
+    student_id = payload.get("student_id") if isinstance(payload, dict) else None
+    if not isinstance(student_id, str):
+        raise ValueError("Il server non ha restituito l'identificativo studente.")
+    return student_help_auth.validate_student_id(student_id)
+
+
 def parse_args() -> argparse.Namespace:
     """Parse CLI arguments for the student lab TUI."""
 
     parser = argparse.ArgumentParser(description="Apri la TUI minima del lab studente.")
-    parser.add_argument("--student-id", required=True, help="Identificativo studente, per esempio rossi-mario.")
+    parser.add_argument(
+        "--student-id",
+        help=(
+            "Identificativo studente, per esempio rossi-mario. "
+            "Se omesso, viene recuperato automaticamente dal server dopo il pairing."
+        ),
+    )
     parser.add_argument("--root", type=Path, default=PROJECT_ROOT, help="Root del repository TheBitLab.")
     parser.add_argument("--now", help="Data ISO da usare per calcolare scadenze e mancanti.")
     parser.add_argument("--no-clear", action="store_true", help="Non pulire lo schermo tra una vista e l'altra.")
@@ -1891,8 +2107,15 @@ def main() -> int:
                 )
             credential = thebitlab_tui_pairing_client.acquire_tui_bearer(args.server_url)
             server_token = credential.bearer_token
+        student_id = args.student_id
+        if student_id is None:
+            if not server_token.strip():
+                raise ValueError(
+                    "Specifica --student-id oppure autentica la TUI con --pair-browser o THEBITLAB_STUDENT_HELP_TOKEN."
+                )
+            student_id = _fetch_student_id(args.server_url, server_token)
         exit_code = run_tui(
-            student_id=args.student_id,
+            student_id=student_id,
             root=args.root.resolve(strict=False),
             now=args.now,
             clear=not args.no_clear,

@@ -106,11 +106,12 @@ def require_same_timezone_kind(left: datetime, right: datetime, left_name: str, 
         raise ValueError(f"{left_name} e {right_name} devono usare timezone coerenti.")
 
 
-def target_sort_key(target: dict[str, str]) -> tuple[str, str, str, str, str]:
+def target_sort_key(target: dict[str, str]) -> tuple[str, str, str, str, str, str]:
     """Return a stable sort key for assignment targets."""
 
     serialized = json.dumps(target, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return (
+        target.get("subject_id", ""),
         target.get("student_id", ""),
         target.get("target", ""),
         target.get("repo_ref", ""),
@@ -131,7 +132,7 @@ def normalize_target(target: dict[str, Any] | str) -> dict[str, str]:
         raise ValueError("Target non valido.")
     normalized = {
         key: str(target.get(key, "")).strip()
-        for key in ("student_id", "display_name", "repo_ref", "path", "target")
+        for key in ("subject_id", "student_id", "display_name", "repo_ref", "path", "target")
         if str(target.get(key, "")).strip()
     }
     if not normalized:
@@ -371,6 +372,19 @@ class JsonAssignmentRecordStorage:
             raise FileNotFoundError(f"Assegnazione non trovata: {assignment_id}")
         return validate_assignment_record(self.read_json(path))
 
+    def read_assignment_strict(self, assignment_id: str) -> dict[str, Any]:
+        """Read one exact regular assignment record or fail closed."""
+
+        path = self.safe_assignment_path(assignment_id)
+        if self.assignments_dir.is_symlink() or path.is_symlink():
+            raise ValueError("Storage assignment non valido.")
+        if not path.is_file():
+            raise FileNotFoundError("Assegnazione non trovata.")
+        assignment = validate_assignment_record(self.read_json(path))
+        if assignment["id"] != assignment_id:
+            raise FileNotFoundError("Assegnazione non trovata.")
+        return assignment
+
     def delete_assignment(self, assignment_id: str) -> dict[str, Any]:
         """Delete one assignment record by id."""
 
@@ -393,6 +407,27 @@ class JsonAssignmentRecordStorage:
                 assignment = validate_assignment_record(self.read_json(path))
             except Exception:  # noqa: BLE001
                 continue
+            assignments.append({**assignment, "name": path.name, "path": self.relative_path(path)})
+        return assignments
+
+    def _assignment_paths(self) -> list[Path]:
+        self.assignments_dir.mkdir(parents=True, exist_ok=True)
+        if self.assignments_dir.is_symlink():
+            raise ValueError("Storage assignment non valido.")
+        return sorted(self.assignments_dir.glob("*.json"))
+
+    def list_assignments_strict(self) -> list[dict[str, Any]]:
+        """List every assignment or fail closed on malformed/duplicate storage."""
+
+        assignments = []
+        seen_ids: set[str] = set()
+        for path in self._assignment_paths():
+            if path.is_symlink() or not path.is_file():
+                raise ValueError("Storage assignment non valido.")
+            assignment = validate_assignment_record(self.read_json(path))
+            if assignment["id"] in seen_ids:
+                raise ValueError("Storage assignment non valido.")
+            seen_ids.add(assignment["id"])
             assignments.append({**assignment, "name": path.name, "path": self.relative_path(path)})
         return assignments
 

@@ -266,7 +266,6 @@ const els = {
   activityEditorBody: document.querySelector("#activityEditorBody"),
   activityWizardEditorMount: document.querySelector("#activityWizardEditorMount"),
   openActivityEditorBtn: document.querySelector("#openActivityEditorBtn"),
-  wizardOpenActivityEditorBtn: document.querySelector("#wizardOpenActivityEditorBtn"),
   activityPanelStatus: document.querySelector("#activityPanelStatus"),
   activityPanelSummary: document.querySelector("#activityPanelSummary"),
   activityAuthorStatus: document.querySelector("#activityAuthorStatus"),
@@ -1773,6 +1772,171 @@ async function loadActivities() {
   renderCoverage();
 }
 
+// Import previews are immutable snapshots kept on the server for ten minutes.
+const courseImport = { catalog: null, preview: null, busy: false };
+const importEls = Object.fromEntries([
+  "Open", "Close", "Dialog",
+  "Fields", "Repository", "Ref", "Load", "Choices", "Preview", "Summary", "Publish", "Status",
+].map((name) => [name, document.querySelector(`#courseImport${name}`)]));
+
+importEls.Open.addEventListener("click", () => {
+  const selected = state.activities.find(item => item.path === els.activityPath.value);
+  if (selected?.origin?.repository && !courseImport.catalog) {
+    importEls.Repository.value = `https://github.com/${selected.origin.repository}`;
+    importEls.Ref.value = selected.origin.ref || "";
+    importEls.Status.textContent = selected.origin.ref
+      ? `Provenienza: ${selected.origin.repository} · ${selected.origin.commit.slice(0, 12)}`
+      : "Importazione precedente: scegli esplicitamente branch, tag o commit.";
+  }
+  if (!importEls.Dialog.open) importEls.Dialog.showModal();
+});
+importEls.Close.addEventListener("click", () => importEls.Dialog.close());
+
+function invalidateCourseImport(clearCatalog = false) {
+  if (courseImport.preview) {
+    courseImportRequest("discard", { preview_token: courseImport.preview.preview_token }).catch(() => {});
+  }
+  courseImport.preview = null;
+  importEls.Publish.disabled = true;
+  importEls.Summary.textContent = "";
+  if (clearCatalog) {
+    courseImport.catalog = null;
+    importEls.Choices.textContent = "";
+    importEls.Preview.disabled = true;
+  }
+}
+
+async function courseImportRequest(action, payload) {
+  return api(`/api/activity-import/${action}`, { method: "POST", body: JSON.stringify(payload) });
+}
+
+async function runCourseImport(work) {
+  if (courseImport.busy) return;
+  courseImport.busy = true;
+  importEls.Fields.disabled = true;
+  importEls.Status.textContent = "Operazione in corso…";
+  try {
+    await work();
+  } catch (error) {
+    importEls.Status.textContent = error.message;
+  } finally {
+    courseImport.busy = false;
+    importEls.Fields.disabled = false;
+  }
+}
+
+async function loadCourseImport() {
+  await runCourseImport(async () => {
+    invalidateCourseImport(true);
+    const result = await courseImportRequest("catalog", {
+      repository: importEls.Repository.value.trim(), ref: importEls.Ref.value.trim(),
+    });
+    courseImport.catalog = result;
+    for (const path of result.activities) {
+      const label = document.createElement("label");
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.value = path;
+      checkbox.addEventListener("change", () => invalidateCourseImport());
+      const text = document.createElement("span");
+      text.textContent = `${path} — Da verificare`;
+      label.append(checkbox, text);
+      importEls.Choices.append(label);
+    }
+    importEls.Preview.disabled = !result.activities.length;
+    importEls.Status.textContent = result.activities.length
+      ? `${result.activities.length} file disponibili. Seleziona fino a ${result.max_selection} activity. Revisione ${result.commit.slice(0, 12)}.`
+      : "Nessuna activity trovata nella cartella activities del corso.";
+  });
+}
+
+async function previewCourseImport() {
+  await runCourseImport(async () => {
+    invalidateCourseImport();
+    const catalog = courseImport.catalog;
+    if (!catalog) throw new Error("Carica prima l'elenco del corso.");
+    const paths = Array.from(importEls.Choices.querySelectorAll("input:checked"), (item) => item.value);
+    if (!paths.length || paths.length > catalog.max_selection) {
+      throw new Error(`Seleziona da 1 a ${catalog.max_selection} activity.`);
+    }
+    const result = await courseImportRequest("preview", {
+      repository: catalog.repository, commit: catalog.commit, paths, ref: catalog.ref,
+    });
+    courseImport.preview = result;
+    for (const activity of result.activities) {
+      const card = document.createElement("div");
+      const title = document.createElement("strong");
+      title.textContent = activity.title;
+      const description = document.createElement("p");
+      description.textContent = `${activity.language} · ${activity.student_assets} file studente · ${activity.reserved_assets} file riservati al docente/grading.`;
+      card.append(title, description);
+      const status = document.createElement("p");
+      status.textContent = ({new: "Nuova", update: "Aggiornamento disponibile", unchanged: "Invariata", conflict: "Conflitto"})[activity.status] || "";
+      card.append(status);
+      for (const change of activity.changes || []) {
+        const line = document.createElement("p");
+        line.textContent = `${({added: "Aggiunto", modified: "Modificato", removed: "Rimosso"})[change.change]}: ${change.path} (${({student: "studente", teacher: "riservato", descriptor: "descriptor"})[change.audience]})`;
+        if (change.visibility_changed) line.textContent += " — visibilità modificata";
+        card.append(line);
+      }
+      const details = [activity.conflict,
+        activity.descriptor_fields?.length ? `Campi modificati: ${activity.descriptor_fields.join(", ")}` : "",
+        activity.previous_source_path && activity.previous_source_path !== activity.source_path
+          ? `Spostata da ${activity.previous_source_path} a ${activity.source_path}` : ""];
+      for (const detail of details.filter(Boolean)) {
+        const line = document.createElement("p");
+        line.textContent = detail;
+        card.append(line);
+      }
+      for (const change of activity.descriptor_changes || []) {
+        const line = document.createElement("p");
+        line.textContent = `${change.field}: ${JSON.stringify(change.before)} → ${JSON.stringify(change.after)}`;
+        card.append(line);
+      }
+      for (const warning of activity.warnings) {
+        const note = document.createElement("p");
+        note.textContent = warning;
+        card.append(note);
+      }
+      importEls.Summary.append(card);
+    }
+    importEls.Publish.disabled = result.can_apply === false;
+    importEls.Status.textContent = `Anteprima pronta: ${result.activities.length} activity, ${Math.ceil(result.bytes / 1024)} KB. Conferma entro 10 minuti. Le consegne esistenti mantengono la loro versione.`;
+    if (result.missing?.length) importEls.Status.textContent += ` Assenti dal corso: ${result.missing.join(", ")}. Nessuna cancellazione locale.`;
+  });
+}
+
+async function publishCourseImport() {
+  await runCourseImport(async () => {
+    const preview = courseImport.preview;
+    if (!preview) throw new Error("Ripeti l'anteprima prima di importare.");
+    const accepted = await DashboardDialogs.confirm({
+      title: "Applica al catalogo", message: `Applicare ${preview.activities.length} activity al catalogo? Le consegne esistenti conservano la versione assegnata. Gli aggiornamenti valgono per le nuove assegnazioni.`,
+      confirmLabel: "Applica", cancelLabel: "Annulla",
+    });
+    if (!accepted) {
+      importEls.Status.textContent = "Importazione annullata. L'anteprima resta disponibile.";
+      return;
+    }
+    // Keep the token on transport failure: publish recognizes a committed operation.
+    const result = await courseImportRequest("publish", { preview_token: preview.preview_token });
+    courseImport.preview = null;
+    invalidateCourseImport();
+    importEls.Status.textContent = `${result.imported.length} activity importate. Sceglile nel catalogo, poi controlla revisione e destinatari.`;
+    try {
+      await loadActivities();
+    } catch {
+      importEls.Status.textContent += " Ricarica la pagina per aggiornare l'elenco.";
+    }
+  });
+}
+
+importEls.Repository.addEventListener("input", () => invalidateCourseImport(true));
+importEls.Ref.addEventListener("input", () => invalidateCourseImport(true));
+importEls.Load.addEventListener("click", loadCourseImport);
+importEls.Preview.addEventListener("click", previewCourseImport);
+importEls.Publish.addEventListener("click", publishCourseImport);
+
 async function loadAssignments() {
   const now = dateTimeInputToIso(els.nowAt?.value);
   const query = now ? `?now=${encodeURIComponent(now)}` : "";
@@ -2823,6 +2987,7 @@ function renderOverviewMatrix(rows) {
                   ${score !== "" ? `<small>${escapeHtml(score)}</small>` : ""}
                 </button>
                 ${selection ? reportSelectionCompactBadge(row) : ""}
+                ${gradeReviewBadge(row, true)}
               ` : '<span class="matrixCell matrixCellEmpty">-</span>'}
             </div>
           </td>
@@ -2905,7 +3070,7 @@ function renderOverview() {
             }, { detailsKey: testDetailsKey })
           : ""}
       </td>
-      <td><code>${escapeHtml(grade)}</code></td>
+      <td><code>${escapeHtml(grade)}</code>${gradeReviewBadge(row)}</td>
       <td>
         <button type="button" class="smallButton" data-overview-report="${escapeHtml(row.report_name)}" data-overview-student="${escapeHtml(row.student || "")}" title="${submissionTitle}" ${hasSubmission ? "" : "disabled"}>
           Consegna
@@ -4002,6 +4167,21 @@ function badge(text, kind = "muted", title = "") {
   return `<span class="badge ${className}${title ? " hasTooltip" : ""}"${tooltipAttributes(label, title)}>${escapeHtml(label)}</span>`;
 }
 
+function gradeReviewBadge(value, compact = false) {
+  const submission = value?.submission || value || {};
+  if (submission.report_authority !== "verified_delivery") return "";
+  const grading = value?.grading || value || {};
+  const provisional = grading.provisional ?? value?.grading_provisional;
+  const confirmed = provisional === false && grading.teacher_grade != null;
+  const label = confirmed ? "Voto confermato" : "Voto da revisionare";
+  const tooltip = confirmed
+    ? "Il docente ha confermato il voto di questo tentativo."
+    : "Il punteggio automatico resta provvisorio fino alla revisione docente, anche per un tentativo definitivo.";
+  return `<span class="${compact ? "matrixGradeReviewState" : "gradeReviewState"}">${badge(
+    compact ? (confirmed ? "CONF" : "REV") : label,
+    confirmed ? "ok" : "warn", `${label}. ${tooltip}`)}</span>`;
+}
+
 function reportSelectionState(value) {
   const submission = value?.submission || value || {};
   const grading = value?.grading || value || {};
@@ -4015,6 +4195,16 @@ function reportSelectionState(value) {
       compactLabel: "ERR",
       kind: "bad",
       tooltip: "La selezione definitiva non e valida: il registro non usa un altro tentativo al suo posto.",
+    };
+  }
+  if (submission.report_authority === "verified_delivery" && ["final", "latest"].includes(selection)) {
+    return {
+      label: selection === "final" ? "Tentativo definitivo" : "Ultimo tentativo",
+      compactLabel: selection === "final" ? "DEF" : "ULT",
+      kind: "muted",
+      tooltip: selection === "final"
+        ? "Lo studente ha scelto questa consegna come definitiva. La revisione del voto e indicata separatamente."
+        : "Il registro usa l'ultima consegna ricevuta. La revisione del voto e indicata separatamente.",
     };
   }
   if (selection === "final") {
@@ -4761,7 +4951,7 @@ function renderStudents(students) {
         <small>Test: ${escapeHtml(grading.tests_passed ?? "-")}/${escapeHtml(grading.tests_total ?? "-")}</small>
         ${gradingDetails(grading, { detailsKey: testDetailsKey })}
       </td>
-      <td><code>${escapeHtml(grading.teacher_grade ?? grading.score ?? "-")}</code></td>
+      <td><code>${escapeHtml(grading.teacher_grade ?? grading.score ?? "-")}</code>${gradeReviewBadge(student)}</td>
       <td>
         <div data-ai-feedback-student="${escapeHtml(student.student_id || student.student)}">
           ${aiFeedbackDetails(ai)}
@@ -5257,7 +5447,6 @@ els.assignmentAiFilesReview?.addEventListener("input", (event) => {
 });
 els.assignmentAiFilesCloseBtn?.addEventListener("click", closeAssignmentAiFilesDialog);
 els.openActivityEditorBtn?.addEventListener("click", () => openActivityEditor("panel"));
-els.wizardOpenActivityEditorBtn?.addEventListener("click", openActivityReviewStep);
 els.activityEditorCloseBtn?.addEventListener("click", closeActivityEditor);
 els.saveAssignmentBtn?.addEventListener("click", saveAssignmentRecord);
 els.distributeAssignmentBtn?.addEventListener("click", distributeAssignment);

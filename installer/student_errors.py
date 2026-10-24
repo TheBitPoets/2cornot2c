@@ -25,7 +25,7 @@ class StudentError:
         )
         result.append(f"CODICE DA COMUNICARE AL DOCENTE: {self.code}")
         if technical:
-            result.append(f"Dettagli tecnici: {technical[:240]}")
+            result.append(f"Dettagli tecnici: {technical[:4000]}")
         return tuple(result)
 
 
@@ -66,9 +66,9 @@ ERRORS = {
     "network": StudentError(
         "E07",
         "Non riesco a collegarmi al server di download",
-        "La procedura ha bisogno di Internet.",
+        "Il controllo verso il server indicato nei dettagli non è riuscito.",
         (
-            "Controlla con il browser che Internet funzioni.",
+            "Prova ad aprire nel browser l'URL indicato nei dettagli.",
             "Non disattivare l'antivirus; riprova o comunica E07.",
         ),
     ),
@@ -95,9 +95,9 @@ ERRORS = {
             "di avviare Linux."
         ),
         (
-            "Controlla se Windows aspetta una richiesta di autorizzazione.",
-            "Scegli Sì e riprova.",
-            "Se ricompare, comunica E20 al docente.",
+            "Leggi il codice e il percorso del log nei dettagli.",
+            "Se Windows mostra una richiesta di autorizzazione, confermala per continuare.",
+            "Se ricompare, comunica E20 e il log al docente; non rimuovere WSL.",
         ),
     ),
     "docker-engine": StudentError(
@@ -122,6 +122,42 @@ ERRORS = {
             "Lascia Docker Desktop aperto e controlla Internet.",
             "Rilancia l'installer: non perderai quanto già scaricato.",
         ),
+    ),
+    "classroom-image": StudentError(
+        "E25",
+        "La box Packer della macchina virtuale non è disponibile",
+        (
+            "La procedura non userà la box Bento generica e non eseguirà "
+            "installazioni lente al primo avvio."
+        ),
+        (
+            "Controlla Internet e rilancia Installa, completa o ripara.",
+            "Se esiste già una VM, segui la migrazione indicata nei dettagli.",
+            "Se ricompare, comunica E25 al docente.",
+        ),
+    ),
+    "classroom-legacy": StudentError(
+        "E26", "La VM precedente richiede una migrazione assistita",
+        "È presente una VM legacy. La procedura la conserva insieme ai suoi dati.",
+        ("Chiedi al docente di verificare i file salvati dentro la VM.",
+         "La migrazione indicata nei dettagli richiede la conferma RICREA VM.",
+         "Per usare Docker torna al menu e scegli Docker: non serve eliminare questa VM."),
+    ),
+    "classroom-state": StudentError(
+        "E27", "La configurazione della VM deve essere verificata",
+        "I marker della VM sono incompleti, non validi o indicano un'altra box.",
+        ("Non cancellare marker o VM.", "Comunica E27 e i dettagli al docente."),
+    ),
+    "classroom-pending": StudentError(
+        "E28", "La release della VM non è ancora attiva",
+        "Non è disponibile una release approvata per questo provider.",
+        ("Chiedi al docente quale ambiente usare.", "Puoi scegliere Docker dal menu."),
+    ),
+    "wsl-uac": StudentError(
+        "E29", "L'autorizzazione per preparare WSL è stata annullata",
+        "Windows non ha avviato la preparazione con i permessi necessari.",
+        ("Rilancia Installa, completa o ripara e conferma la richiesta di Windows.",
+         "Se servono credenziali amministrative, chiedi al docente."),
     ),
     "student-security": StudentError(
         "E22",
@@ -175,9 +211,26 @@ def resource_error(detail: str) -> StudentError:
     return ERRORS["resources"]
 
 
-def for_check(key: str, detail: str) -> StudentError:
+def for_check(key: str, detail: str, *, reason: str = "") -> StudentError:
+    if key == "network" and reason == "timeout":
+        return StudentError(
+            "E07",
+            "Il controllo della connessione è scaduto",
+            "Il controllo non è terminato entro il tempo previsto; non basta a stabilire se Internet è assente.",
+            ("Riprova il controllo dal menu.", *ERRORS["network"].actions),
+        )
     if key == "resources":
         return resource_error(detail)
+    if key == "wsl" and "WSL_UAC_CANCELLED" in detail:
+        return ERRORS["wsl-uac"]
+    if key == "classroom-image":
+        for marker, category in (
+            ("CLASSROOM_LEGACY_VM:", "classroom-legacy"),
+            ("CLASSROOM_STATE_INVALID:", "classroom-state"),
+            ("CLASSROOM_RELEASE_PENDING:", "classroom-pending"),
+        ):
+            if marker in detail:
+                return ERRORS[category]
     return ERRORS.get(
         key,
         StudentError(
@@ -189,7 +242,7 @@ def for_check(key: str, detail: str) -> StudentError:
     )
 
 
-def for_step(key: str) -> StudentError:
+def for_step(key: str, detail: str = "") -> StudentError:
     if key == "docker":
         return StudentError(
             "E18",
@@ -200,7 +253,7 @@ def for_step(key: str) -> StudentError:
                 "Riavvia e rilancia il comando; se ricompare comunica E18.",
             ),
         )
-    return for_check(key, "")
+    return for_check(key, detail)
 
 
 def print_error(error: StudentError, technical: str = "") -> None:

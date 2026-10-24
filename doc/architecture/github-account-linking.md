@@ -7,7 +7,7 @@
 ## Vincoli di sicurezza
 
 - `begin_link()` accetta esclusivamente un `HttpAuthContext` già autenticato.
-- Il flow one-time è associato a `user_id`, ID/digest/generazione della sessione, revisione utente e browser originario.
+- Il flow one-time è associato a `user_id`, all'intera generazione immutabile della sessione (`session_id`, `user_id`, `token_digest`, `created_at`, `expires_at`, `audience`, `source_pairing_id`), alla revisione utente e al browser originario. La callback non adotta una sessione cancellata e ricreata, anche se riusa ID, digest e data di creazione.
 - State e browser binding sono conservati solo come SHA-256; il verifier PKCE resta soltanto nella memoria bounded del processo.
 - Cookie transazionali `__Host-`, `Secure`, `HttpOnly`, `SameSite=Lax` hanno nomi distinti per state, permettendo più schede.
 - Il callback consuma il flow prima del token exchange; binding/sessione errati non consumano il flow. Revisione utente e sessione persistita vengono ricontrollate atomicamente al link.

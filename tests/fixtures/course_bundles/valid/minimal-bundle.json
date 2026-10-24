@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0.0",
+  "id": "tpsi-quarto-2026",
+  "version": "1.0.0",
+  "title": "TPSI quarto anno",
+  "school_year": "2026/2027",
+  "target_class": "4^",
+  "language": "it",
+  "platform_min_version": "2026.8.0",
+  "authors": [{"name": "Docente TPSI", "role": "author"}],
+  "license": "proprietary",
+  "price": null,
+  "content": {
+    "units": [
+      {
+        "id": "u01-intro-c",
+        "title": "Introduzione al C",
+        "activities": ["activities/01-intro/activity.json"],
+        "materials": ["materials/01-intro.md"]
+      },
+      {
+        "id": "u02-funzioni",
+        "title": "Funzioni in C",
+        "order": 5,
+        "handouts": ["handouts/funzioni.pdf"]
+      }
+    ]
+  }
+}

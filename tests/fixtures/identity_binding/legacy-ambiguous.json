@@ -1,0 +1,24 @@
+{
+  "schema_version": "identity_subject_binding.v1",
+  "user_id": "auth-user-001",
+  "subject_id": "subject:11111111111111111111111111111111",
+  "class_ids": ["class:3a-tpsi:2026-2027"],
+  "assignment": {
+    "schema_version": "1.0",
+    "id": "assignment:legacy:3a:001",
+    "class_id": "class:3a-tpsi:2026-2027",
+    "targets": [{"student_id": "rossi-mario"}]
+  },
+  "legacy_aliases": [
+    {
+      "class_id": "class:3a-tpsi:2026-2027",
+      "legacy_student_id": "rossi-mario",
+      "subject_id": "subject:11111111111111111111111111111111"
+    },
+    {
+      "class_id": "class:3a-tpsi:2026-2027",
+      "legacy_student_id": "rossi-mario",
+      "subject_id": "subject:22222222222222222222222222222222"
+    }
+  ]
+}

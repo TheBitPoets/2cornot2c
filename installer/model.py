@@ -6,6 +6,9 @@ from dataclasses import dataclass
 from enum import Enum
 
 
+CHECK_TIMEOUT_SECONDS = 20
+
+
 class Host(str, Enum):
     """Host supportati dall'installer."""
 
@@ -33,6 +36,7 @@ class Check:
     command: tuple[str, ...]
     expected_text: str = ""
     minimum_version: str = ""
+    failure_context: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,6 +50,7 @@ class Step:
     detail: str = ""
     deferred: bool = False
     restart_after_success: bool = False
+    always_run: bool = False
 
 
 @dataclass(frozen=True, slots=True)

@@ -9,8 +9,8 @@ Fornire agli studenti un solo percorso supportato per sistema operativo:
 | Windows 10/11 | amd64 | VirtualBox | box Vagrant Packer |
 | macOS Apple Silicon | arm64 | VMware Fusion | box Vagrant Packer |
 
-VirtualBox su macOS resta un fallback per il docente. L'ambiente Docker
-interattivo sarà una milestone separata e non sostituirà il runner di grading.
+VirtualBox su macOS non è supportato dal flusso classroom. L'ambiente Docker
+interattivo resta l'alternativa leggera e non sostituisce il runner di grading.
 
 ## Prima iterazione
 
@@ -107,9 +107,10 @@ La selezione locale viene salvata in file ignorati da Git:
 - `.classroom-box`: nome immutabile della box verificata;
 - `.classroom-provider`: provider collaudato per l'host.
 
-Il fallback senza questi file resta `bento/ubuntu-24.04`. La presenza di una
-box Packer disabilita il provisioning legacy, evitando reinstallazioni lente
-e dipendenti dalla rete a ogni ricreazione.
+Senza questi file il Vagrantfile si ferma; `bento/ubuntu-24.04` resta
+disponibile soltanto agli sviluppatori tramite l'opt-in esplicito documentato.
+La presenza di una box Packer disabilita il provisioning legacy, evitando
+reinstallazioni lente e dipendenti dalla rete a ogni ricreazione.
 
 La sostituzione di una VM già presente è un'operazione distinta
 dall'importazione della box. Richiede una conferma testuale non abbreviabile,

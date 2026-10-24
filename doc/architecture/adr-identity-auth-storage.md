@@ -67,7 +67,7 @@ I JSON restano formato di export, backup leggibile e scambio, ma non sono una se
 
 Lo schema concreto e le migrazioni sono implementati da `SqliteIdentityStorage` dietro le porte definite in `scripts/thebitlab_identity_ports.py`.
 
-### Schema SQLite v1-v2
+### Schema SQLite v1-v12
 
 La prima migrazione crea:
 
@@ -80,17 +80,21 @@ La prima migrazione crea:
 - `tui_pairings`;
 - `schema_migrations`.
 
-Foreign key, ruoli, booleani e stati pairing sono vincolati anche nel database. La cancellazione di un utente elimina identita, membership, sessioni e pairing gia associati; la cancellazione di una classe elimina membership e mapping collegati. Le chiavi provider e i digest hanno vincoli univoci indicizzati.
+Foreign key, ruoli, booleani e stati pairing sono vincolati anche nel database. La cancellazione di un utente elimina identita, membership, sessioni e pairing gia associati; dalla v12 viene invece bloccata se esiste il binding didattico autorevole. La cancellazione di una classe elimina membership e mapping collegati, ma viene bloccata finche esistono alias legacy da migrare. Le chiavi provider e i digest hanno vincoli univoci indicizzati.
 
 `linked_at` e `created_at` dei mapping descrivono la creazione originale e non cambiano quando vengono aggiornati attributi leggibili come email, username o display name. Il linking verso un proprietario interno differente fallisce senza modifiche parziali.
 
-Le operazioni di revoca multipla sono atomiche: un istante anteriore alla creazione o all'ultimo utilizzo di una sessione attiva viene rifiutato, invece di lasciare sessioni parzialmente revocate. Revoca e `last_seen_at` sono monotoni: `save_session` usa un compare-and-swap e non puo riattivare una sessione tramite uno snapshot stale. Ogni record sessione ha audience vincolata `web` o `tui`; audience fa parte dell'identità immutabile verificata dai CAS e impedisce uso incrociato tra cookie browser e bearer terminale. Le sessioni `tui` richiedono inoltre un `source_pairing_id` univoco verso il pairing consumato, mentre le sessioni `web` non possono dichiararlo. La migrazione elimina fail-closed eventuali sessioni TUI legacy prive di correlazione.
+Le operazioni di revoca multipla sono atomiche: un istante anteriore alla creazione o all'ultimo utilizzo di una sessione attiva viene rifiutato, invece di lasciare sessioni parzialmente revocate. Revoca e `last_seen_at` sono monotoni: `save_session` usa un compare-and-swap e non puo riattivare una sessione tramite uno snapshot stale. Il touch di autenticazione ricampiona il clock storage dopo `BEGIN IMMEDIATE` e include nello stesso CAS la scadenza esclusiva rispetto al massimo fra tempo applicativo, touch proposto e tempo storage; attesa del lock e skew in una delle due direzioni non possono quindi arretrare l'autorità temporale. Ogni record sessione ha audience vincolata `web` o `tui`; audience fa parte dell’identità immutabile verificata dai CAS e impedisce uso incrociato tra cookie browser e bearer terminale. Le sessioni `tui` richiedono inoltre un `source_pairing_id` univoco verso il pairing consumato, mentre le sessioni `web` non possono dichiararlo. La migrazione elimina fail-closed eventuali sessioni TUI legacy prive di correlazione.
+
+Ogni mutazione di identità esterna vincolata a una sessione confronta nello stesso CAS transazionale l'intera generazione immutabile `(session_id, user_id, token_digest, created_at, expires_at, audience, source_pairing_id)`. `source_pairing_id` usa uguaglianza SQLite NULL-safe. Il controllo comprende inoltre revoca nulla, account attivo e revisione esatta, `created_at` e `last_seen_at` non successivi al transaction/use time e `expires_at` strettamente successivo. Il clock storage viene campionato soltanto dopo l'acquisizione di `BEGIN IMMEDIATE`; una delete/recreate parziale o una replacement generation non può ereditare l'autorità già verificata dal caller.
 
 Le transizioni pairing vengono applicate con compare-and-swap sullo stato persistito. Solo una delle richieste concorrenti puo autorizzare, consumare, scadere o revocare il record; gli stati terminali non possono essere riaperti da snapshot precedenti. Il consumo browser/TUI aggiorna il pairing e inserisce la sessione audience `tui` nella stessa transazione; una scadenza osservata dal clock storage viene persistita prima di restituire l'errore.
 
 `expires_at` e un limite esclusivo: `last_seen_at` e `revoked_at` devono precederlo, e una sessione con `expires_at` uguale all'istante di revoca non e piu attiva. I cleanup ricevono un cutoff esplicito e cancellano record con `expires_at` minore o uguale al cutoff; la politica di retention resta responsabilita del service chiamante.
 
 La migrazione v2 crea la tombstone ABA-safe `external_identity_generations` e la popola dalle identita v1 esistenti prima di accettare nuovi link.
+
+La migrazione v12 aggiunge `student_subject_bindings` e `legacy_student_subject_aliases`. Il binding 1:1 collega l'account auth al soggetto didattico opaco; classi e target vengono risolti dalle membership e dagli assignment autorevoli, non da ID della request. Contratto, lifecycle e migrazione legacy sono definiti in [`adr-authoritative-student-identity-binding.md`](adr-authoritative-student-identity-binding.md).
 
 Le migrazioni sono numerate, sequenziali, eseguite dentro `BEGIN IMMEDIATE` e registrate solo al commit. Il codice rifiuta sequenze mancanti e database con una versione schema piu recente, evitando downgrade impliciti.
 
@@ -127,12 +131,15 @@ I record provider-agnostici sono definiti in `scripts/thebitlab_identity.py`:
 - `UserSession`;
 - `TuiPairing`.
 
+Il binding didattico usa i record `StudentSubjectBinding`, `LegacySubjectAlias` e `StudentBindingSnapshot` definiti in `scripts/thebitlab_identity_binding.py`.
+
 Le porte di persistenza sono definite in `scripts/thebitlab_identity_ports.py`:
 
 - `UserDirectoryStorage`;
 - `ClassDirectoryStorage`;
 - `SessionStorage`;
-- `TuiPairingStorage`.
+- `TuiPairingStorage`;
+- `StudentSubjectBindingStorage`.
 
 ## Conseguenze
 
@@ -163,6 +170,7 @@ Le porte di persistenza sono definite in `scripts/thebitlab_identity_ports.py`:
 
 - Epic MVP: #535.
 - Contratti iniziali: #537.
+- Binding autorevole studente: [`adr-authoritative-student-identity-binding.md`](adr-authoritative-student-identity-binding.md), #702.
 - Servizi applicativi: [`auth-application-services.md`](auth-application-services.md).
 - Roadmap MVP: #292.
 - Roadmap architetturale: #282.

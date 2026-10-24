@@ -12,6 +12,11 @@ from scripts.thebitlab_identity import (
     UserAccount,
     UserSession,
 )
+from scripts.thebitlab_identity_binding import (
+    LegacySubjectAlias,
+    StudentBindingSnapshot,
+    StudentSubjectBinding,
+)
 
 
 class IdentityStorageError(RuntimeError):
@@ -35,7 +40,7 @@ class IdentityStoragePairingExpiredError(IdentityStorageConflictError):
 
 
 class IdentityStorageSessionExpiredError(IdentityStorageConflictError):
-    """Raised when a candidate session expires before atomic insertion."""
+    """Raised when a session expires before atomic insertion or authenticated use."""
 
 
 class IdentityStorageNotFoundError(IdentityStorageError):
@@ -84,9 +89,12 @@ class UserDirectoryStorage(Protocol):
         expected_session_id: str,
         expected_session_token_digest: str,
         expected_session_created_at: datetime,
+        expected_session_expires_at: datetime,
+        expected_session_audience: str,
+        expected_session_source_pairing_id: str | None,
         expected_session_valid_at: datetime,
     ) -> None:
-        """Atomically link while both active user and session still match."""
+        """Atomically link while both active user and exact session generation match."""
         ...
 
     def refresh_external_identity(
@@ -108,9 +116,12 @@ class UserDirectoryStorage(Protocol):
         expected_session_id: str,
         expected_session_token_digest: str,
         expected_session_created_at: datetime,
+        expected_session_expires_at: datetime,
+        expected_session_audience: str,
+        expected_session_source_pairing_id: str | None,
         expected_session_valid_at: datetime,
     ) -> None:
-        """Refresh a link while active user and session still match."""
+        """Refresh a link while active user and exact session generation match."""
         ...
 
     def read_external_identity(self, provider: str, subject: str) -> ExternalIdentity | None: ...
@@ -146,9 +157,12 @@ class UserDirectoryStorage(Protocol):
         expected_session_id: str,
         expected_session_token_digest: str,
         expected_session_created_at: datetime,
+        expected_session_expires_at: datetime,
+        expected_session_audience: str,
+        expected_session_source_pairing_id: str | None,
         expected_session_valid_at: datetime,
     ) -> bool:
-        """Atomically unlink while identity, active owner, and live session match."""
+        """Atomically unlink while identity, active owner, and exact live session match."""
         ...
 
 
@@ -271,6 +285,90 @@ class ClassDirectoryStorage(Protocol):
     ) -> None: ...
 
 
+class StudentSubjectBindingStorage(Protocol):
+    """Authoritative persistence port for auth-to-educational-subject binding."""
+
+    def create_student_subject_binding(
+        self,
+        binding: StudentSubjectBinding,
+        aliases: tuple[LegacySubjectAlias, ...] = (),
+    ) -> None: ...
+
+    def read_student_subject_binding(
+        self, subject_id: str
+    ) -> StudentSubjectBinding | None: ...
+
+    def list_user_subject_bindings(self, user_id: str) -> list[StudentSubjectBinding]: ...
+
+    def save_student_subject_binding(
+        self,
+        binding: StudentSubjectBinding,
+        *,
+        expected_revision: int,
+    ) -> None: ...
+
+    def save_legacy_subject_alias(
+        self,
+        alias: LegacySubjectAlias,
+        *,
+        expected_binding_revision: int,
+    ) -> None: ...
+
+    def list_legacy_subject_aliases(
+        self, class_id: str | None = None
+    ) -> list[LegacySubjectAlias]: ...
+
+    def read_student_binding_snapshot(self, user_id: str) -> StudentBindingSnapshot:
+        """Read the complete binding authority in one coherent transaction."""
+        ...
+
+
+class AdminBootstrapStorage(Protocol):
+    """One-shot local boundary for establishing the first administrator."""
+
+    def read_user(self, user_id: str) -> UserAccount | None: ...
+
+    def bootstrap_first_admin(
+        self,
+        target_user_id: str,
+        updated_at: datetime,
+        *,
+        expected_target_updated_at: datetime,
+    ) -> tuple[UserAccount, int]: ...
+
+
+class AdminProvisioningStorage(Protocol):
+    """Atomic persistence boundary for explicit admin-owned onboarding."""
+
+    def read_admin_provisioning_snapshot(
+        self,
+        actor_user_id: str,
+        *,
+        expected_actor_updated_at: datetime,
+        maximum_items: int,
+    ) -> tuple[tuple[UserAccount, ...], tuple[ClassGroup, ...]]: ...
+
+    def create_class_as_admin(
+        self,
+        actor_user_id: str,
+        class_group: ClassGroup,
+        *,
+        expected_actor_updated_at: datetime,
+    ) -> None: ...
+
+    def approve_pending_user_as_admin(
+        self,
+        actor_user_id: str,
+        target_user_id: str,
+        role: str,
+        class_id: str | None,
+        updated_at: datetime,
+        *,
+        expected_actor_updated_at: datetime,
+        expected_target_updated_at: datetime,
+    ) -> tuple[UserAccount, ClassMembership | None, int]: ...
+
+
 class SessionStorage(Protocol):
     """Persistence port for hashed web sessions."""
 
@@ -289,9 +387,13 @@ class SessionStorage(Protocol):
     def save_session(self, session: UserSession) -> None: ...
 
     def save_session_for_active_user(
-        self, session: UserSession, *, expected_user_updated_at: datetime
-    ) -> None:
-        """Touch an active session only while its owner revision remains unchanged."""
+        self,
+        session: UserSession,
+        *,
+        expected_user_updated_at: datetime,
+        expected_valid_at: datetime,
+    ) -> UserSession:
+        """Touch and return a transaction-current session at a monotonic time."""
         ...
 
     def list_user_sessions(self, user_id: str) -> list[UserSession]: ...

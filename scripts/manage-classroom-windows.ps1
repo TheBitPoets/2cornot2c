@@ -31,8 +31,18 @@ if (Test-Path $StatePath) {
 }
 
 $VenvPython = Join-Path $InstallDir ".installer-venv\Scripts\python.exe"
+$PythonReady = $false
 if ((Test-Path (Join-Path $InstallDir ".git")) -and
     (Test-Path $VenvPython)) {
+    # A venv launcher survives removal of its base Python installation.
+    try {
+        & $VenvPython -I -c 'pass' *> $null
+        $PythonReady = $LASTEXITCODE -eq 0
+    } catch {
+        $PythonReady = $false
+    }
+}
+if ($PythonReady) {
     Push-Location $InstallDir
     try {
         & $VenvPython -m installer.tui
@@ -43,6 +53,18 @@ if ((Test-Path (Join-Path $InstallDir ".git")) -and
 }
 
 Write-Host "L'ambiente non è ancora completo."
+$SelectiveUninstaller = Join-Path $env:LOCALAPPDATA '2cornot2c\uninstall-classroom-windows.ps1'
+if ((Test-Path -LiteralPath $StatePath) -and (Test-Path -LiteralPath $SelectiveUninstaller)) {
+    Write-Host '1. Installa, completa o ripara'
+    Write-Host '2. Disinstalla: scegli i componenti rimasti'
+    Write-Host '0. Esci senza modifiche'
+    $Choice = Read-Host 'Scegli una voce'
+    if ($Choice -eq '2') {
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $SelectiveUninstaller -SelectComponents
+        exit $LASTEXITCODE
+    }
+    if ($Choice -ne '1') { exit 2 }
+}
 Write-Host "Avvio automaticamente la preparazione guidata..."
 try {
     $Bootstrap = Invoke-RestMethod -TimeoutSec 30 $BootstrapUrl

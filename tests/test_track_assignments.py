@@ -1326,6 +1326,110 @@ class StaticTrackingReportSource:
         return self.result
 
 
+def write_federated_tracking_assignment(tmp_path, *, class_id):
+    activity_path = write_activity(tmp_path)
+    student = target(tmp_path, "rossi-mario")
+    student.path.mkdir()
+    record = assignment_records.build_assignment_record(
+        assignment_id="assignment-delivery", activity_id=activity()["id"],
+        activity_path="activity.json", target_type="student", class_id=class_id,
+        assigned_at="2026-10-12T09:00:00+02:00", due_at="2026-10-21T08:00:00+02:00",
+        targets=[{"student_id": student.student, "subject_id": "subject:11111111111111111111111111111111",
+                  "repo_ref": student.repo, "path": student.student}],
+    )
+    assignment_records.JsonAssignmentRecordStorage(tmp_path).write_assignment(record)
+    return activity_path, student, record
+
+
+@pytest.mark.parametrize("class_id", ["", "3A-TPSI"])
+@pytest.mark.parametrize("has_report", [False, True])
+def test_federated_tracking_default_never_opens_delivery_archive(tmp_path, monkeypatch, class_id, has_report):
+    from scripts import student_delivery_store
+
+    activity_path, student, record = write_federated_tracking_assignment(tmp_path, class_id=class_id)
+    if has_report:
+        write_report(student.path, "2026-10-20T08:00:00+02:00")
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("Legacy tracking must not open the delivery archive")
+
+    monkeypatch.setattr(student_delivery_store, "JsonStudentDeliveryStore", forbidden)
+    row = track_assignments.track_assignments(
+        activity_path=activity_path, targets=[student], assignment_id=record["id"],
+        server_root=tmp_path, help_subject_aliases=(), due_at=record["due_at"],
+        now="2026-10-20T09:00:00+02:00",
+    )["students"][0]
+    assert row["submitted"] is has_report
+    assert row["grading"]["status"] == ("graded_passed" if has_report else "not_graded")
+    assert row["help"]["subject_id"] == record["targets"][0]["subject_id"]
+
+
+@pytest.mark.parametrize("backend", ["local", "github"])
+@pytest.mark.parametrize("now, status", [
+    ("2026-10-20T09:00:00+02:00", "pending"),
+    ("2026-10-22T09:00:00+02:00", "missing"),
+])
+def test_delivery_register_without_receipts_discards_previous_report(
+    tmp_path, monkeypatch, backend, now, status,
+):
+    from scripts import course_board_server as server
+    from scripts import student_delivery_client as client
+    from tests.test_student_delivery_client import manifest
+
+    activity_path, student, record = write_federated_tracking_assignment(tmp_path, class_id="3A-TPSI")
+    write_report(student.path, "2026-10-20T08:00:00+02:00")
+    source = StaticTrackingReportSource(thebitlab_tracking_reports.TrackingReportResult(
+        configured=True, report=attempt_report(record["id"], "attempt-old", passed=True,
+            submitted_at="2026-10-20T08:00:00+02:00"),
+        selection="github_actions_artifact", authority="verified_remote", provisional=True,
+        provenance={"repository": student.repo},
+    )) if backend == "github" else None
+    monkeypatch.setattr(server, "ROOT", tmp_path)
+    monkeypatch.setattr(server, "TEACHER_REPORTS_DIR", tmp_path / "teacher-reports")
+    monkeypatch.setattr(server, "TEACHER_ASSIGNMENTS_DIR", tmp_path / "teacher-assignments")
+    monkeypatch.setattr(server, "grading_tracking_report_source", lambda: source)
+    payload = {"activity_path": str(activity_path), "assignment_id": record["id"],
+               "targets_text": str(student.path), "due_at": record["due_at"],
+               "now": now, "output_name": "delivery.json"}
+    legacy = server.generate_assignment_report(payload, help_subject_aliases=())["report"]
+    old = legacy["students"][0]
+    assert old["submitted"] is True
+    assert old["grading"]["status"] == "graded_passed"
+    old["ai_feedback"] = {"status": "approved", "suggested_grade": 10, "summary": "Old report"}
+    track_assignments.write_tracking_index(legacy, tmp_path / "teacher-reports" / "delivery.json")
+    if source:
+        source.requests.clear()
+
+    result = server.generate_assignment_report(
+        payload, help_subject_aliases=(), student_delivery_enabled=True,
+    )["report"]["students"][0]
+    assert result["submitted"] is False
+    assert result["status"] == status
+    assert result["late"] is (status == "missing")
+    assert result["grading"]["status"] == "not_graded"
+    assert result["grading"]["score"] is None and result["grading"]["teacher_grade"] is None
+    assert result["report_path"] is None
+    assert result["submission"]["source_path"] is None
+    assert result["submission"]["files"] == []
+    assert result["submission"]["local_preview_status"] == "unavailable"
+    assert result["submission"]["submitted_at"] is None
+    assert not result["submission"].get("final_selected")
+    assert not result["submission"].get("report_provenance")
+    assert result["ai_feedback"]["status"] == "not_generated"
+    if source:
+        assert source.requests == []
+
+    description = {**manifest(), "assignment_id": record["id"], "activity_id": activity()["id"]}
+    monkeypatch.setattr(client, "request", lambda route, **kwargs: description
+        if route == "delivery-manifest" else {"items": [], "final": None, "status": status})
+    tui = client.enrich_payload({"assignments": [{"assignment_id": record["id"],
+        "activity_id": activity()["id"], "submitted": True, "grading": old["grading"]}]},
+        root=tmp_path, server_url="http://localhost:8765", server_token="test-only",
+        allow_insecure_http=True)["assignments"][0]
+    assert (result["submitted"], result["status"]) == (tui["submitted"], tui["status"])
+    assert result["grading"]["teacher_grade"] == tui["grading"]["teacher_grade"]
+
+
 def test_track_assignments_uses_verified_remote_report_and_provenance(tmp_path) -> None:
     activity_path = write_activity(tmp_path)
     student_path = tmp_path / "rossi-mario"

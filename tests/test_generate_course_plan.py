@@ -82,10 +82,35 @@ def test_render_design_preserves_remote_repository_ref_and_timestamp() -> None:
                 "ref": "release/2026",
                 "files": ["README.md"],
                 "updated_at": "2026-07-29T08:00:00Z",
-                "indexing_status": "pending",
+                "indexing_status": "ready",
             }
         ],
-        "years": [],
+        "_resolved_source_refs": {"remote-course": "b" * 40},
+        "years": [
+            {
+                "id": "third",
+                "title": "Third",
+                "udas": [
+                    {
+                        "id": "uda-1",
+                        "title": "Remote",
+                        "items": [
+                            {
+                                "id": "remote-course:README.md#intro",
+                                "title": "Intro",
+                                "source": "README.md",
+                                "source_id": "remote-course",
+                                "source_provider": "github",
+                                "source_commit": "a" * 40,
+                                "href": "https://example.invalid/intro",
+                                "level": 1,
+                                "frame": {"status": "todo"},
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
     }
 
     markdown = generate_course_plan.render_design(design)
@@ -93,6 +118,9 @@ def test_render_design_preserves_remote_repository_ref_and_timestamp() -> None:
     assert "TheBitPoets/course" in markdown
     assert "ref `release/2026`" in markdown
     assert "aggiornata `2026-07-29T08:00:00Z`" in markdown
+    assert f"snapshot `{'b' * 40}`" in markdown
+    assert f"commit `{'a' * 40}`" in markdown
+    assert f"github:remote-course · README.md @ {'a' * 40}" in markdown
 
 
 def test_cli_check_uses_explicit_paths_without_touching_real_course_design(tmp_path, monkeypatch) -> None:

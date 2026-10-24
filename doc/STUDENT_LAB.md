@@ -284,7 +284,8 @@ Comandi disponibili nella TUI minima:
 Nel dettaglio della consegna i comandi sono divisi in:
 
 - azioni principali: `e` esegue il runner e salva il report, `t` mostra lo storico e seleziona il tentativo
-  definitivo, `a` registra una richiesta di aiuto, `o` apre la cartella workspace, `v` apre l'editor;
+  definitivo, `a` registra una richiesta di aiuto, `o` apre la cartella workspace, `v` apre l'editor,
+  `c` apre un terminale nel workspace;
 - altri comandi: `h` mostra lo storico aiuti, `b` o invio torna alla lista, `q` esce.
 - navigazione `utui`: `j` scorre i pannelli verso il basso e `k` verso l'alto.
 
@@ -294,8 +295,20 @@ la selezione viene inviata a `POST /api/student-lab/final-attempt`: il server ri
 consegna e tentativo sui propri dati. Senza token, la stessa operazione applicativa lavora sulla root locale.
 
 Il comando `v` cerca un editor terminale nell'ordine `micro`, `nvim`, `vim`, `hx`, `nano` (e `notepad` su Windows).
-Per scegliere esplicitamente un editor, imposta `THEBITLAB_EDITOR`, per esempio `micro --clean` o `nvim`.
+`micro` e' l'editor minimale di default ed e' installato automaticamente nelle immagini del lab: e' un binario
+piccolo, ha syntax highlighting, supporto mouse e keybinding intuitivi (`Ctrl+S` salva, `Ctrl+Q` esce).
 L'editor viene eseguito nella cartella della consegna e apre il file sorgente indicato dall'activity.
+
+Il comando `o` apre la cartella del workspace. Senza configurazione usa il file manager di sistema
+(Esplora Risorse su Windows). Se si vuole aprire la cartella direttamente in un editor che lo supporta
+(VS Code, VSCodium, Cursor, Zed, ...), impostare `THEBITLAB_WORKSPACE_EDITOR`.
+
+Il comando `c` apre un terminale nella cartella del workspace. Su Windows preferisce Windows Terminal
+(`wt -d <cartella>`); se non e' installato apre il Prompt dei comandi. Da li lo studente puo' eseguire
+comandi come `code .` per avviare VS Code o `python main.py` per provare il programma.
+
+Per una guida dettagliata alla configurazione di editor diversi, inclusi VS Code, VSCodium e Notepad++,
+vedi [TUI_EDITOR_SETUP.md](TUI_EDITOR_SETUP.md).
 
 Il comando `l` apre il layout della vista consegna. Ogni sezione del dettaglio diventa un pannello separato;
 la disposizione iniziale li distribuisce in due colonne. Per ora il controllo principale e' il ridimensionamento:

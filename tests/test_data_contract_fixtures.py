@@ -33,7 +33,8 @@ def test_class_group_contract_fixture() -> None:
 
     assert_required(payload, {"schema_version", "id", "label", "school_year", "provider", "provider_ref", "students"})
     student = payload["students"][0]
-    assert_required(student, {"schema_version", "id", "display_name", "class_ids", "provider_accounts", "repo_refs"})
+    assert_required(student, {"schema_version", "subject_id", "id", "display_name", "class_ids", "provider_accounts", "repo_refs"})
+    assert student["subject_id"] == "subject:11111111111111111111111111111111"
     assert student["id"] == "rossi-mario"
     assert student["class_ids"] == ["3a-tpsi-2026"]
     assert student["provider_accounts"]["github"] == "rossi-mario"
@@ -110,5 +111,7 @@ def test_assignment_contract_fixture() -> None:
         },
     )
     assert payload["target_type"] == "class"
+    assert payload["class_id"] == load_fixture("class_group.json")["id"]
+    assert payload["targets"][0]["subject_id"] == "subject:11111111111111111111111111111111"
     assert payload["targets"][0]["student_id"] == "rossi-mario"
     assert payload["targets"][0]["repo_ref"] == "TheBitPoets/rossi-mario"

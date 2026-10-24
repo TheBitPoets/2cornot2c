@@ -1,0 +1,10562 @@
+# Programmazione Assembly
+
+Materiale su sistema operativo, architettura x86-64 e programmazione Assembly.
+
+## Indice
+  * [Sistema Operativo](#sistema-operativo)
+    + [I modelli di memoria](#i-modelli-di-memoria)
+    + [I Segmenti](#i-segmenti)
+    + [I Registri](#i-registri)
+    + [I registri di segmento](#i-registri-di-segmento)
+    + [I registri di segmento in x64](#i-registri-di-segmento-in-x64)
+    + [I registri General-Purpose](#i-registri-general-purpose)
+    + [Instruction Pointer](#instruction-pointer)
+    + [Flags Register](#flags-register)
+    + [Math Coprocessors and Registers](#math-coprocessors-and-registers)
+    + [I quattro principali modelli di programmazione per x86](#i-quattro-principali-modelli-di-programmazione-per-x86)
+  * [Real Mode Flat Model (modello piatto in modalità reale)](#real-mode-flat-model-modello-piatto-in-modalità-reale)
+  * [Real Mode Segmented Model (modello segmentato in modalità reale)](#real-mode-segmented-model-modello-segmentato-in-modalità-reale)
+    + [32-Bit Protected Mode Flat Model](#32-bit-protected-mode-flat-model)
+    + [Memory Mapped Video](#memory-mapped-video)
+    + [Accesso diretto alle porte hardware](#accesso-diretto-alle-porte-hardware)
+    + [Chiamate dirette al BIOS](#chiamate-dirette-al-bios)
+    + [64bit Long Mode](#64-bit-long-mode)
+  * [Il primo programma assembly (eatsyscall.asm)](#il-primo-programma-assembly-eatsyscallasm)
+  * [Il primo programma assembly in SASM (eatsyscallgcc.asm)](#il-primo-programma-assembly-in-sasm-eatsyscallgccasm)
+    + [Template per nasm](#template-per-nasm)
+    + [Template per sasm](#template-per-sasm)
+    + [Le Istruzione ed i loro operandi](#le-istruzioni-e-i-loro-operandi)
+    + [Operandi Sorgente e Destinazione](#operandi-sorgente-e-destinazione)
+    + [Dati Immediati](#dati-immediati)
+    + [Dati di Registro](#dati-di-registro)
+    + [Dati di Memoria ed Effective Addresses](#dati-di-memoria-ed-effective-addresses)
+    + [Il dato ed il suo indirizzo](#il-dato-e-il-suo-indirizzo)
+    + [La dimensione dei dati di memoria](#la-dimensione-dei-dati-di-memoria)
+    + [Il registro RFLAGS](#il-registro-rflags)
+    + [Aggiungere e Sottrarre 1 con INC e DEC](#aggiungere-e-sottrarre-1-con-inc-e-dec)
+    + [Come i Flags cambiano l'esecuzione del programma](#come-i-flag-cambiano-lesecuzione-del-programma)
+    + [Valori Signed ed Unsigned](#valori-signed-e-unsigned)
+    + [Complemento a due e NEG](#complemento-a-due-e-neg)
+    + [Estensione del segno e MOVSX](#estensione-del-segno-e-movsx)
+    + [Operandi impliciti e MUL](#operandi-impliciti-e-mul)
+    + [MUL ed il Carry Flag](#mul-e-il-carry-flag)
+    + [Divisione senza segno con DIV](#divisione-senza-segno-con-div)
+    + [MUL e DIV sono dei ritardatari](#mul-e-div-sono-dei-ritardatari)
+    + [Leggere ed Usare una guida all'assembly](#leggere-e-usare-una-guida-allassembly)
+    + [Legal Forms](#legal-forms)
+    + [Operand Symbols](#operand-symbols)
+    + [Examples](#examples)
+    + [Notes](#notes)
+    + [Cosa manca](#cosa-manca)
+    + [Esaminiamo `EATSYSCALL.ASM`](#esaminiamo-eatsyscallasm)
+    + [Sezione .data](#sezione-data)
+    + [Sezione .bss](#sezione-bss)
+    + [Sezione .text](#sezione-text)
+    + [Labels (Etichette)](#labels-etichette)
+    + [Variabili per i dati inizializzati](#variabili-per-i-dati-inizializzati)
+    + [Variabili Stringa](#variabili-stringa)
+    + [Derivare la lunghezza della stringa con EQU e $](#derivare-la-lunghezza-della-stringa-con-equ-e-)
+    + [Lo Stack (LIFO: Last in, First out)](#lo-stack-lifo-last-in-first-out)
+    + [Istruzione Push](#istruzione-push)
+    + [Istruzione Pop](#istruzione-pop)
+    + [PUSHA E POPA sono stati rimossi](#pusha-e-popa-sono-stati-rimossi)
+    + [Push e Pop in dettaglio](#push-e-pop-in-dettaglio)
+    + [Syscall del kernel](#syscall-del-kernel)
+    + [ABI (Application Binary Interface)](#abi-application-binary-interface)
+    + [Lo Schema dei Parametri del Registro ABI](#lo-schema-dei-parametri-del-registro-abi)
+    + [Terminare un programma via SYSCALL](#terminare-un-programma-via-syscall)
+    + [Registri sporcati da una SYSCALL](#registri-sporcati-da-una-syscall)
+    + [Progettare un programma](#progettare-un-programma)
+    + [Scansionare un Buffer](#scansionare-un-buffer)
+    + [Dallo Pseudocodice al codice Assembly](#dallo-pseudocodice-al-codice-assembly)
+    + [Operazioni sui Bit](#operazioni-sui-bit)
+    + [Numerazione dei bit](#numerazione-dei-bit)
+    + [Operazioni Binarie](#operazioni-binarie)
+    + [Istruzione AND](#istruzione-and)
+    + [Mascherare i Bit](#mascherare-i-bit)
+    + [Istruzione OR](#istruzione-or)
+    + [Istruzione XOR](#istruzione-xor)
+    + [Istruzione NOT](#istruzione-not)
+    + [I segmenti di registro non rispondono alla logica](#i-segmenti-di-registro-non-rispondono-alla-logica)
+    + [Shiftare i bit](#shiftare-i-bit)
+    + [Come funziona lo shifting dei bit](#come-funziona-lo-shifting-dei-bit)
+    + [Colpire i bit nel Carry Flag](#colpire-i-bit-nel-carry-flag)
+    + [L'istruzione Rotate](#listruzione-rotate)
+    + [Ruotare i bit attraverso il Carry Flag](#ruotare-i-bit-attraverso-il-carry-flag)
+    + [Settare un valore noto nel Carry Flag](#settare-un-valore-noto-nel-carry-flag)
+    + [Bit-Bashing](#bit-bashing)
+    + [Dividere un byte in due nibble](#dividere-un-byte-in-due-nibble)
+    + [Shiftare il nibble alto nel nibble basso](#shiftare-il-nibble-alto-nel-nibble-basso)
+    + [Usare una Lookup Table](#usare-una-lookup-table)
+    + [Moltiplicare attraverso Shifting e Somme](#moltiplicare-attraverso-shifting-e-somme)
+    + [Flag, test e branch](#flag-test-e-branch)
+    + [Salti incondizionati](#salti-incondizionati)
+    + [Salti condizionati](#salti-condizionati)
+    + [Saltare sull'assenza di una condizione](#saltare-sullassenza-di-una-condizione)
+    + [Flags](#flags)
+    + [Confronti con CMP](#confronti-con-cmp)
+    + [Una giungla di istruzioni JUMP](#una-giungla-di-istruzioni-jump)
+    + [Cercare un bit a 1 con TEST](#cercare-un-bit-a-1-con-test)
+    + [Cercare un bit a 0 con BT](#cercare-un-bit-a-0-con-bt)
+    + [X64 Long Mode Memory Addressing](#x64-long-mode-memory-addressing)
+    + [Calcolo dell'effective address](#calcolo-delleffective-address)
+    + [Displacement (scostamento)](#displacement-scostamento)
+    + [Il problema della dimensione dello scostamento in x64](#il-problema-della-dimensione-dello-scostamento-in-x64)
+    + [Base Addressing (indirizzamento di base)](#base-addressing-indirizzamento-di-base)
+    + [Base + Displacement Addressing](#base--displacement-addressing)
+    + [Base + Index Addressing](#base--index-addressing)
+    + [Index - Scale + Displacement Addressing](#index---scale--displacement-addressing)
+    + [Altri schemi d'indirizzamento](#altri-schemi-dindirizzamento)
+    + [Istruzione LEA](#istruzione-lea)
+    + [Tabella di traduzione caratteri](#tabella-di-traduzione-caratteri)
+    + [Tabella di traduzione](#tabella-di-traduzione)
+    + [Tradurre con MOV o XLAT](#tradurre-con-mov-o-xlat)
+    + [Tabelle al posto di calcoli](#tabelle-al-posto-di-calcoli)
+    + [Procedure](#procedure)
+    + [Chiamare e Ritornare](#chiamare-e-ritornare)
+    + [Chiamate all'interno di chiamate](#chiamate-allinterno-di-chiamate)
+    + [Il pericolo della ricorsione accidentale](#il-pericolo-della-ricorsione-accidentale)
+    + [Un errore di etichetta del flag a cui fare attenzione](#un-errore-di-etichetta-del-flag-a-cui-fare-attenzione)
+    + [Le procedure e i dati di cui hanno bisogno](#le-procedure-e-i-dati-di-cui-hanno-bisogno)
+    + [Salvare i registri del chiamante](#salvare-i-registri-del-chiamante)
+    + [Preservare i registri attraverso le chiamate di sistema Linux](#preservare-i-registri-attraverso-le-chiamate-di-sistema-linux)
+    + [PUSHAD e POPAD sono spariti](#pushad-e-popad-sono-spariti)
+    + [Dati locali](#dati-locali)
+    + [Inserire dati costanti nelle definizioni delle procedure](#inserire-dati-costanti-nelle-definizioni-delle-procedure)
+    + [Alcuni trucchi per le tabelle](#alcuni-trucchi-per-le-tabelle)
+    + [Etichette locali e lunghezze dei salti](#etichette-locali-e-lunghezze-dei-salti)
+    + [Accesso forzato all'etichetta locale](#accesso-forzato-alletichetta-locale)
+    + [Salti Corti, Vicini e Lontani](#salti-corti-vicini-e-lontani)
+    + [Costruzione di librerie di procedure esterne](#costruzione-di-librerie-di-procedure-esterne)
+    + [Quando i tool raggiungono i loro limiti](#quando-i-tool-raggiungono-i-loro-limiti)
+    + [Utilizzare gli include file in SASM](#utilizzare-gli-include-file-in-sasm)
+    + [Dove devono essere memorizzati i file di inclusione di SASM](#dove-devono-essere-memorizzati-i-file-di-inclusione-di-sasm)
+    + [Il modo migliore per creare una libreria di file di inclusione](#il-modo-migliore-per-creare-una-libreria-di-file-di-inclusione)
+    + [Assemblaggio e moduli separati](#assemblaggio-e-moduli-separati)
+    + [Dichiarazioni Globali ed Esterne](#dichiarazioni-globali-ed-esterne)
+- [Il meccanismo dei Globals e Externals](#il-meccanismo-dei-globals-e-externals)
+    + [Collegare le librerie nei tuoi programmi](#collegare-le-librerie-nei-tuoi-programmi)
+    + [I pericoli di troppe procedure e troppe librerie](#i-pericoli-di-troppe-procedure-e-troppe-librerie)
+    + [L'arte di creare procedure](#larte-di-creare-procedure)
+    + [Manutenibilità e Riutilizzo](#manutenibilità-e-riutilizzo)
+    + [Decidere cosa dovrebbe essere una procedura](#decidere-cosa-dovrebbe-essere-una-procedura)
+    + [Usare i commenti!](#usare-i-commenti)
+    + [Controllo semplice del cursore nella console di Linux](#controllo-semplice-del-cursore-nella-console-di-linux)
+    + [Avvertenze per il controllo della console](#avvertenze-per-il-controllo-della-console)
+    + [Creare ed Usare Macro](#creare-ed-usare-macro)
+    + [Il Meccanismo della definizione di Macro](#il-meccanismo-della-definizione-di-macro)
+    + [Definire Macro con parametri](#definire-macro-con-parametri)
+    + [Il Meccanismo d'invocazione delle Macro](#il-meccanismo-dinvocazione-delle-macro)
+    + [Etichette Locali all'interno di macro](#etichette-locali-allinterno-di-macro)
+    + [Librerie Macro come File di Inclusione](#librerie-macro-come-file-di-inclusione)
+    + [Macro contro Procedure: Pro e Contro](#macro-contro-procedure-pro-e-contro)
+    + [Le stringhe in linguaggio Assembly](#le-stringhe-in-linguaggio-assembly)
+    + [Stringa Sorgente e stringa Destinazione](#stringa-sorgente-e-stringa-destinazione)
+    + [Uno schermo virtuale di visualizzazione del testo](#uno-schermo-virtuale-di-visualizzazione-del-testo)
+    + [REP STOSB, la mitragliatrice software](#rep-stosb-la-mitragliatrice-software)
+    + [Mitragliatrice sul display virtuale](#mitragliatrice-sul-display-virtuale)
+    + [Esecuzione dell'istruzione STOSB](#esecuzione-dellistruzione-stosb)
+    + [STOSB e il Flag di Direzione DF](#stosb-e-il-flag-di-direzione-df)
+    + [Definire le linee nel buffer di visualizzazione](#definire-le-linee-nel-buffer-di-visualizzazione)
+    + [Invio del Buffer alla Console di Linux](#invio-del-buffer-alla-console-di-linux)
+    + [L'Arma Semiautomatica: STOSB Senza REP](#larma-semiautomatica-stosb-senza-rep)
+    + [Chi Decrementa RCX?](#chi-decrementa-rcx)
+    + [L'Istruzione LOOP](#listruzione-loop)
+    + [Visualizzare un righello sullo schermo](#visualizzare-un-righello-sullo-schermo)
+    + [MUL non è IMUL](#mul-non-è-imul)
+    + [Le quattro dimensioni di STOS](#le-quattro-dimensioni-di-stos)
+    + [Addio Matematica BCD](#addio-matematica-bcd)
+    + [MOVSB: Copie di blocco veloci](#movsb-copie-di-blocco-veloci)
+    + [DF e Mosse di Blocco Sovrapposte](#df-e-mosse-di-blocco-sovrapposte)
+    + [Istruzioni di stringa REP con passo singolo](#istruzioni-di-stringa-rep-con-passo-singolo)
+    + [Memorizzare dati in stringhe discontinue](#memorizzare-dati-in-stringhe-discontinue)
+    + [Visualizzazione di una tabella ASCII](#visualizzazione-di-una-tabella-ascii)
+    + [Cicli di istruzioni annidati](#cicli-di-istruzioni-annidati)
+    + [Salto quando RCX arriva a 0](#salto-quando-rcx-arriva-a-0)
+    + [Chiusura del ciclo interno](#chiusura-del-ciclo-interno)
+    + [Chiusura del ciclo esterno](#chiusura-del-ciclo-esterno)
+    + [Showchar Recap](#showchar-recap)
+    + [Argomenti da linea di comando, ricerche di stringhe e lo stack di Linux](#argomenti-da-linea-di-comando-ricerche-di-stringhe-e-lo-stack-di-linux)
+    + [Visualizzazione degli argomenti della riga di comando da SASM](#visualizzazione-degli-argomenti-della-riga-di-comando-da-sasm)
+    + [Ricerche di stringhe con SCASB](#ricerche-di-stringhe-con-scasb)
+    + [REPNE vs. REPE](#repne-vs-repe)
+    + [Non puoi passare argomenti da linea di comando ai programmi all'interno di SASM](#non-puoi-passare-argomenti-da-linea-di-comando-ai-programmi-allinterno-di-sasm)
+    + [Lo Stack, la sua struttura e come usarlo](#lo-stack-la-sua-struttura-e-come-usarlo)
+    + [Accedere allo Stack direttamente](#accedere-allo-stack-direttamente)
+    + [Stack Alignment Prolog](#stack-alignment-prolog)
+    + [Indirizzamento dei dati nello Stack](#indirizzamento-dei-dati-nello-stack)
+    + [Usare gcc per l'assembly](#usare-gcc-per-lassembly)
+    + [SASM usa GCC](#sams-usa-gcc)
+    + [Come usare GCC in assembly](#come-usare-gcc-in-assembly)
+    + [Perché no GAS?](#perché-no-gas)
+    + [Linking alla libreria standard del C](#linking-alla-libreria-standard-del-c)
+    + [Convenzioni di chiamata C](#convenzioni-di-chiamata-c)
+    + [Chiamanti, Chiamati e Sovrascrittori](#chiamanti-chiamati-e-sovrascrittori)
+    + [Impostare lo Stack Frame](#impostare-lo-stack-frame)
+    + [Distruggere lo Stack Frame (in the Epilog - epilogo)](#distruggere-lo-stack-frame-in-epilogo)
+    + [Allineamento dello Stack](#allineamento-dello-stack)
+    + [Caratteri via Puts()](#caratteri-via-puts)
+    + [Testo formattato con printf()](#testo-formattato-con-printf)
+    + [Passaggio di parametri a printf()](#passaggio-di-parametri-a-printf)
+    + [Printf() necessita di uno 0 precedente in RAX](#printf-necessita-di-uno-0-precedente-in-rax)
+    + [Gcc --no-pie](#gcc---no-pie)
+    + [Dati in con fgets() e scanf()](#dati-in-con-fgets-e-scanf)
+    + [Utilizzando scanf() per l'inserimento di valori numerici](#utilizzando-scanf-per-linserimento-di-valori-numerici)
+    + [Essere un Signore del Tempo Linux](#essere-un-signore-del-tempo-linux)
+    + [La macchina del tempo della libreria C](#la-macchina-del-tempo-della-libreria-c)
+    + [Recupero valori time_t dall'orologio di sistema](#recupero-valori-time_t-dallorologio-di-sistema)
+    + [Convertire un valore time_t in una stringa formattata](#convertire-un-valore-time_t-in-una-stringa-formattata)
+    + [Generazione di valori locali di tempo separati](#generazione-di-valori-locali-di-tempo-separati)
+    + [Creare una copia della struttura tm di glibc con MOVSD](#creare-una-copia-della-struttura-tm-di-glibc-con-movsd)
+    + [Comprendere i mnemonici di istruzione AT&T](#comprendere-i-mnemonici-di-istruzione-att)
+    + [Convenzioni mnemoniche di AT&T](#convenzioni-mnemoniche-di-att)
+    + [Sintassi di riferimento della memoria AT&T](#sintassi-di-riferimento-della-memoria-att)
+    + [Generazione di numeri casuali](#generazione-di-numeri-casuali)
+    + [Inizializzare il generatore con srand()](#inizializzare-il-generatore-con-srand)
+    + [Generazione di numeri pseudocasuali](#generazione-di-numeri-pseudocasuali)
+    + [Alcuni bit sono più casuali di altri](#alcuni-bit-sono-più-casuali-di-altri)
+    + [Chiamate a indirizzi nei registri](#chiamate-a-indirizzi-nei-registri)
+    + [Usare puts() per inviare una linea vuota alla console](#usare-puts-per-inviare-una-linea-vuota-alla-console)
+    + [Come passare più di sei parametri a una funzione libc](#come-passare-più-di-sei-parametri-a-una-funzione-libc)
+    + [Come C vede gli argomenti della riga di comando](#come-c-vede-gli-argomenti-della-riga-di-comando)
+    + [Semplici operazioni di I/O sui file](#semplici-operazioni-di-io-sui-file)
+    + [Convertire le stringhe in numeri con sscanf()](#convertire-le-stringhe-in-numeri-con-sscanf)
+    + [Creare ed Aprire i File](#creare-ed-aprire-i-file)
+    + [Leggere testo dai file con fgets()](#leggere-testo-dai-file-con-fgets)
+    + [Scrivere testo su file con fprintf()](#scrivere-testo-su-file-con-fprintf)
+    + [Note sulla raccolta delle procedure in librerie](#note-sulla-raccolta-delle-procedure-in-librerie)
+  * [Controllo dei processi](#controllo-dei-processi)
+
+<small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
+
+## Sistema Operativo
+
+### I modelli di memoria
+
+<p align=justify>
+Uno dei concetti più complessi dei sistemi e della programmazione a basso livello (in linguaggio assembly del processore) è l'indirizzamento della memoria, ovvero come la CPU indirizza la memoria, cioè in che modo questa permette l'accesso alle celle di memoria; questo è molto importante perché influenza il modo con cui il programmatore vede la RAM. Anche se la RAM fisicamente è una sequenza ordinata di celle di 8 byte, l'indirizzamento della CPU può influenzare come il programmatore vede e usa questa sequenza di byte. In questa sede faremo riferimento all'architettura x86 dei processori Intel/AMD. L'indirizzamento della memoria da parte del processore è argomento complesso in quanto, nella nostra architettura di riferimento, esistono diversi modi con cui i processori x86 indirizzano la memoria. Nello specifico esistono quattro <b>modelli di memoria</b> che gli attuali processori della famiglia x86 supportano:
+</p>
+
+<ol>
+  <li>
+    <p align="justify">
+    <strong>real mode flat model</strong> (modello piatto in modalità reale)
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <strong>real mode segmented model</strong> (modello segmentato in modalità reale)
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <strong>32-bit protected mode flat model</strong> (modello piatto in modalità protetta)
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    <strong>64-bit long mode flat model</strong> (modello piatto in modalità lunga)
+    </p>
+  </li>
+</ol>
+
+<p align=justify>
+Nella programmazione per Linux moderno a 64 bit, sei praticamente limitato a un solo modello di memoria (modello piatto in modalità protetta), e una volta che comprenderai meglio l'indirizzamento della memoria, ne sarai molto contento.
+I primi due modelli sono ormai un retaggio del passato: per intenderci, il modello segmentato era usato dal <a href="https://it.wikipedia.org/wiki/DOS">DOS</a>, mentre il modello flat in real mode era usato dal <a href="https://it.wikipedia.org/wiki/CP/M">CP/M-80</a>. A partire da Windows 95 e successivi (Windows 2000/XP/Vista/7/10/11) il modello di memoria utilizzato è il flat in protected mode. Attenzione: il protected mode flat model è disponibile solo a partire dal processore 80386; i processori precedenti, 8086, 8088 e 80286, non supportano questo modello. Possiamo considerare il protected model flat model come una versione più ampia del real mode flat model; il real mode segmented model è una bestia infernale che è stata introdotta da Intel per questioni più di business che tecnologiche.
+</p>
+
+<p align=justify>
+Il predecessore di tutti questi processori citati (8086, 8088, 80286 e 80386), l'8080, supportava solo il primo modello: real mode flat model. Siamo circa alla metà degli anni Settanta e le potenze di calcolo e di storage erano assai inferiori a quelle a cui siamo abituati oggi. L'8080 era un processore a 8 bit e quindi manipolava 8 bit d'informazione alla volta, ma la dimensione dei registri interni alla CPU e del bus indirizzi era di 16 bit. Un bus indirizzi di 16 bit si traduce in una quantità totale di byte di memoria indirizzabili pari a $2^{16} = 65536 = 64KB$, che era un valore notevole considerando che le memorie in quegli anni erano di circa 4K-8K.
+</p>
+
+<p align=justify>
+Lo schema d'indirizzamento dell'8080 era molto semplice: il processore inseriva l'indirizzo di memoria sul bus indirizzi e dopo un certo tempo riceveva, sul bus dati, gli 8 bit presenti nella cella indirizzata dai 16 bit precedenti (indirizzo di memoria della cella).
+</p>
+
+<p align=justify>
+Il sistema operativo più utilizzato con l'8080 era il CP/M-80. Questo sistema operativo risiedeva nella zona alta della memoria installata in modo da lasciare spazio e avere un punto di partenza coerente per i programmi transitori, cioè quelli che a differenza del sistema operativo venivano caricati in memoria ed eseguiti solo quando necessario. Quando il CP/M-80 leggeva un programma dal disco per eseguirlo, lo caricava in memoria bassa all'indirizzo $0100H$, cioè 256 byte dopo la cella più bassa di memoria.
+Ti ricordo che ogni cifra esadecimale rappresenta 4 bit, infatti per rappresentare sedici cifre (0,1,2,3,4,5,6,7,8,9,A,B,C,D,E,F) ho bisogno di 4 bit: $2^4=16$, quindi il numero esadecimale $0100H$ in binario diventa $0000-0001-0000-0000$, il cui valore decimale è $2^8=256$.
+I primi 256 byte di memoria erano chiamati <i>program segment prefix</i> (PSP) ed erano usati per i buffer di I/O dei programmi. Il codice eseguibile del programma caricato in memoria iniziava solamente dopo l'indirizzo 0100H.
+</p>
+
+
+<table>
+	<td>:memo: <b>Note</b>
+	<p align=justify>
+I microcomputer primordiali come i sistemi 8080 che eseguivano CP/M-80 avevano un'architettura della memoria semplice. I programmi venivano scritti per essere caricati ed eseguiti a un indirizzo di memoria fisico specifico. Per CP/M, questo era 0100H. Il programmatore poteva assumere che qualsiasi programma iniziasse a 0100H e procedesse da lì. Gli indirizzi di memoria degli elementi di dati e delle procedure erano indirizzi fisici reali e ogni volta che il programma veniva eseguito, i suoi elementi di dati venivano caricati e riferiti esattamente nello stesso posto in memoria.
+Tutto ciò è cambiato con l'arrivo dell'8086 e dei sistemi operativi specifici per l'8086 come CP/M-86 e PC DOS. I miglioramenti nell'architettura Intel introdotti con l'8086 hanno reso superfluo assemblare il programma per essere eseguito a un indirizzo di memoria fisico specifico. Questa caratteristica è chiamata <b>relocabilità</b> ed è una parte necessaria di qualsiasi sistema operativo moderno, specialmente quando più programmi possono essere in esecuzione contemporaneamente. Gestire la relocabilità è complesso; una volta che ti sentirai più a tuo agio con il linguaggio assembly, diventerà un argomento degno di ulteriori ricerche.
+	</p>
+	</td>
+</table>
+
+<p align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/cpm-memory.png">
+</p>
+
+<p align=justify>
+Il modello di memoria dell'8080, utilizzato con CP/M-80, era semplice; così quando Intel creò la sua prima CPU a 16 bit: l'8086, tentò di rendere facile per le persone tradurre il vecchio software CP/M-80 dall'8080 all'8086. Un modo per farlo era assicurarsi che un sistema di indirizzamento a 16 bit come quello dell'8080 funzionasse ancora sull'8086.
+Il processore 8086 però aveva un bus indirizzi di 20 bit, mentre i registri interni e il bus dati erano di 16. Con 20 bit era possibile indirizzare $2^{20}=1MB$ di memoria, che è una quantità sedici volte superiore rispetto ai 64K del predecessore 8080 ($16 x 64K = 1MB$). Intel quindi, anche se l'8086 poteva potenzialmente indirizzare una quantità di memoria sedici volte superiore rispetto all'8080, per rendere semplice il porting dei programmi precedentemente scritti per CP/M-80 su 8080, impostò il nuovo 8086 in modo che un programma potesse utilizzare un unico blocco di 64K (detto segmento) all'interno del 1MB massimo indirizzabile. Il programma quindi veniva eseguito interamente all'interno dei 64KB, cioè all'interno del proprio segmento, come se si trovasse di fatto all'interno della memoria massima indirizzabile del vecchio 8080.
+Per ottenere questo funzionamento si fece uso dei registri di segmento, che sono semplicemente registri della CPU che contengono gli indirizzi di memoria dove il segmento inizia. In altre parole, i registri di segmento sono dei semplici puntatori alla memoria che indicano dove, all'interno del megabyte di memoria dell'8086, inizierebbe un programma portato dal mondo dell'8080.
+</p>
+
+<p align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/8080model_inside8086.png">
+</p>
+
+<p align=justify>
+Quando si parla dell'8086 e dell'8088, ci sono quattro registri di segmento da considerare. Nella figura precedente, considera il registro chiamato CS (che sta per <b>code segment</b>) ancora una volta come un puntatore a una posizione all'interno del megabyte di memoria dell'8086. Questa posizione funge da punto di partenza per una regione di memoria di 64K, all'interno della quale un programma CP/M-80 rapidamente convertito potrebbe funzionare molto felicemente. Questo è stato un pensiero a breve termine molto saggio ma allo stesso tempo un pensiero a lungo termine catastroficamente sbagliato. Un elevato numero di programmi CP/M-80 è stato convertito per l'8086 nel giro di un paio d'anni. I problemi sono iniziati quando i programmatori hanno tentato di creare nuovi programmi da zero che non avevano mai visto l'8080 e non avevano bisogno del modello di memoria segmentato. Purtroppo il modello segmentato ha dominato l'architettura dell'8086. I programmi che necessitavano di più di 64K di memoria alla volta dovevano usare la memoria in blocchi da 64K, passando da un blocco all'altro cambiando valori dentro e fuori dai registri di segmento. Questo era un vero incubo. Tuttavia, c'è un buon motivo per impararlo: comprendere il modo in cui funziona l'indirizzamento della memoria segmentata in modalità reale ti aiuterà a comprendere come funzionano i due modelli piatti x86 e, nel processo, arriverai a capire molto meglio la natura della CPU.
+</p>
+
+<p align=justify>
+Quando si opera in modalità reale segmentata, le CPU x86 possono utilizzare fino a un megabyte di memoria indirizzabile direttamente. Questa memoria è chiamata anche memoria in modalità reale (real mode memory).
+Le CPU moderne possono gestire una quantità di memoria enormemente superiore a questa (1MB). Con le CPU originali 8086 e 8088, le 20 linee di indirizzo e 1 megabyte di memoria erano letteralmente tutto ciò che avevano. Le CPU Intel a 32 bit 386 e successive potevano indirizzare 4 gigabyte di memoria senza doverla suddividere in segmenti più piccoli. Quando una CPU a 32 bit opera in modalità protetta modello piatto, un segmento è di 4 gigabyte, quindi un segmento è, per la maggior parte, più che sufficiente, e si possono avere di più se nel sistema sono installati 8, 16 o 64 GB di memoria. Con la modalità lunga x64, beh, il tuo segmento può essere lungo quanto vuoi. Quanto a lungo può essere potrebbe sorprenderti. Tuttavia, c'era un'enorme quantità di software DOS scritto per sfruttare i segmenti ovunque e doveva essere gestito. Così, per mantenere la compatibilità con i vecchi 8086 e 8088, le CPU più recenti hanno ricevuto il potere di limitarsi a ciò che i chip più vecchi potevano indirizzare ed eseguire. Quando una CPU della classe Pentium o migliore deve eseguire software scritto per il modello a segmenti in modalità reale, utilizza un'astuzia che, temporaneamente, la fa diventare un 8086. Questo veniva chiamato modalità virtual-86 (virtual-86 mode), e forniva un'ottima retrocompatibilità attiva per il software DOS. Quando avvii una finestra MS-DOS o una "scatola DOS" sotto Windows NT e versioni successive di Windows, stai usando la modalità virtual-86 per creare ciò che equivale a una piccola isola in modalità reale all'interno del sistema di memoria in modalità protetta di Windows. Era l'unico modo valido per mantenere quella compatibilità retro attiva, per motivi che capirai abbastanza presto.
+</p>
+
+
+<p align=justify>
+Nel modello segmentato in modalità reale, una CPU x86 può 'vedere' un intero megabyte di memoria. Tutto qui. Quando un processore lavora col modello segmentato in modalità reale si imposta da solo per usare 20 dei 32 o 64 pin d'indirizzo e quindi, sul bus indirizzi, possono passare solamente indirizzi lunghi 20 bit. Il problema con questo modello è che in questo modo, anche se le CPU potrebbero vedere l'intero megabyte di memoria, sono costrette a vedere il megabyte attraverso la limitazione dei 64K (data dai 16 bit del bus indirizzi); come puoi vedere nella figura seguente, il lungo rettangolo rappresenta il megabyte di memoria a cui la CPU può accedere nel modello segmentato in modalità reale. La CPU è sulla destra. Al centro c'è un pezzo di cartone metaforico con una fessura tagliata. La fessura è larga 1 byte e lunga 65.536 byte (64K). La CPU può far scorrere quel pezzo di cartone su e giù per l'intera lunghezza del suo sistema di memoria. Tuttavia, in un dato momento, può accedere solo a 65.536 byte.
+</p>
+
+<p align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/64kblinder.png">
+</p>
+
+<p align=justify>
+La vista della memoria da parte della CPU nel modello segmentato in modalità reale è particolare; la CPU è costretta a guardare la memoria in blocchi e ciascun blocco è al massimo largo 65.536 byte (64K). Facendo uso di questo modello a pezzetti di memoria (detti segmenti), sapere quale segmento è attualmente in uso e come passare da uno all'altro è la vera sfida della programmazione in modalità reale a modello segmentato.
+</p>
+
+### I Segmenti
+
+<p align=justify>
+Fino a questo momento, abbiamo parlato informalmente dei segmenti come blocchi di memoria all'interno dello spazio di memoria più grande che la CPU può vedere e utilizzare. Nel contesto del modello segmentato in modalità reale, un segmento è una regione di memoria che inizia su un confine di <b>paragrafo</b> (<i>paragraph</i>) e si estende per un certo numero di byte. Nel modello segmentato in modalità reale, questo numero è minore o uguale a 64K (65.536).
+</p>
+
+<p align=justify>
+Cosa sono quindi i paragrafi? Un <b>paragrafo è una misura di memoria pari a 16 byte</b>. Il termine paragrafo non è molto comune e per lo più è usato solo in relazione ai <b>luoghi nella memoria dove i segmenti possono iniziare</b>. Qualsiasi indirizzo di memoria divisibile per 16 è chiamato <b>confine o limite del paragrafo</b> (<i>paragraph boundary</i>). Il primo confine del paragrafo è l'indirizzo 0. Il secondo è l'indirizzo 10H; il terzo 20H e così via (ricorda che 10H è equivalente a decimale 16). <b>Qualsiasi limite di paragrafo può essere considerato l'inizio di un segmento</b>. Questo non significa che un segmento inizi effettivamente ogni 16 byte su e giù in quel megabyte di memoria. Un segmento è come un ripiano in uno di quegli scaffali moderni regolabili. Sul lato posteriore dello scaffale ci sono molte piccole fessure distanziate di mezzo pollice l'una dall'altra. Un supporto per ripiano può essere inserito in una delle piccole fessure. Tuttavia, non ci sono centinaia di ripiani, ma solo quattro o cinque. Quasi tutte le fessure sono vuote e non utilizzate. Esistono affinché un numero molto più ridotto di ripiani possa essere regolato su e giù in altezza come necessario. In modo molto simile, <b>i limiti di paragrafo sono piccole fessure in cui un segmento può essere iniziato</b>. Nel modello segmentato in modalità reale, un programma può utilizzare solo quattro o cinque segmenti, ma ciascuno di quei segmenti può iniziare in uno dei <b>65.536 limiti di paragrafo esistenti nel megabyte di memoria disponibile</b> nel modello segmentato in modalità reale. Ecco di nuovo quel numero: 65.536, il nostro amato 64K. <b>Ci sono 64K diversi limiti di paragrafo in cui un segmento può iniziare</b>. Il motivo per cui ci sono solamente 65536 limiti di paragrafo è semplice: la memoria misura $1MB=2^{20}$ e i limiti di paragrafo iniziano ogni $16=2^4$ bit; quindi effettuando la divisione $2^{20}/2^4=2^{20-4}=2^{16}=65536$ otteniamo il numero di limiti di paragrafo in una memoria di 1MB. <b>Ogni limite di paragrafo ha un numero</b>. Come sempre, i numeri cominciano da 0 e arrivano a 64K meno uno; in decimale 65.535, o in esadecimale $0FFFFH$ (tutti i sedici bit a 1, in esadecimale quattro F). Poiché un segmento può iniziare in qualsiasi limite di paragrafo, <b>il numero del limite di paragrafo in cui un segmento inizia</b> è chiamato <b>indirizzo del segmento</b> di quel particolare segmento. Raramente, in effetti, parliamo di paragrafi o limiti di paragrafo. Quando vedi il termine indirizzo del segmento in connessione con il modello segmentato in modalità reale, tieni presente che ogni indirizzo di segmento è di 16 byte (un paragrafo) più in là nella memoria rispetto all'indirizzo del segmento precedente. Nella figura seguente, ogni barra ombreggiata è un indirizzo di segmento, e i segmenti iniziano ogni sedici byte. L'indirizzo di segmento più alto è 0FFFFH, che si trova a 16 byte (un paragrafo) dalla sommità della memoria di 1 megabyte in modalità reale. In sintesi: <b>i segmenti possono iniziare in qualsiasi indirizzo di segmento</b>. <b>Ci sono 65.536 indirizzi di segmento</b> distribuiti uniformemente nella memoria completa di un megabyte in modalità reale, <b>separati da sedici byte</b> (paragrafo). Un indirizzo di segmento è più un permesso che un obbligo; per tutti i 64K possibili indirizzi di segmento, solo cinque o sei vengono effettivamente utilizzati per iniziare segmenti in un dato momento. Pensa agli indirizzi di segmento come a delle fessure in cui possono essere inseriti i segmenti. E per quanto riguarda i segmenti stessi? La cosa più importante da capire su un segmento è che può essere lungo fino a 64K byte, ma non deve esserlo per forza. Un segmento può essere lungo solo un byte, o 256 byte, o 21.378 byte, o qualsiasi lunghezza inferiore a 64K.
+</p>
+
+<p align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/memory_address_vs_segment_address.png">
+</p>
+
+<p align=justify>
+Per definire un segmento è sufficiente dichiarare il limite di paragrafo dal quale esso inizia (che diventerà l'indirizzo di quel segmento). Ma invece, cosa definisce quanto è lungo un segmento? Niente! Un segmento è più un orizzonte che un luogo. Una volta che definisci dove inizia un segmento, quel segmento può racchiudere qualsiasi posizione nella memoria tra quel punto di partenza e l'orizzonte, che è 65.536 byte più in là. Niente stabilisce, ovviamente, che un segmento debba utilizzare tutta quella memoria. Nella maggior parte dei casi, quando un segmento è definito a qualche indirizzo di segmento, un programma considera solo i successivi pochi centinaia o forse qualche migliaio di byte come parte di quel segmento, a meno che non si tratti di un programma davvero di prima classe. La maggior parte dei principianti che leggono riguardo ai segmenti li considera come una sorta di allocazione di memoria, una regione di memoria protetta con pareti su entrambi i lati, riservata per un uso specifico. Non è assolutamente così e ciò è la cosa più lontana dalla verità che si possa pensare. <b>In modalità reale nulla è protetto all'interno di un segmento</b> e i <b>segmenti non sono riservati</b> per alcun accesso specifico. <b>I segmenti possono sovrapporsi</b>. (Le persone spesso non pensano a questo o non lo realizzano.) In un certo senso, i segmenti non esistono realmente, tranne come orizzonti oltre i quali un certo tipo di riferimento di memoria non può andare. Si torna a quel paraocchi/fessura/finestra della dimensione di un blocco di 64K che la CPU indossa. Vediamola in questo modo: <b>un segmento è la posizione nella memoria in cui sono posizionati i paraocchi da 64K della CPU</b>. Guardando la memoria attraverso i paraocchi, puoi vedere byte che partono dall'indirizzo di segmento e continuano fino a quando i paraocchi ti bloccano, 64K byte più in là. La chiave per comprendere questa definizione, ammettiamo metafisica, di un segmento è sapere come vengono utilizzati i segmenti; e comprendere questo richiede infine una discussione dettagliata sui registri della CPU.
+</p>
+
+### I Registri
+
+<p align=justify>
+Un registro è un tipo di memoria all'interno del chip della CPU, piuttosto che all'esterno della CPU in RAM o da qualche parte. L'8088, l'8086 e l'80286 sono spesso chiamati CPU a 16 bit perché i loro registri interni sono quasi tutti di 16 bit di dimensione. L'80386 e i suoi successori sono chiamati CPU a 32 bit perché la maggior parte dei loro registri interni sono di 32 bit di dimensione. Dalla metà degli anni 2000, molte delle nuove CPU x86 sono state progettate a 64 bit, con registri larghi 64 bit. Le CPU x86 hanno un numero abbastanza elevato di registri.
+</p>
+
+<p align=justify>
+I registri svolgono molte funzioni, ma forse il loro compito più importante è quello di memorizzare gli indirizzi di posizioni importanti in memoria (l'indirizzo della prossima istruzione da eseguire, l'indirizzo all'inizio dello stack etc.). Se ricordi, l'8086 e l'8088 hanno 20 pin per il bus indirizzi, e il loro megabyte di memoria (che è la memoria segmentata in modalità reale di cui stiamo parlando) richiede indirizzi di 20 bit ($2^{20}=1MB$), ma i registri interni della CPU, e quindi anche quello per indirizzare la memoria, sono di 16 bit.
+</p>
+
+<p align=justify>
+Come si inserisce un indirizzo di memoria a 20 bit in un registro a 16 bit? Non lo si fa. Si inserisce un indirizzo a 20 bit in due registri a 16 bit. Ecco cosa succede: <b>tutte le posizioni (indirizzi) di memoria</b> nella memoria di un megabyte <b>sono composte da due parti</b>: <b>l'indirizzo di segmento</b> e <b>l'offset</b> all'interno di quel segmento del byte a cui vogliamo fare riferimento. Ogni byte in memoria si presume si trovi in un segmento. <b>L'indirizzo completo di un byte, quindi, consiste nell'indirizzo del suo segmento, insieme alla distanza del byte dall'inizio di quel segmento (detto offset)</b>. Ricorda che l'indirizzo del segmento è l'indirizzo del byte dove inizia il segmento che deve comunque trovarsi al limite di un paragrafo (alla fine di un blocco di 16 byte di memoria) quindi deve essere comunque un indirizzo il cui valore sia divisibile per 16. <b>La distanza del byte dall'inizio del segmento è l'indirizzo offset del byte</b>. Entrambi gli indirizzi devono essere specificati per descrivere completamente la posizione di un singolo byte all'interno del megabyte completo di memoria in modalità reale. Quando vengono scritti, l'indirizzo del segmento viene prima, seguito dall'indirizzo offset. I due sono separati da due punti. Gli indirizzi <b>segmento:offset</b> sono sempre scritti in esadecimale. Guarda la figura seguente per chiarire meglio questo concetto. Un byte di dati che chiameremo MyByte esiste in memoria presso la posizione contrassegnata in nero. Il suo indirizzo è dato come 0001:0019. Questo significa che MyByte si trova all'interno del segmento 0001H ed è situato 0019H byte dall'inizio di quel segmento. è una convenzione nella programmazione x86 che quando due numeri vengono utilizzati per specificare un indirizzo con un due punti tra di essi, non si termina ciascuno dei due numeri con una H per esadecimale. Gli indirizzi scritti nella forma segmento:offset si presume siano in esadecimale. L'universo è perverso e degli occhi acuti percepiranno che MyByte può avere altri due indirizzi legali perfettamente validi: 0000:0029 e 0002:0009. Come mai? Tieni presente che un segmento può iniziare ogni 16 byte in tutta la memoria reale di un megabyte. Un segmento, una volta iniziato, abbraccia tutti i byte dalla sua origine fino a 65.535 byte più in alto in memoria. Non c'è nulla di sbagliato con i segmenti che si sovrappongono, e nella figura in basso abbiamo tre segmenti sovrapposti. MyByte è a 2DH byte nel primo segmento, che inizia all'indirizzo segmento 0000H. MyByte è a 1DH byte nel secondo segmento, che inizia all'indirizzo segmento 0001H. Non è che MyByte si trovi in due o tre posti contemporaneamente. Si trova in un solo posto, ma quel posto può essere descritto in uno qualsiasi dei tre modi.
+</p>
+
+<p align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/mybyte.png">
+</p>
+
+<p align=justify>
+Un byte arbitrario in qualche punto del mezzo del megabyte di memoria della modalità reale può cadere in letteralmente migliaia di segmenti diversi. Quale segmento contiene effettivamente il byte è strettamente una questione di convenzione. In sintesi: esprimere un indirizzo a 20 bit in due registri a 16 bit significa mettere l'indirizzo del segmento in un registro a 16 bit e l'indirizzo di offset in un altro registro a 16 bit. I due registri presi insieme identificano un byte tra tutti i 1.048.576 byte nella memoria del megabyte della modalità reale.
+ </p>
+
+### I registri di segmento
+
+<p align=justify>
+L'8088, l'8086 e l'80286 hanno esattamente quattro registri di segmento specificamente designati come contenitori degli indirizzi di memoria dove ha inizio uno specifico segmento. I processori 386 e successivi ne hanno altri due che possono essere utilizzati anche in modalità reale. (Devi essere consapevole del modello di CPU su cui stai eseguendo il tuo codice se intendi utilizzare i due registri di segmento aggiuntivi, poiché le CPU più vecchie, precedenti il 386, non hanno affatto questi registri.) Ogni registro di segmento è una zona di memoria a 16 bit che esiste all'interno del chip della CPU stessa. Non importa cosa stia facendo la CPU, se sta indirizzando qualche locazione in memoria, allora l'indirizzo di segmento di quella locazione è presente in uno dei sei registri di segmento. I registri di segmento hanno nomi che riflettono le loro funzioni generali: CS, DS, SS, ES, FS e GS. FS e GS esistono solo nei processori Intel x86 386 e successivi, ma sono ancora di dimensioni 16 bit. <b>Tutti i registri di segmento sono di dimensioni 16 bit</b>, indipendentemente dalla CPU. Questo è vero anche per le CPU a 32 e 64 bit.
+</p>
+
+<p align=justify>
+<ul>
+	<li>
+		<b>CS</b> sta per segmento di codice. Le istruzioni della macchina esistono a un certo offset all'interno di un segmento di codice. L'indirizzo del segmento di codice dell'istruzione attualmente in esecuzione è contenuto in CS.
+	</li>
+	<li>
+		<b>DS</b> sta per segmento di dati. Le variabili e altri dati esistono a un certo offset in un segmento di dati. Potrebbero esserci molti segmenti di dati, ma la CPU può utilizzare solo uno alla volta, collocando l'indirizzo di quel segmento nel registro DS. 
+	</li>
+	<li>
+		<b>SS</b> sta per segmento di stack. Lo stack è un componente molto importante della CPU utilizzato per l'archiviazione temporanea di dati e indirizzi (chiamate a funzioni in C etc). Spiegheremo come funziona lo stack più avanti; per ora è sufficiente comprendere che, come tutto il resto all'interno del megabyte di memoria della modalità reale, lo stack ha un indirizzo di segmento, che è contenuto in SS.
+	</li>
+	<li>
+		<b>ES</b> sta per segmento extra. Il segmento extra è esattamente quello: un segmento di riserva che può essere utilizzato per specificare una posizione in memoria. 	</li>
+	<li>
+		<b>FS</b> e <b>GS</b> sono cloni di ES. Sono entrambi segmenti aggiuntivi senza un compito o specialità specifica. I loro nomi derivano dal fatto che sono stati creati dopo ES (pensa, E, F, G). Non dimenticare che esistono solo nelle CPU x86 386 e successive!
+	</li>
+</ul>
+</p>
+
+### I registri di segmento in x64
+
+<p align=justify>
+Ora, c'è qualcosa di strano riguardo ai registri di segmento nell'architettura x64: non vengono utilizzati nei programmi applicativi. Affatto. Pensateci: 64 bit possono identificare $2^{64}$ byte di memoria. In notazione scientifica decimale, sono $1,8 x 10^{19}$. Ad alta voce diremmo "o18 exabyte." Un exabyte è un miliardo di gigabyte, cioè un miliardo di miliardi di byte. Il punto fondamentale dei registri di segmento era permettere che 20 bit d'indirizzamento fossero gestiti da due registri da 16 bit. Quando un singolo registro da 64 bit può indirizzare quasi quanti più byte di memoria ci sono stelle nell'universo osservabile (non sto esagerando!), i registri di segmento diventano inutili, almeno nella programmazione applicativa. I sistemi operativi ne usano ancora due. Gli altri ci sono, ma possono causare problemi se cerchi di usarli. In breve, quando passi alla modalità lunga x64 (long x64), i familiari registri di segmento da 16 bit semplicemente scompaiono. Quindi, i processori x64 di Intel hanno 64 linee di indirizzo? No. Non c'è nemmeno circuiteria all'interno dei chip per supportare più di 48 bit di indirizzo nelle vecchie CPU x64. (Intel ha aumentato questo valore a 52 bit per alcune CPU high-end alcuni anni fa.) Da una prospettiva a 64 bit, i registri di segmento sono ormai storia.
+</p>
+
+### I registri General-Purpose
+
+<p align=justify>
+I registri di segmento esistono solo per contenere indirizzi di segmento. Possono essere costretti a fare poche altre cose in modalità reale, ma, in generale, i registri di segmento devono essere considerati specialisti nel contenere indirizzi di segmento. Le CPU x86 hanno un insieme di registri generalisti per svolgere il resto del lavoro del calcolo in linguaggio assembly. Tra le molte altre cose, <b>questi registri a uso generale vengono anche utilizzati per contenere gli indirizzi di offset</b> che devono essere abbinati agli indirizzi di segmento per individuare una singola posizione nella memoria. Contengono anche valori per le manipolazioni aritmetiche, per lo spostamento di bit (di più su questo più avanti) e molte altre cose. Sono davvero le tasche dell'artigiano all'interno della CPU.
+</p>
+
+<p align=justify>
+Ma qui arriviamo a una delle differenze più grandi e ovvie tra le vecchie CPU x86 a 16 bit (l'8086, l'8088 e l'80286) e le nuove CPU x86 a 32 e 64 bit a partire dal 386: la dimensione dei registri a uso generale. La 'bitness' del mondo è quasi interamente definita dalla larghezza dei registri della CPU x86. Il primordiale 8080 aveva registri a 8 bit. Le CPU x86 a 16 bit (l'8086, l'8088, l'80186 e l'80286) avevano registri a 16 bit. Le CPU x86 a 32 bit a partire dal 386 hanno registri a 32 bit. E nel mondo x64, le CPU hanno 14 registri a 64 bit a uso generale. Due registri aggiuntivi, il puntatore dello stack (stack pointer, <b>SP</b>) e il puntatore base (base pointer, <b>BP</b>), sono specialisti ed esistono nelle architetture a 16 bit, 32 bit e 64 bit. Il puntatore dello stack punta sempre alla cima dello stack. (Molto di più sullo stack nei paragrafi successivi.) Il puntatore base è un po' come un segnalibro e viene usato per accedere ai dati "più in basso" nello stack; ancora una volta, arriveremo allo stack alla fine, e spiegherò questo in modo più approfondito. Come i registri di segmento, i registri a uso generale x64 sono posizioni di memoria esistenti all'interno del chip della CPU stessa. I registri a uso generale sono davvero generalisti in quanto tutti condividono un ampio insieme di capacità. Tuttavia, alcuni dei registri a uso generale hanno anche quella che chiamo un'agenda nascosta: un compito o un insieme di compiti che solo esso può eseguire. Alcune delle agende nascoste sono in realtà limitazioni delle vecchie CPU a 16 bit. I nuovi registri generali a 32 bit e 64 bit sono molto più, beh, generali.
+</p>
+
+<p align=justify>
+Nel nostro attuale mondo a 64 bit, i registri a uso generale rientrano in quattro classi generali: i registri a uso generale a 16 bit, i registri a uso generale estesi a 32 bit, i registri a uso generale a 64 bit e le metà dei registri a 8 bit. Queste quattro classi non rappresentano affatto quattro insiemi completamente distinti di registri. I registri a 8 bit, a 16 bit e a 32 bit sono in realtà nomi di aree all'interno dei registri a 64 bit. L'espansione dei registri nella storica famiglia di CPU x86 è avvenuta estendendo registri già esistenti nelle CPU più vecchie. Aggiungere una stanza alla tua casa non la rende due case, ma solo una casa più grande. E così è stato con i registri x86. Ci sono otto registri a uso generale a 16 bit: AX, BX, CX, DX, BP, SI, DI e SP. (SP e BP sono un po' meno generali rispetto agli altri, ma ci arriveremo.) Questi registri esistevano tutti nelle CPU 8086, 8088, 80186 e 80286. Sono tutti di 16 bit di dimensione e puoi inserire in essi qualsiasi valore che possa essere espresso in 16 bit o meno. Quando Intel ha ampliato l'architettura x86 a 32 bit nel 1985, ha raddoppiato la dimensione di tutti e otto i registri e ha dato loro nuovi nomi aggiungendo una E all'inizio di ciascun nome di registro, producendo EAX, EBX, ECX, EDX, EBP, ESI, EDI ed ESP.
+Le cose cambiarono ancora nel 2003, quando Intel iniziò ad adottare l'architettura x64 di AMD. Ancora una volta, Intel aveva già la propria architettura a 64 bit, IA-64 Itanium, ma Itanium aveva alcune difficoltà tecniche sottili ma importanti nella sua microarchitettura. Intel quindi ingoiò il suo orgoglio e fece la cosa intelligente adottando l'architettura a 64 bit di successo di AMD. Purtroppo, l'8080 resta solo. La retrocompatibilità può estendersi solo fino a un certo punto prima di diventare più un problema che una caratteristica. L'architettura x64 ampliò la gamma di registri a uso generale da 32 a 64 bit. Questa volta il prefisso divenne R. Quindi ora invece del registro a 32 bit EAX, abbiamo RAX, e così via lungo l'elenco dei registri a 32 bit. Intel aggiunse anche otto nuovi registri a 64 bit che non erano mai stati parte della loro architettura prima. I loro nomi sono per lo più numeri: da R8 a R15. I registri x64 a 64 bit sono in verità registri all'interno di registri. Come molte cose, questo si mostra meglio che a dirlo. Dai un'occhiata alla figura seguente, che illustra come funziona con i registri x64 RAX e R8.
+RAX contiene EAX, AX, AH e AL. EAX contiene AX, AH e AL. AX contiene AH e AL. I nomi "RAX", "EAX", "AX", "AH" e "AL" sono tutti validi in x64. Puoi usare tutti questi nomi nei tuoi programmi in linguaggio assembly per accedere ai 64 bit contenuti in RAX o a determinate parti più piccole di esso. Vuoi accedere ai 32 bit inferiori di RAX? Usa il nome EAX. Vuoi accedere ai 16 bit più bassi di RAX? Usa AX.
+</p>
+
+<p align=center>
+<img src=https://github.com/TheBitPoets/2cornot2c/blob/main/images/registers_inside_registers.png>
+</p>
+
+<p align=justify>
+Quindi, nell'estensione a 64 bit gli otto registri originali furono ampliati a 64 bit, etichettati RAX, RBX, RCX, RDX, RSI, RDI, RBP, RSP. Inoltre, furono aggiunti otto nuovi registri, ai quali furono dati nomi secondo una nuova convenzione di denominazione: R8, R9, R10, R11, R12, R13, R14, R15
+</p>
+
+<p align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/general_purpose_register_32.png">
+</p>
+
+<p align=justify>
+Lo stesso vale per i quattro registri di uso generale RAX, RBX, RCX e RDX, ma c'è una particolare variazione: i 16 bit inferiori sono divisi in due metà da 8 bit ciascuna. Quindi, ciò che abbiamo sono nomi di registri su quattro livelli. I registri a 16 bit AX, BX, CX e DX sono presenti come le porzioni inferiori a 16 bit di EAX, EBX, ECX ed EDX, che a loro volta sono le porzioni inferiori a 32 bit di RAX, RBX, RCX e RDX. Ma AX, BX, CX e DX sono a loro volta divisi in metà da 8 bit, e gli assemblatori riconoscono nomi speciali per le due metà. Le lettere A, B, C e D sono mantenute, ma invece della X, si specifica una metà con una H (per la metà alta) o una L (per la metà bassa). Ogni metà di registro è grande 1 byte (8 bit). Pertanto, per formare il registro a 16 bit AX, hai le metà di registro di dimensione byte AH e AL; all"Tinterno di BX ci sono BH e BL, e così via. I nuovi registri x64 R8-R15 possono essere indirizzati come 64 bit, 32 bit, 16 bit e 8 bit. Tuttavia, lo schema AH/AL per i 16 bit inferiori è un trucco riservato solo a RAX-RDX. Lo schema di denominazione per i registri R fornisce un mnemonico: D per dword, W per word e B per byte. Ad esempio, se vuoi trattare gli 8 bit più bassi di R8, utilizzi il nome R8B. Non commettere l'errore da principiante di assumere che R8, R8D, R8W e R8B siano quattro registri separati e indipendenti! Una metafora migliore è pensare ai nomi dei registri come paese/stato/contea/città. Una città è una piccola porzione di una contea, che è una piccola porzione di uno stato, e così via. Se scrivi un valore in R8B, cambi il valore memorizzato in R8, R8D e R8W.
+Ancora una volta, questo può essere mostrato meglio graficamente. La figura seguente è un'espansione della figura precedente e questa volta include tutti i registri a uso generale dell'x64. Questi registri sono una sorta di 'metà bassa'. A parte AH, BH, CH e DH, non c'è un nome per la metà alta di qualsiasi registro a uso generale. Naturalmente, è possibile accedere alla metà alta di qualsiasi registro utilizzando più di un'istruzione macchina. Non puoi semplicemente farlo per nome in un colpo solo, a meno che tu non stia trattando con le quattro eccezioni a 8 bit menzionate sopra. Essere in grado di trattare i registri AX, BX, CX e DX come metà da 8 bit può essere estremamente utile in situazioni in cui stai manipolando molte quantità da 8 bit. Ogni metà del registro può essere considerata un registro separato, dandoti il doppio del numero di posti dove mettere le cose mentre il tuo programma lavora. Come vedrai più avanti, trovare un posto dove incollare un valore in un momento critico è una delle grandi sfide che affrontano i programmatori di linguaggio assembly.
+</p>
+
+<p align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/8_16_32_64_bit_registers.png">
+</p>
+
+
+<p align=justify>
+Ciascuno dei quattro registri mostrati nella figura precedente è di dimensione 32 bit. Tuttavia, in ciascun registro, i 16 bit inferiori hanno un proprio nome. I 16 bit inferiori di ESI, ad esempio, possono essere referenziati come SI. I 16 bit inferiori di EDI possono essere referenziati come DI. Se stai scrivendo programmi da eseguire in modalità reale su una macchina 8088 come il vecchio IBM PC, puoi fare riferimento solo alla parte DI: i 16 bit superiori non esistono su quella CPU! Sfortunatamente, i 16 bit superiori dei registri generali a 32 bit non hanno nomi propri. Puoi accedere ai 16 bit bassi di ESI come SI, ma per accedere ai 16 bit superiori, devi fare riferimento a ESI e ottenere l'intero pacchetto a 32 bit.
+</p>
+
+<p align=justify>
+Ciò discusso sopra per i registri ESI, EDI, EBP, ESP vale anche per gli altri quattro registri generali, EAX, EBX, ECX ed EDX. C'è un'ulteriore particolarità per tutti questi registri: i 16 bit inferiori sono suddivisi in due metà da 8 bit, quindi ciò che abbiamo sono nomi di registri non su due ma su tre livelli. I registri a 16 bit AX, BX, CX e DX sono presenti come le porzioni inferiori a 16 bit di EAX, EBX, ECX ed EDX; ma AX, BX, CX e DX stessi sono divisi in metà da 8 bit, e gli assemblatori riconoscono nomi speciali per le due metà. Le lettere A, B, C e D sono conservate, ma invece della X, una metà è specificata con un H (per metà alta) o un L (per metà bassa). Ogni metà del registro è grande un byte (8 bit). Così, formando il registro a 16 bit AX, hai le metà del registro di dimensione byte AH e AL; all'interno di BX ci sono BH e BL, e così via. Ancora una volta, questo può essere compreso meglio osservando la figura seguente. 
+</p>
+
+<p align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/general_purpose_register_16.png">
+</p>
+
+ <p align=justify>
+Come accennato in precedenza, una peculiarità di questo sistema è che non esiste un nome per la porzione alta a 16 bit dei registri a 32 bit. In altre parole, puoi leggere i 16 bit inferiori di EAX specificando AX in un'istruzione del linguaggio assembly, ma non c'è modo di specificare i 16 bit superiori da soli. Questo mantiene le convenzioni di denominazione per i registri un po' più semplici e la mancanza non è avvertita così spesso come potresti pensare. Una cosa da sapere sui registri a 8 bit è che puoi leggere e modificare una metà di un numero a 16 bit senza disturbare l'altra metà. Questo significa che se inserisci il valore esadecimale 76E9H nel registro AX, puoi leggere il valore di un byte 76H dal registro AH e E9H dal registro AL. Ancora meglio, se poi memorizzi il valore 0AH nel registro AL e poi leggi di nuovo il registro AX, scoprirai che il valore originale di 76E9H è stato cambiato in 760AH. Essere in grado di trattare i registri AX, BX, CX e DX come metà a 8 bit può essere estremamente utile in situazioni in cui stai manipolando molte quantità a 8 bit. Ogni metà del registro può essere considerata un registro separato, offrendoti il doppio dei posti per mettere le cose mentre il tuo programma lavora.
+</p>
+
+<p align=justify>
+Quindi riassumendo, una CPU x86-64 contiene un insieme di 16 registri a uso generale che memorizzano valori a 64 bit. Questi registri sono utilizzati per memorizzare dati interi e puntatori. Nella figura seguente, i loro nomi iniziano tutti con %r (register), ma seguono altrimenti diverse convenzioni di denominazione, a causa dell'evoluzione storica dell'insieme di istruzioni. <b>L'originale 8086 aveva otto registri a 16 bit</b>, denominati AX, BX, CX, DX, SI, DI, BP, SP. Ognuno aveva uno scopo specifico, e pertanto furono dati nomi che riflettevano come dovevano essere utilizzati. è possibile accedere al byte meno significativo di questi registri a 16 bit usando la L (low) e quindi avremo AL, BL, CL, DL, SIL, DIL, BPL, SPL, e usare la H (high) per il byte più significativo: AH, BH, CH, DH, SIH, DIH, BPH, SPH. <b>Con l'estensione a IA32</b> (estensione a 32 bit), questi registri furono ampliati a registri a 32 bit, etichettati EAX, EBX, ECX, EDX, ESI, EDI, EBP, ESP. Non si possono leggere i 16 bit più significativi di questi 32 come invece accade per i registri a 16. <b>Nell'estensione a x86-64</b>, gli otto registri originali furono ampliati a 64 bit, etichettati RAX, RBX, RCX, RDX, RSI, RDI, RBP, RSP e furono aggiunti otto nuovi registri, usando una nuova convenzione di denominazione: R8, R9, R10, R11, R12, R13, R14, R15. Le istruzioni del set x86-64 possono operare su dati di diverse dimensioni memorizzati nei byte a ordine inferiore dei 16 registri. Le operazioni a livello di byte possono accedere al byte meno significativo, le operazioni a 16 bit possono accedere ai 2 byte meno significativi, le operazioni a 32 bit possono accedere ai 4 byte meno significativi, e le operazioni a 64 bit possono accedere all'intero registro.
+</p>
+
+<p align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/general_purpose_register_64.png">
+</p>
+
+### Instruction Pointer
+
+<p align=justify>
+IP è un altro tipo di registro che vive all'interno di tutte le CPU Intel, compresa la x64. Il puntatore di istruzione IP (instruction pointer) è in una classe a parte. In modalità a 16 bit, il puntatore di istruzione viene semplicemente chiamato IP. In modalità a 32 bit, è EIP. In x64, è RIP. In tutti i casi, tuttavia, questo registro non è accessibile direttamente dal programmatore assembly. Viene invece accesso in modo indiretto quando si esegue un salto, una branch condizionale, una chiamata di procedura o un'interruzione. In una discussione generale non limitata a una modalità particolare, seguirò la convenzione e lo chiamerò IP. In radicale contrasto con il gruppo dei veri registri a uso generale, IP è uno specialista d'eccellenza, più uno specialista dei registri di segmento stessi. Può fare solo una cosa: <b>contiene l'indirizzo offset della prossima istruzione macchina da eseguire nel segmento di codice corrente</b>. <b>Un segmento di codice è un'area di memoria in cui sono memorizzate le istruzioni macchina</b>. <b>A seconda del modello di memoria che stai utilizzando, potrebbero esserci molti segmenti di codice in un programma, oppure (nella maggior parte dei casi) solo uno</b>. <b>Il segmento di codice corrente è quel segmento di codice il cui indirizzo di segmento è attualmente memorizzato nel registro del segmento di codice CS</b>. In un dato momento, l'istruzione macchina attualmente in esecuzione esiste all'interno del segmento di codice corrente. Nel modello segmentato a modalità reale, il valore in CS può cambiare frequentemente. Nei modelli piatti (che includono la modalità lunga x64), il valore in CS non cambia quasi mai, e certamente non cambia su richiesta di un programma applicativo. Gestire i segmenti di codice e il puntatore di istruzione è ora compito del sistema operativo. Questo è particolarmente vero nella modalità lunga x64, dove c'è solo un segmento che contiene tutto, e i registri di segmento hanno così poco da fare nello spazio utente che sono praticamente invisibili ai programmi in spazio utente come quelli che scrivi.
+</p>
+
+<p align=justify>
+Durante l'esecuzione di un programma, la CPU utilizza l'IP per tenere traccia di dove si trova nel segmento di codice corrente. Ogni volta che viene eseguita un'istruzione, l'IP viene incrementato di un certo numero di byte. Il numero di byte corrisponde alla dimensione dell'istruzione appena eseguita. Il risultato netto è spostare ulteriormente l'IP nella memoria in modo che punti all'inizio della prossima istruzione da eseguire. Le istruzioni possono avere dimensioni diverse, che variano tipicamente da 1 a 15 byte. La CPU conosce la dimensione di ogni istruzione che esegue. è attenta a incrementare l'IP esattamente del giusto numero di byte in modo che punti effettivamente all'inizio della prossima istruzione e non semplicemente a metà dell'ultima istruzione o a metà di qualche altra istruzione del tutto.
+</p>
+
+<p align=justify>
+Se l'IP contiene l'indirizzo di offset della prossima istruzione macchina, dov'è l'indirizzo del segmento? <b>L'indirizzo del segmento è conservato nel registro del segmento di codice CS</b>. <b>Insieme, CS e IP contengono l'indirizzo completo della prossima istruzione macchina da eseguire</b>. La natura di questo indirizzo dipende da quale CPU stai utilizzando e per quale modello di memoria lo stai utilizzando. Negli 8086, 8088 e (di solito) 80286, l'IP ha una dimensione di 16 bit. Nelle CPU 386 e successive, l'IP (come tutti gli altri registri tranne i registri di segmento) passa a 32 bit di dimensione e diventa EIP.
+</p>
+
+<p align=justify>
+Nel modello a segmenti in modalità reale, CS e IP lavorano insieme per fornire un indirizzo a 20 bit che punta a uno dei 1.048.576 byte nella memoria in modalità reale. Nei modelli flat (di cui parleremo tra breve), CS è impostato dal sistema operativo e mantenuto costante. IP gestisce tutto il puntamento delle istruzioni con cui tu, programmatore, devi interfacciarti. Nel modello flat a 16 bit (modello flat in modalità reale), ciò significa che IP può seguire l'esecuzione delle istruzioni attraverso un intero segmento di memoria di 64 KB. Il modello flat a 32 bit fa molto più del doppio di questo; 32 bit possono rappresentare 4.294.967.290 indirizzi di memoria differenti. In modalità lunga a 64 bit, bene, RIP può indirizzare tanta memoria quanto tu potresti inserire nella macchina nel corso della tua vita e certamente nella mia. Le opinioni sono divise su se mai ci saranno CPU a 128 bit. IP è noto per essere l'unico registro che non può né essere letto né scritto direttamente. Ci sono trucchi che possono essere usati per ottenere il valore corrente in IP, ma avere il valore di IP non è così utile come potresti pensare, e non dovrai farlo molto spesso.
+</p>
+
+### Flags Register
+
+<p align=justify>
+C'è un altro tipo di registro all'interno della CPU: quello che chiamiamo genericamente registro dei flag. Ha una dimensione di 16 bit nell'8086, 8088 e 80286, e il suo nome formale è FLAGS. Ha una dimensione di 32 bit nelle CPU a 32 bit, e il suo nome formale nelle CPU a 32 bit è EFLAGS. Il registro RFLAGS in x64 è di 64 bit. Poco meno della metà dei bit nel registro RFLAGS sono utilizzati come registri a bit singolo chiamati flag. (Il resto è non definito.) Ognuno di questi flag individuali ha un nome con un'abbreviazione di due caratteri, come CF, DF, OF, e così via, e ogni flag ha un significato molto specifico all'interno della CPU. Poiché un singolo bit può contenere solo due valori, 1 o 0, testare un flag in linguaggio assembly è davvero un affare a due vie: o il valore di un flag è 1 o non lo è. Quando il valore del flag è 1, diciamo che il flag è impostato. Quando il valore del flag è 0, diciamo che il flag è azzerato. Quando il tuo programma esegue un test, quello che testa è uno o occasionalmente due dei flag a bit singolo nel registro RFLAGS. Poi prende un percorso di esecuzione separato a seconda dello stato del flag o dei flag. Ci sono istruzioni di salto separate per tutti i flag comuni, e alcune di più per testare coppie specifiche di flag. Il registro RFLAGS non è quasi mai trattato come un'unità a meno che i flag non vengano salvati nello stack. Al momento ci stiamo concentrando sull'indirizzamento in memoria, quindi per ora prometto semplicemente di approfondire la lore dei flag in modo più dettagliato in momenti più appropriati più avanti.
+</p>
+
+### Math Coprocessors and Registers
+
+<p align=justify>
+Sin dalla CPU 80486DX a 32 bit, c'è stato un coprocessore matematico sullo stesso chip di silicio con la CPU generica. Nei tempi antichi, il chip matematico era un circuito integrato completamente separato che si collegava al proprio socket sulla scheda madre. Le CPU x64 sono tutte dotate di coprocessori matematici integrati, con i propri registri e istruzioni macchina. L'architettura x64 utilizza la terza generazione di coprocessore matematico, AVX. Le architetture MMX e SSE sono le prime due generazioni e sono state introdotte prima di AVX. Spesso ci si pone la domanda: quando avremo CPU a 128 bit? La verità è che li abbiamo già, per le cose che contano. L'unico luogo in cui i registri a 128 bit sono essenziali è nelle applicazioni matematiche avanzate, come la modellazione 3D, l'elaborazione video, la crittografia, la compressione dei dati e l'intelligenza artificiale. Tutte le CPU moderne che incorporano il coprocessore SSE hanno registri a 128 bit per l'uso del coprocessore matematico. (La CPU generica non può utilizzarli direttamente.) E non finisce qui. Il coprocessore AVX alza la posta in gioco a 256 bit. E AVX 512, introdotto nel 2021, in gran parte per le CPU dei server, può fare i suoi calcoli nei registri a 512 bit. Con registri matematici a 128, 256 e 512 bit disponibili per l'elaborazione di numeri, non ha molto senso espandere i registri GP a 128 bit. I 64 bit sono ampiamente visti come una sorta di "punto debole" per l'informatica generica e dovrebbero rimanere tali per molto tempo. è ben al di fuori del nostro scopo spiegare come usare l'SSE, tanto meno l'AVX. Un buon trattamento per principianti può essere trovato in Beginning x64 Assembly Programming di Jo Van Hoey (Apress, 2019). La programmazione del coprocessore matematico è sottile e complessa. Consiglierei di diventare ragionevolmente fluenti nell'assemblaggio x64 ordinario prima di immergersi nel lato matematico.
+</p>
+
+### I quattro principali modelli di programmazione per x86
+
+<p align="justify">
+Ci sono quattro modelli di programmazione principali disponibili per l'uso sulle CPU Intel a 64 bit, sebbene due di essi siano ora considerati arcaici. Le differenze tra di essi risiedono (per lo più) nell'uso dei registri per indirizzare la memoria. (E le altre differenze, specialmente nella fascia alta, sono per la maggior parte nascoste da te dal sistema operativo.) In questa sezione, riassumerò i quattro modelli per riferimento storico. Solo uno di essi, la modalità lunga x64, verrà trattato in dettaglio successivamente.
+</p>
+
+
+## Real Mode Flat Model (modello piatto in modalità reale)
+
+<p align=justify>
+In modalità reale, se ricordi, la CPU può vedere solo un megabyte (1.048.576) di memoria. Puoi accedere a ogni singolo byte di quel milione utilizzando il trucco del registro segmento:offset mostrato in precedenza per formare un indirizzo a 20 bit da due indirizzi a 16 bit contenuti in due registri. Oppure, puoi accontentarti di 64K di memoria e non preoccuparti affatto dei segmenti. Nel modello piatto della modalità reale, il tuo programma e tutti i dati su cui lavora devono esistere all'interno di un singolo blocco di memoria di 64K. Sessantaquattro kilobyte! Cosa potresti mai realizzare in soli 64K di byte? Bene, la prima versione di WordStar per l'IBM PC stava in 64K. Anche i primi tre rilasci principali di Turbo Pascal - in effetti, il programma Turbo Pascal stesso occupava molto meno di 64K perché compilava i suoi programmi in memoria. L'intero pacchetto Turbo Pascal - compilatore, editor di testo e alcuni strumenti vari - arrivò a poco più di 39K. Trentuno kilobyte! Non riesci nemmeno a scrivere una lettera a tua madre (usando Microsoft Word) in quel poco spazio al giorno d'oggi!
+</p>
+
+<p align=justify>
+Cose spettacolari sono successe una volta in 64K, e mentre potresti non essere mai chiamato a limitarti al modello piatto in modalità reale, la disciplina che tutti quei programmatori ora con i capelli grigi hanno sviluppato a causa del numero limitato di risorse è molto utile. Più precisamente, il modello piatto in modalità reale è il "fratello minore" del modello piatto in modalità protetta, che è il modello di codice che userai quando programmi sotto Linux. Se impari i modi del modello piatto in modalità reale, il modello piatto in modalità protetta sarà un gioco da ragazzi. (Qualsiasi problema avrai non sarà con il codice assembly o i modelli di memoria, ma con i requisiti bizantini di Linux e le sue librerie di codice canoniche.) Il modello piatto in modalità reale è mostrato graficamente nella figura seguente. Non c'è molto da dire. I registri di segmento sono tutti impostati per puntare all'inizio del blocco di 64K di memoria con cui puoi lavorare. (Il sistema operativo li imposta quando carica ed esegue il tuo programma.) Tutti puntano a quello stesso posto e non cambiano mai finché il tuo programma è in esecuzione. Nessun registro di segmento, niente inganni con i segmenti, e nessuna delle brutte complicazioni che vengono con essi. Poiché un registro a 16 bit come BX può contenere qualsiasi valore da 0 a 65.535, può localizzare qualsiasi singolo byte all'interno del pieno 64K con cui il tuo programma deve lavorare. L'indirizzamento della memoria può quindi avvenire senza l'uso esplicito dei registri di segmento. I registri di segmento continuano a funzionare, ovviamente, dal punto di vista della CPU. Non scompaiono e sono ancora presenti, ma il sistema operativo li imposta a valori a sua scelta quando avvia il tuo programma, e quei valori saranno validi finché il tuo programma è in esecuzione. Non è necessario accedere ai registri di segmento in alcun modo per scrivere il tuo programma.
+</p>
+
+<p align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/real_mode_flat_model.png">
+</p>
+
+<p align=justify>
+La maggior parte dei registri generali può contenere indirizzi di posizioni in memoria. Li usi in combinazione con le istruzioni della macchina per prelevare dati dalla memoria e scriverli di nuovo.
+In cima al segmento singolo in cui esiste il tuo programma, vedrai una piccola regione chiamata stack. Lo stack è una posizione di memorizzazione last in, first out (LIFO) con alcune proprietà e usi molto speciali. Spiegherò cos'è lo stack e come funziona in dettaglio successivamente.
+</p>
+
+## Real Mode Segmented Model (modello segmentato in modalità reale)
+
+<p align=justify>
+Il modello segmentato in modalità reale era il modello di programmazione principale durante l'era MS-DOS, ed entra ancora in gioco quando si avvia una finestra MS-DOS per eseguire software 'legacy'. è un sistema complicato e brutto che richiede di ricordare molte piccole regole e insidie, ma è utile da comprendere perché illustra molto chiaramente la natura e la funzione dei segmenti. Si noti che sotto entrambi i modelli piatti è possibile strizzare un po' gli occhi e fingere che i segmenti e i registri di segmento non esistano realmente, ma sono entrambi ancora lì e funzionano, e una volta che ci si addentra in alcuni degli stili di programmazione più esotici, sarà necessario essere consapevoli di essi e comprendere come funzionano. Nel modello segmentato in modalità reale, il tuo programma può vedere l'intero 1 MB di memoria disponibile per la CPU in modalità reale. Ciò avviene combinando un indirizzo segmento a 16 bit con un indirizzo offset a 16 bit. Tuttavia, non si tratta semplicemente di unirli in un indirizzo a 32 bit. Devi tornare alla discussione sui segmenti nei paragrafi precedenti. Un indirizzo di segmento non è realmente un indirizzo di memoria. Un indirizzo di segmento specifica uno dei 65.536 spazi in cui un segmento può iniziare. Uno di questi spazi esiste ogni 16 byte dalla parte inferiore della memoria fino alla parte superiore. L'indirizzo di segmento 0000H specifica il primo di tali spazi, in corrispondenza della prima posizione nella memoria. L'indirizzo di segmento 0001H specifica il successivo spazio, che si trova 16 byte più in alto nella memoria. Saltando ulteriormente nella memoria altri 16 byte si arriva all'indirizzo di segmento 0002H, e così via. Puoi tradurre un indirizzo di segmento in un effettivo indirizzo di memoria a 20 bit moltiplicandolo per 16. L'indirizzo di segmento 0002H è quindi equivalente all'indirizzo di memoria 0020H, che è il 32° byte nella memoria.
+</p>
+
+<p align=justify>
+Ma tale moltiplicazione non è qualcosa che devi fare. La CPU gestisce internamente la combinazione dei segmenti e degli offset in un indirizzo completo a 20 bit. Il tuo compito è dire alla CPU dove si trovano i due diversi componenti di quell'indirizzo a 20 bit. La notazione consueta è separare il registro del segmento dal registro dell'offset con due punti, come mostrato nel seguente esempio:
+</p>
+
+<ul>
+  <li>
+    <p align="justify">
+    SS:SP
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    SS:BP
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    ES:DI
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    DS:SI
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    CS:BX
+    </p>
+  </li>
+</ul>
+
+<p align=justify>
+Ognuna di queste cinque combinazioni di registri specifica un indirizzo completo a 20 bit. ES:DI, ad esempio, specifica l'indirizzo come la distanza in DI dall'inizio del segmento indicato in ES.
+</p>
+
+<p align=justify>
+Il diagramma sottostante delinea il modello segmentato in modalità reale. In contrasto con il modello piatto in modalità reale (mostrato nella figura precedente), il diagramma qui mostra tutta la memoria, non solo il piccolo blocco di 64K che il tuo programma del modello piatto in modalità reale può allocare quando viene eseguito. Un programma scritto per il modello segmentato in modalità reale può vedere tutta la memoria della modalità reale (1MB).
+</p>
+
+<p align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/real_mode_segmented_model.png">
+</p>
+
+<p align=justify>
+Il diagramma mostra due segmenti di codice e due segmenti di dati. In pratica, puoi avere un numero ragionevole di segmenti di codice e di dati, non solo due di ciascuno. Puoi accedere a due segmenti di dati contemporaneamente, perché hai due registri di segmento disponibili per svolgere il lavoro: DS ed ES. (Nei processori 386 e successivi, hai due registri di segmento aggiuntivi, FS e GS.) Ognuno può specificare un segmento di dati e puoi trasferire dati da un segmento all'altro utilizzando alcune istruzioni macchina. Tuttavia, hai solo un registro di segmento di codice, CS. CS punta sempre al segmento di codice corrente e la prossima istruzione da eseguire è puntata dal registro IP. Non carichi valori direttamente in CS per passare da un segmento di codice a un altro. Le istruzioni macchina chiamate salti cambiano il segmento di codice necessario. Il tuo programma può estendersi su diversi segmenti di codice e quando un'istruzione di salto (di cui esistono diversi tipi) deve portare l'esecuzione in un altro segmento di codice, cambia il valore in CS per te.
+</p>
+
+<p align=justify>
+Esiste un solo segmento di stack per ogni singolo programma, specificato dal registro del segmento di stack SS. Il registro SP punta all'indirizzo di memoria (relativo a SS, anche se nella direzione capovolta) in cui avrà luogo la successiva operazione dello stack. Lo stack richiede spiegazioni considerevoli, che riprenderò in diversi punti più avanti. è necessario tenere presente che in modalità reale ci saranno parti del sistema operativo (e se si utilizza un 8086 o un 8088, sarà l'intero sistema operativo) in memoria insieme al tuo programma, oltre a importanti tabelle di dati di sistema. è possibile distruggere parti del sistema operativo con l'uso incauto dei registri di segmento: questo causerà l'arresto anomalo del sistema operativo e porterà con sé il programma. Questo è il pericolo che ha spinto Intel a creare nuove funzionalità nelle sue CPU 80386 e successive per supportare una modalità "protetta". In modalità protetta, i programmi applicativi, ovvero i programmi scritti dall'utente, anziché il sistema operativo o i driver di periferica, non possono eliminare il sistema operativo o altri programmi applicativi in esecuzione in un altro punto della memoria tramite il multitasking. Questo è ciò che significa protetto. Infine, anche se è vero che c'era una sorta di rudimentale modalità protetta presente nell'80286, nessun sistema operativo l'ha mai veramente usata, e non vale la pena discuterne oggi.
+</p>
+
+### 32-Bit Protected Mode Flat Model
+
+<p align=justify>
+Le CPU di Intel hanno implementato un'ottima architettura in modalità protetta fin da quando il 386 è apparso nel 1986. Tuttavia, i programmi applicativi non possono fare uso della modalità protetta da soli. Il sistema operativo deve impostare e gestire una modalità protetta prima che i programmi applicativi possano funzionare al suo interno. MS-DOS non poteva farlo, e Microsoft Windows non poteva davvero farlo nemmeno fino all'apparizione di Windows NT nel 1994. Linux, non avendo problemi di 'legacy' in modalità reale da affrontare, ha operato in modalità protetta fin dalla sua prima apparizione nel 1992. I programmi in linguaggio assembly in modalità protetta possono essere scritti sia per Linux che per le versioni di Windows da NT in poi. (Escludo Windows 9x per motivi tecnici. Il suo modello di memoria è un ibrido proprietario bizzarro tra modalità reale e modalità protetta, molto difficile da comprendere completamente e ora quasi completamente irrilevante.)
+</p>
+
+<p align=justify>
+Nota bene che i programmi scritti per Windows non devono necessariamente essere di natura grafica. Il modo più semplice per programmare in modalità protetta sotto Windows è creare applicazioni console, che sono programmi in modalità testo che vengono eseguiti in una finestra di testo chiamata console. La console è controllata attraverso una riga di comando quasi identica a quella di MS-DOS. Le applicazioni console utilizzano il modello piatto in modalità protetta e sono abbastanza semplici rispetto alla scrittura di applicazioni GUI per Windows. La modalità predefinita per Linux è una console testuale, quindi è ancora più facile creare programmi in assembly per Linux. Il modello di memoria è molto simile. Il modello piatto in modalità protetta è mostrato nella figura seguente.
+</p>
+
+<p align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/protected_mode_flat_model.png">
+</p>
+
+<p align=justify>
+Il tuo programma vede un singolo blocco di indirizzi di memoria che vanno da zero a poco più di 4 gigabyte. Ogni indirizzo è una quantità a 32 bit. Tutti i registri a uso generale sono di dimensioni 32 bit, quindi un registro GP può puntare a qualsiasi posizione nello spazio di indirizzi completo di 4 GB. Il puntatore di istruzione è anch'esso di 32 bit, quindi EIP può indicare qualsiasi istruzione macchina ovunque nei 4 GB di memoria. I registri di segmento esistono ancora, ma funzionano in un modo radicalmente diverso. Non solo non devi preoccuparti di loro; non puoi farlo. I registri di segmento sono ora considerati parte del sistema operativo e nella quasi totalità dei casi non puoi né leggerli né modificarli direttamente. Il loro nuovo compito è definire dove esiste il tuo spazio di memoria da 4 GB nella memoria fisica o virtuale. La memoria fisica può essere molto più grande di 4 GB, e attualmente 4 GB di memoria non sono particolarmente costosi. Tuttavia, un registro a 32 bit può esprimere solo 4.294.967.296 posizioni diverse. Se hai più di 4 GB di memoria nel tuo computer, il sistema operativo deve organizzare una regione da 4 GB all'interno della memoria, e i tuoi programmi sono limitati a operare in questa regione. Definire dove nel tuo sistema di memoria più grande si trova questa regione da 4 GB è compito dei registri di segmento, e il sistema operativo li tiene molto vicini ai suoi interessi.
+</p>
+
+<p align=justify>
+La memoria virtuale è un sistema per il quale uno spazio di memoria molto più grande può essere "mappato" su uno spazio di archiviazione su disco, in modo che anche con solo 4 GB di memoria fisica nella tua macchina, la CPU possa indirizzare uno spazio di memoria "virtuale" di milioni di byte più grande. Ancora una volta, questo è gestito dal sistema operativo in un modo che è quasi completamente trasparente al software che scrivi. è sufficiente capire che quando il tuo programma viene eseguito, riceve uno spazio di indirizzi di 4 GB in cui lavorare, e qualsiasi registro a 32 bit può potenzialmente indirizzare uno qualsiasi di quei 4 miliardi di locazioni di memoria, tutto da solo. Questa è una semplificazione eccessiva, specialmente per i normali PC desktop basati su Intel. Non tutti i 4 GB sono a disposizione del tuo programma, e ci sono certe parti dello spazio di memoria che non puoi usare e nemmeno guardare. Purtroppo, le regole sono specifiche per il sistema operativo che stai eseguendo e non posso generalizzare troppo senza specificare Linux o Windows NT o qualche altro sistema operativo in modalità protetta. Ma vale la pena confrontare il modello piatto in modalità reale con il modello piatto in modalità protetta. La principale differenza è che nel modello piatto in modalità reale, il tuo programma possiede l'intero spazio di 64K di memoria che il sistema operativo gli restituisce. Nel modello piatto in modalità protetta, ti viene data una porzione di 4 GB di memoria come tua, mentre altre porzioni appartengono ancora al sistema operativo. A parte ciò, le somiglianze sono sorprendenti: un registro a uso generale (GP) può da solo specificare qualsiasi locazione di memoria nell'intero spazio degli indirizzi di memoria, e i registri di segmento sono realmente gli strumenti del sistema operativo, non del programmatore. (Ancora una volta, nel modello piatto in modalità protetta, un registro GP può contenere l'indirizzo di qualsiasi locazione nel suo spazio di 4 GB, ma tentare di leggere o scrivere effettivamente in certe locazioni sarà vietato dal sistema operativo e causerà un errore di esecuzione.)
+</p>
+
+<p align=justify>
+Nota che non abbiamo ancora parlato in dettaglio delle istruzioni della macchina, e siamo stati in grado di definire in modo piuttosto chiaro l'universo in cui esistono e funzionano le istruzioni della macchina. L'indirizzamento della memoria e i registri sono fondamentali in questo settore. Se li conosci, le istruzioni saranno un gioco da ragazzi. Se non li conosci, le istruzioni non ti saranno di aiuto! La difficoltà nella programmazione per la modalità protetta con il modello flat risiede nella comprensione del sistema operativo, dei suoi requisiti e delle sue restrizioni. Questo può richiedere una quantità sostanziale di apprendimento: Windows NT e Linux sono sistemi operativi principali che possono richiedere anni di studio per essere compresi bene.
+</p>
+
+### Memory Mapped Video
+
+<p align=justify>
+Il PC IBM originale utilizzava un meccanismo molto semplice ed estremamente ingegnoso per visualizzare testo e grafica a bassa risoluzione (secondo gli standard odierni). Una scheda video conteneva una certa quantità di memoria, e questa memoria era 'mappata' nello spazio di memoria fisica del PC. In altre parole, non c'era nulla di 'magico' nell'accesso alla memoria della scheda video. Semplicemente scrivendo dati a un indirizzo di memoria segmento:offset da qualche parte nel range di memoria contenuta sulla scheda video, qualcosa veniva visualizzato sul monitor. Questa tecnica consentiva ai programmi di visualizzare schermate complete di testo che apparivano 'all'improvviso', senza alcuna sensazione che il testo apparisse gradualmente dall'alto verso il basso, anche su macchine antiche con chip CPU incredibilmente lenti. L'organizzazione del buffer di memoria era semplice: partendo dall'indirizzo 0B00:0 (o 0B800:0 per display a colori) c'era un array di parole a due byte. Il primo byte in ciascuna parola era un codice di carattere ASCII. Ad esempio, il numero 41H codificava la lettera maiuscola 'A'. Il secondo byte era un attributo di testo: il colore del glifo, il colore della parte di sfondo della cella del carattere, o presentazioni speciali come la sottolineatura.
+</p>
+
+<p align=justify>
+Questo sistema ha reso molto facile e molto veloce visualizzare il testo utilizzando librerie di linguaggio assembly relativamente semplici. Sfortunatamente, l'accesso diretto alla scheda video e alle periferiche di sistema è una violazione delle protezioni della modalità protetta. Il perché è semplice: la modalità protetta rende possibile l'esecuzione di più programmi contemporaneamente e, se più di un programma in esecuzione tentasse di modificare contemporaneamente la memoria video, ne risulterebbe un caos video. Il buon vecchio DOS era rigorosamente un sistema operativo a singola attività, quindi comunque solo un programma era in esecuzione alla volta. Per avere il multitasking in un modo che abbia senso, un sistema operativo deve gestire l'accesso al video, attraverso intricate librerie di codice di visualizzazione video che a loro volta accedono all'hardware di visualizzazione tramite software driver che girano accanto al kernel nello spazio del kernel. I driver consentono al sistema operativo di confinare l'output video di un singolo programma a una finestra sullo schermo, in modo che qualsiasi numero ragionevole di programmi in esecuzione possa visualizzare la propria uscita simultaneamente senza sovrapporsi all'uscita degli altri programmi. Ora, detto ciò, c'è un modo per impostare un buffer nella memoria utente e poi dire a Linux di usarlo per la visualizzazione video. Questo comporta un certo lavoro intorno al dispositivo framebuffer di Linux dev/fb0 e alle funzioni mmap e ioctl, ma non è affatto semplice ed è ben lontano dall'essere veloce. Il meccanismo è utile per portare antichi programmi DOS su Linux, ma per i nuovi programmi è di gran lunga più problematico di quanto ne valga la pena.
+</p>
+
+### Accesso diretto alle porte hardware
+
+<p align=justify>
+Negli anni del DOS, i PC avevano porte seriali e parallele controllate da chip di controllo separati sulla scheda madre. Come tutto il resto nella macchina, questi chip di controllo potevano essere accessibili direttamente da qualsiasi software in esecuzione sotto DOS. Scrivendo valori di controllo mappati a bit nei chip e creando routine di servizio per interruzioni personalizzate, si poteva creare software per interfacce seriali su misura, che permetteva ai lenti modem dial-up da 300 caratteri al secondo di quell'epoca di funzionare alla velocità massima possibile. Questo era normale, ma con un po' di ingegno si potevano far fare all'hardware standard del computer cose per cui non era realmente destinato. Ancora una volta, come per il video, i requisiti del multitasking richiedono che il sistema operativo gestisca l'accesso alle porte, cosa che fa attraverso driver e librerie di codice; ma a differenza del video, usare driver per interfacciarsi con le porte è in realtà molto più semplice che controllare completamente le porte da soli.
+</p>
+
+### Chiamate dirette al BIOS
+
+<p align=justify>
+La terza tecnica dell'era DOS a cui abbiamo dovuto rinunciare a causa dei rigori della modalità protetta è l'invocazione diretta delle routine BIOS del PC. IBM ha inserito una libreria di codice nella memoria di sola lettura (ROM) per la gestione di base del video e delle periferiche come le porte. Nell'era DOS era possibile per il software invocare direttamente queste routine BIOS senza limitazioni. La modalità protetta riserva le chiamate BIOS al sistema operativo, ma in verità, anche i sistemi operativi in modalità protetta fanno poco con le chiamate BIOS dirette al giorno d'oggi. Quasi tutto l'accesso a basso livello all'hardware avviene attraverso driver installabili. I sistemi operativi normalmente effettuano chiamate BIOS per determinare informazioni sulla configurazione hardware per cose come la gestione dell'alimentazione. Come una sorta di premio di consolazione, Linux fornisce un elenco di funzioni a basso livello che possono essere chiamate attraverso un meccanismo molto simile alle chiamate BIOS, utilizzando l'interruzione software 80H.
+</p>
+
+### 64-bit Long Mode
+
+<p align=justify>
+Tutti i computer al giorno d'oggi contengono CPU AMD o Intel che sono tecnicamente larghe 64 bit. Per utilizzare queste funzionalità a 64 bit, hai bisogno di un sistema operativo che sia stato esplicitamente compilato per esse e sappia come gestirle. Sia Windows che Linux sono disponibili in versioni compilate per la modalità lunga a 64 bit. Windows Vista e Windows XP sono stati disponibili in versioni a 64 bit per un po' di tempo. Windows 7 era disponibile sia in versioni a 32 bit che a 64 bit. è utile avere un'idea di cosa offre la modalità lunga, in modo da poterla esplorare da solo mentre le tue abilità di programmazione maturano.
+</p>
+
+<p align=justify>
+L'architettura x86 a 64 bit ha una storia peculiare: nel 2000, il concorrente di Intel, AMD, annunciò un superset a 64 bit dell'architettura IA-32. AMD non rilasciò CPU che implementavano questa nuova architettura fino al 2003, ma fu un attacco preventivo nelle guerre delle CPU. Intel aveva già un'architettura a 64 bit chiamata IA-64 Itanium, ma Itanium rappresentava una rottura netta con IA-32, e il software IA-32 non sarebbe potuto funzionare sui processori Itanium senza ricompilazione e, in alcuni casi, ricodifica. L'industria desiderava la compatibilità con le versioni precedenti, e la risposta all'architettura nuova di AMD fu così entusiastica che Intel fu costretta a recuperare terreno e implementare un'architettura compatibile con AMD, che chiamò Intel 64. Le prime CPU a 64 bit compatibili con AMD di Intel furono rilasciate alla fine del 2004. Il termine neutrale rispetto ai venditori "x86-64" viene ora applicato a caratteristiche implementate in modo identico da entrambe le aziende. L'architettura x86-64 definisce tre modalità generali: modalità reale, modalità protetta e modalità lunga. La modalità reale è una modalità di compatibilità che consente alla CPU di eseguire sistemi operativi e software più vecchi come DOS e Windows 3.1. In modalità reale, la CPU funziona proprio come fa una 8086 o un'altra CPU x86 in modalità reale, e supporta il modello piatto in modalità reale e il modello segmentato in modalità reale. La modalità protetta è anch'essa una modalità di compatibilità e fa sì che la CPU "appaia" come una CPU IA-32 per il software, in modo che le CPU x86-64 possano eseguire Windows 2000/XP/Vista/7 e altri sistemi operativi a 32 bit come Linux, oltre ai loro driver e applicazioni a 32 bit.
+</p>
+
+<p align=justify>
+La modalità long è una vera modalità a 64 bit; e quando la CPU è in modalità long, tutti i registri sono larghi 64 bit e tutte le istruzioni macchina che agiscono su operandi a 64 bit sono disponibili. Tutti i registri disponibili in IA-32 sono presenti e sono stati estesi a 64 bit in larghezza. Le versioni a 64 bit dei registri sono rinominate a partire dalla R: EAX diventa RAX, EBX diventa RBX, e così via. Oltre ai familiari registri generali presenti in IA-32, ci sono otto nuovissimi registri generali a 64 bit senza controparti a 32 bit. Questi nuovi registri sono denominati da R8 a R15. x86-64 aggiunge otto registri SSE a 128 bit agli otto di IA-32, per un totale di 16. Tutti questi nuovi registri sono come manna dal cielo per i programmatori assembly in cerca di aumenti nella velocità di esecuzione. Il posto più veloce dove memorizzare i dati è nei registri, e i programmatori che hanno sofferto per la scarsità di registri delle prime CPU x86 guarderanno a quell'ammasso di ricchezza interna e rimarranno sbalorditi.
+</p>
+
+<p align=justify>
+Come ho descritto in precedenza, 32 bit possono indirizzare solo 4 gigabyte di memoria. Sono state utilizzate varie astuzie per rendere disponibile più memoria ai programmi in esecuzione su CPU IA-32. In modalità long a 64 bit abbiamo un problema simile al contrario: 64 bit possono indirizzare un'immensità di memoria tale che i sistemi di memoria che richiedono uno spazio di indirizzo di 64 bit non saranno creati per molti anni a venire. (Mi trattengo un po' qui ricordando a me stesso e a tutti voi che abbiamo detto cose simili in passato, solo per ritrovarci con le mani nei capelli.) 64 bit possono indirizzare 16 exabyte. Un exabyte è 2^60 byte, che può essere descritto più comprensibilmente come un miliardo di gigabyte, che equivale a poco più di un quintilione di byte. Ci arriveremo prima o poi, ma non ci siamo ancora. La questione critica per il qui e ora è questa: gestire tutti i bit in quegli indirizzi a 64 bit richiede transistor all'interno della microarchitettura della CPU. Pertanto, invece di sprecare transistor sul chip per gestire le linee di indirizzo di memoria che non verranno utilizzate durante la vita prevista del chip della CPU (o anche dell'architettura x86-64 stessa), i produttori di chip hanno limitato il numero di linee di indirizzo che sono realmente funzionali nelle implementazioni attuali dei chip. I chip CPU x86-64 che puoi acquistare oggi implementano 48 bit di indirizzo per la memoria virtuale e solo 40 bit per la memoria fisica. Questo è ancora molto più memoria fisica di quanta tu possa inserire in qualsiasi computer fisico al momento: 2^40 rappresenta un terabyte; praticamente poco più di mille gigabyte, o un trilione di byte. Ci sono alcune differenze nel modo in cui Linux a 64 bit gestisce le chiamate di funzione, ma la modalità long a 64 bit è ancora un modello piatto, ed è molto più simile al modello piatto a 32 bit di quanto il modello piatto a 32 bit sia al modello segmentato della modalità reale che abbiamo subito per i primi 15 o 20 anni dell'era PC. Questo è sufficiente per ora riguardo alla piattaforma su cui il nostro codice verrà eseguito.
+</p>
+
+## Il primo programma assembly (eatsyscall.asm)
+
+```asm
+;  Executable name : eatsyscall
+;  Version         : 1.0
+;  Created date    : 4/25/2022
+;  Last update     : 5/10/2023
+;  Author          : Jeff Duntemann
+;  Architecture    : x64
+;  From            : x64 Assembly Language Step By Step, 4th Edition
+;  Description     : A simple program in assembly for x64 Linux, using NASM 2.14,
+;                    demonstrating the use of the syscall instruction to display text.
+;                    Not for use with SASM.
+;
+;  Build using these commands:
+;    nasm -f elf64 -g -F stabs eatsyscall.asm
+;    ld -o eatsyscall eatsyscall.o
+;
+
+SECTION .data          ; Section containing initialised data
+	
+	EatMsg: db "Eat at Joe's!",10
+ 	EatLen: equ $-EatMsg	
+	
+SECTION .bss           ; Section containing uninitialized data	
+
+SECTION .text          ; Section containing code
+
+global 	_start	       ; Linker needs this to find the entry point!
+	
+_start:
+    push rbp
+    mov rbp,rsp
+
+    mov rax,1           ; 1 = sys_write for syscall
+    mov rdi,1           ; 1 = fd for stdout; i.e., write to the terminal window
+    mov rsi,EatMsg      ; Put address of the message string in rsi
+    mov rdx,EatLen      ; Length of string to be written in rdx
+    syscall             ; Make the system call
+
+    mov rax,60          ; 60 = exit the program
+    mov rdi,0           ; Return value in rdi 0 = nothing to return
+    syscall             ; Call syscall to exit
+```
+
+## Il primo programma assembly in SASM (eatsyscallgcc.asm)
+
+<p align=justify>
+Se il tuo assemblatore è SASM (un assemblatore grafico, al contrario di NASM, che è solo a riga di comando), il codice è leggermente differente. Parleremo delle differenze nei paragrafi successivi.
+</p>
+
+```asm
+;  Executable name : eatsyscallgcc (For linking with gcc)
+;  Version         : 1.0
+;  Created date    : 4/25/2022    
+;  Last update     : 4/10/2023     
+;  Author          : Jeff Duntemann          
+;  Architecture    : x64    
+;  From            : x64 Assembly Language Step By Step, 4th Edition
+;  Description     : A simple program in assembly for x64 Linux, using NASM 2.14,
+;                  : demonstrating the use of the syscall instruction to display text.
+;
+;                  : Build using the default build configuration in SASM
+;  
+ 
+SECTION .data           ; Section containing initialized data
+ EatMsg: db "Eat at Joe's!",10
+ EatLen: equ $-EatMsg
+ 
+SECTION .bss            ; Section containing uninitialized data       
+SECTION .text           ; Section containing code           
+
+global   main           ; Linker needs this to find the entry point!
+
+main:
+  mov rbp,rsp            ; SASM may add another copy of this in debug mode!
+ 
+  mov rax,1             ; 1 = sys_write for syscall    
+  mov rdi,1             ; 1 = fd for stdout
+                        ; write to the terminal window
+  mov rsi,EatMsg        ; Put address of the message string in rsi
+  mov rdx,EatLen        ; Length of string to be written in rdx
+  syscall               ; Make the system call
+
+  mov rax,60            ; 60 = exit the program 
+  mov rdi,0             ; Return value in rdi 0 = nothing to return
+  syscall               ; Call syscall to exit   
+```
+
+### Template per nasm
+
+```asm
+section .data
+section .text
+section .bss
+
+global 	_start
+	
+_start:
+
+     nop
+
+; Put your experiments between the two nops...
+; Put your experiments between the two nops...
+
+     nop
+
+     mov rax,60   	; Code for Exit Syscall
+     mov rdi,0		; Return a code of zero    
+     syscall		; Make kernel call      
+```
+
+### Template per sasm
+
+```asm
+section .data
+section .text
+section .bss
+
+global main
+
+main:
+    mov rbp,rsp  ; Save stack pointer for debugger
+    nop
+
+; Put your experiments between the two nops...
+; Put your experiments between the two nops...
+
+     nop
+
+     mov rax,60   	; Code for Exit Syscall
+     mov rdi,0		; Return a code of zero    
+     syscall		; Make kernel call      
+```
+
+<p align=justify>
+Ciò di cui abbiamo bisogno è un punto di partenza contrassegnato come globale: qui, l'etichetta `main`. (<b>L'uso di main è un requisito di SASM, non di NASM.</b> Vedi il template di NASM sopra.) Dobbiamo anche definire una sezione dati e una sezione testo come mostrato. La sezione dati (.data) contiene i dati a cui devono essere assegnati valori iniziali quando il programma viene eseguito. Il vecchio messaggio pubblicitario "Eat at Joe's" era un elemento dati nominato nella sezione dati. La sezione testo (.text) contiene il codice del programma. <b>Entrambe queste sezioni (.data e .text) sono necessarie per creare un eseguibile, anche se una o entrambe sono vuote</b>. <b>La sezione contrassegnata .bss non è strettamente essenziale</b>, ma è utile averla se prevedi di sperimentare. <b>La sezione .bss contiene dati non inizializzati</b>, cioè spazio riservato per elementi dati a cui non vengono assegnati valori iniziali quando il programma inizia a essere eseguito. Questi sono fondamentalmente buffer vuoti, per dati che saranno generati o letti da qualche parte mentre il programma è in esecuzione. Per consuetudine, la sezione .bss si trova dopo la sezione .text.
+</p>
+
+<p align=justify>
+Nei template sono presenti due istruzioni NOP. Ricorda che le istruzioni NOP non fanno altro che richiedere un po' di tempo. Sono lì per rendere più facile osservare il programma nel debugger SASM. Per giocare con le istruzioni macchina, inserisci le istruzioni di tua scelta tra i due commenti. Compila il programma, fai clic sul pulsante Debug e divertiti! Imposta un punto di interruzione in corrispondenza della prima istruzione inserita tra i commenti e fai clic su Debug. L'esecuzione inizierà e si fermerà in corrispondenza del punto di interruzione. Per osservare gli effetti di tale istruzione, fai clic sul pulsante Esegui passaggio. Ecco perché c'è la seconda istruzione NOP: quando si esegue un'istruzione a passo singolo, ci deve essere un'istruzione dopo quell'istruzione su cui l'esecuzione possa fermarsi. Se la prima istruzione nella sandbox è l'ultima istruzione, l'esecuzione andrà "oltre il limite" nel primo passaggio singolo e il programma terminerà. Quando ciò accade, i riquadri Registri e Memoria di SASM diventeranno vuoti e non sarai in grado di vedere gli effetti di quell'unica istruzione! L'idea di uscire dai limiti del programma è interessante. Se fai clic sul pulsante Debug o premi il tasto di scelta rapida F5, vedrai cosa succede quando non chiudi correttamente il programma: Linux restituirà un errore di segmentazione, che può avere una serie di cause. Tuttavia, ciò che è accaduto in questo caso è che il programma ha tentato di eseguire una posizione oltre la fine della sezione .text. Linux sa quanto è lungo il tuo programma e non ti permetterà di eseguire istruzioni che non erano presenti nel tuo programma quando è stato caricato. Non c'è alcun danno duraturo in questo, ovviamente. Linux è molto bravo a gestire programmi che si comportano male e malformati (specialmente quelli semplici), e nulla di ciò che probabilmente farai per caso avrà alcun effetto sull'integrità di Linux stesso. è possibile evitare di generare l'errore di segmentazione facendo clic sul pulsante rosso Stop prima di inviare l'esecuzione alla fine del piccolo programma sperimentale. SASM passerà dalla modalità di debug alla modalità di modifica. Tieni presente che se esci dalla modalità di debug, non sarà più possibile visualizzare i registri o gli elementi di memoria. Naturalmente, se desideri semplicemente far eseguire un programma, puoi aggiungere alcune righe che effettuano una SYSCALL alla routine di uscita x64 alla fine della sandbox. In questo modo, se l'esecuzione prosegue oltre la parte inferiore degli esperimenti, la chiamata SYSCALL interromperà automaticamente l'esecuzione. Di seguito è riportato il codice per l'uscita SYSCALL. Posiziona questo codice dopo il secondo NOP, e sei a posto.
+</p>
+
+```asm
+mov rax,60   	; Code for Exit Syscall
+mov rdi,0	; Return a code of zero    
+syscall		; Make kernel call  
+```
+
+### Le istruzioni e i loro operandi
+
+<p align=justify>
+L'attività più comune nel lavoro con il linguaggio assembly è spostare dati da un luogo all'altro. Ci sono diversi modi specializzati per farlo, ma solo un modo veramente generale: l'istruzione MOV. MOV può spostare un byte, una parola (16 bit), una doppia parola (32 bit) o una quadrupla parola (64 bit) di dati da un registro a un altro, da un registro alla memoria, o dalla memoria a un registro. <b>Ciò che MOV non può fare è spostare dati direttamente da un indirizzo in memoria a un altro indirizzo in memoria</b>. (Per farlo, sono necessarie due istruzioni MOV separate: prima dalla memoria a un registro e poi da quel registro di nuovo in un altro luogo nella memoria.) Il nome MOV è un po' fuorviante, poiché ciò che accade effettivamente è che i dati vengono copiati da una sorgente a una destinazione. Una volta copiati nella destinazione, tuttavia, i dati non scompaiono dalla sorgente, ma continuano a esistere in entrambi i luoghi. Questo confligge un po' con la nostra nozione intuitiva di spostare qualcosa, che di solito significa che qualcosa scompare da un luogo sorgente e riappare in un luogo di destinazione.
+</p>
+
+### Operandi Sorgente e Destinazione
+
+<p align=justify>
+La maggior parte delle istruzioni macchina, inclusa MOV, ha uno o più operandi. (Alcune istruzioni non hanno operandi o operano implicitamente su registri o memoria. Quando questo è il caso, lo menzionerò nel testo.) Considera questa istruzione macchina:
+</p>	
+
+```asm
+ 	mov rax,1
+``` 
+ 
+<p align=justify>
+Ci sono due operandi nell'istruzione precedente. Il primo è RAX e il secondo è il numero 1. <b>Per convenzione nel linguaggio assembly, il primo operando (quello più a sinistra) appartenente a un'istruzione macchina è l'operando di destinazione</b>. <b>Il secondo operando da sinistra è l'operando sorgente</b>. Con l'istruzione MOV, il significato dei due operandi è piuttosto letterale: l'operando sorgente viene copiato nell'operando di destinazione. Nell'istruzione precedente, l'operando sorgente (il valore letterale 1) viene copiato nell'operando di destinazione RAX. Il significato di sorgente e destinazione non è affatto così letterale in altre istruzioni, ma una regola generale è questa: ogni volta che un'istruzione macchina causa la generazione di un nuovo valore, quel nuovo valore viene posto nell'operando di destinazione. <b>Ci sono tre diversi tipi di dati che possono essere utilizzati come operandi</b>. Questi sono: <b>dati di memoria</b>, <b>dati di registro</b> e <b>dati immediati</b>. Ho esposto alcune istruzioni MOV di esempio nella tabella seguente per darti un'idea di come i diversi tipi di dati sono specificati come operandi per l'istruzione MOV.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/move_and_its_operands.png">
+</div>
+
+### Dati Immediati
+
+<p align=justify>
+L'istruzione MOV RAX,42h è un buon esempio dell'uso di quello che si chiama <i>dato immediato</i>, a cui si accede attraverso una modalità di indirizzamento chiamata <b>indirizzamento immediato</b>. L'indirizzamento immediato prende il suo nome dal fatto che <b>l'elemento indirizzato è un dato incorporato direttamente nell'istruzione macchina stessa</b>. La CPU non deve cercare altrove per trovare i dati immediati. Non si trovano in un registro, né sono memorizzati in un elemento dati da qualche parte nella memoria. I dati immediati si trovano sempre all'interno dell'istruzione che viene recuperata ed eseguita.
+</p>
+
+<p align=justify>
+I dati immediati devono avere una dimensione appropriata per l'operando. Ad esempio, non puoi spostare un valore immediato a 16 bit in una sezione di registro a 8 bit come AH o DL. NASM non ti permetterà di assemblare un'istruzione come questa:
+</p>
+
+```asm
+	mov cl,067EFh 
+ ```
+
+<p align=justify>
+CL è un registro a 8 bit e 067EFh è una quantità a 16 bit. Non funziona! Poiché sono incorporati direttamente in un'istruzione macchina, potresti pensare che l'accesso ai dati immediati sia rapido. Questo è vero solo fino a un certo punto: recuperare qualcosa dalla memoria richiede più tempo rispetto a recuperare qualcosa da un registro e le istruzioni sono, dopo tutto, memorizzate in memoria. Quindi, mentre indirizzare i dati immediati è un po' più veloce rispetto a indirizzare dati normali memorizzati in memoria, nessuno dei due è così veloce come semplicemente estrarre un valore da un registro della CPU. Tieni anche presente che solo l'operando sorgente può essere un dato immediato. L'operando di destinazione è il luogo dove i dati arrivano, non quello da cui provengono. Poiché i dati immediati consistono in costanti letterali (numeri come 1, 0, 42 o 07F2Bh), cercare di copiare qualcosa nei dati immediati piuttosto che da essi non ha alcun significato ed è sempre un errore. NASM consente alcune interessanti forme di dati immediati. Ad esempio, la seguente è perfettamente legale, anche se non necessariamente utile come sembra a prima vista:
+</p>
+
+```asm
+	mov eax,'WXYZ'
+```
+
+<p align=justify>
+Questa è una buona istruzione da caricare nel tuo assemblatore ed eseguire nel debugger. Guarda il contenuto del registro EAX nella vista registri: 0x5a595857. Questo potrebbe sembrare strano, ma guarda da vicino: gli equivalenti numerici dei caratteri ASCII maiuscoli W, X, Y e Z sono stati caricati in ordine in EAX. W è 57h, X è 58h, Y è 59h e Z è 5Ah. Ogni carattere equivalente ha una dimensione di 8 bit, quindi quattro di essi si adattano perfettamente nel registro a 32 bit EAX. Tuttavia, sono invertiti.
+Bene, no. Ricorda il concetto di "endianness". L'architettura x86/x64 è "little endian", il che significa che il byte meno significativo in una sequenza multibyte è memorizzato all'indirizzo più basso. Questo si applica anche ai registri e ha senso una volta che capisci come ci riferiamo alle unità di memoria all'interno di un registro. La confusione nasce dalla nostra abitudine di leggere il testo da sinistra a destra, mentre leggiamo i numeri da destra a sinistra. Dai un'occhiata alla figura seguente. (Questo esempio utilizza il registro a 32 bit EAX per rendere la figura meno complessa e più facile da capire.) Trattata come una sequenza di caratteri di testo, la W in WXYZ è considerata l'elemento meno significativo. EAX, tuttavia, è un contenitore per numeri, dove la colonna meno significativa è sempre (per le lingue occidentali) a destra. Il byte meno significativo in EAX lo chiamiamo AL, ed è lì che va la W. Il secondo byte meno significativo in EAX lo chiamiamo AH, ed è lì che va la X. I due byte più significativi in EAX non hanno nomi separati e non possono essere indirizzati individualmente, ma sono comunque byte a 8 bit e possono contenere valori a 8 bit come caratteri ASCII. Il carattere più significativo nella sequenza WXYZ è la Z, e viene memorizzato nel byte più significativo di EAX.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/strings_as_immediate_data.png">
+</div>
+
+### Dati di Registro
+
+<p align=justify>
+I dati memorizzati all'interno di un registro della CPU sono noti come <i>dati di registro</i>, e accedere ai dati di registro direttamente è una modalità di indirizzamento chiamata <b>indirizzamento per registro</b>. L'indirizzamento per registro viene effettuato semplicemente nominando il registro con cui vogliamo lavorare. Ecco alcuni esempi completamente legali di dati di registro e indirizzamento per registro:
+</p>
+
+```asm
+	mov rbp,rsi   ; 64-bit
+	add ecx,edx   ; 32-bit
+	add di,ax     ; 16-bit
+	mov bl,ch     ; 8-bit
+```
+
+<p align=justify>
+Non stiamo parlando solo dell'istruzione MOV qui. L'istruzione ADD fa esattamente ciò che ci si può aspettare e aggiunge gli operandi sorgente e destinazione. La somma sostituisce qualunque cosa fosse presente nell'operando di destinazione. Indipendentemente dall'istruzione, l'indirizzamento dei registri avviene ogni volta che i dati in un registro vengono utilizzati direttamente. Certe operazioni non sono legali: ad esempio, spostare una sorgente di 8 byte in una destinazione di 2 byte. E mentre spostare una sorgente di 2 byte in una destinazione di 8 byte potrebbe sembrare possibile e talvolta persino ragionevole, la CPU non lo supporta e non può essere fatto direttamente. Se ci provi, NASM ti darà questo errore.
+</p>
+
+```
+ 	error: invalid combination of opcode and operands
+```
+
+<p align=justify>
+In altre parole, <b>se stai spostando dati da un registro a un altro, i registri sorgente e di destinazione devono avere la stessa dimensione</b>. Osservare i dati dei registri nel debugger è un buon modo per avere un'idea di come funziona, soprattutto quando stai iniziando. Facciamo un po' di pratica. Inserisci queste istruzioni nella tua sandbox, costruisci l'eseguibile e carica l'eseguibile della sandbox nel debugger.
+</p>
+
+```asm
+	xor rbx,rbx
+ 	xor rcx,rcx
+ 	mov rax,067FEh
+ 	mov rbx,rax
+ 	mov cl,bh
+ 	mov ch,bl
+```
+
+<p align=justify>
+Imposta un punto di interruzione sulla prima delle istruzioni, quindi clicca su Esegui. Procedi passo dopo passo attraverso le istruzioni, prestando attenzione a quello che accade a RAX, RBX e RCX. Tieni presente che la finestra dei Registri di SASM non mostra le sezioni dei registri a 8 bit, 16 bit o 32 bit separatamente e individualmente. EAX fa parte di RAX, AX fa parte di EAX e CL fa parte di ECX, ecc. Qualsiasi cosa tu metta in RAX è già presente in EAX, AX e AL. Una volta terminato il passo dopo passo, clicca sull'icona rossa Stop per terminare il programma. Ricorda che se selezioni Debug -> Continua o cerchi di avanzare oltre la fine del programma, Linux ti darà un errore di segmentazione per non aver terminato il programma correttamente. Nulla sarà danneggiato dall'errore; ricorda che il sandbox non è previsto per essere un programma Linux completo e corretto. è buona prassi "terminare" il programma tramite Stop piuttosto che generare l'errore, tuttavia. Nota le prime due istruzioni. <b>Quando vuoi mettere il valore 0 in un registro, il modo più veloce è usare l'istruzione XOR</b>, che esegue un'operazione XOR bitwise sugli operandi sorgente e destinazione. Sì, potresti usare
+</p>
+
+```asm
+ 	mov rbx,0
+```
+
+<p align=justify>
+ma in questo modo si deve andare in memoria per caricare il valore immediato 0. L'operazione XOR tra un registro e se stesso non va in memoria né per l'operando sorgente né per l'operando di destinazione e pertanto è leggermente più veloce. Una volta azzerati RBX e RCX, ecco cosa succede: la prima istruzione (mov rax,067FEh) MOV è un esempio di indirizzamento immediato utilizzando registri a 64 bit. Il valore esadecimale a 16 bit 067FEH viene spostato nel registro RAX. (Nota qui che puoi MOV un valore immediato di 16 bit o di qualsiasi altra dimensione che possa adattarsi al registro di destinazione.) La seconda istruzione (mov rbx,rax) utilizza l'indirizzamento del registro per copiare i dati del registro da EAX a EBX. La terza e la quarta istruzione MOV spostano entrambe i dati tra segmenti di registri a 8 bit piuttosto che a 16, 32 o 64 bit. Queste due istruzioni realizzano qualcosa di interessante. Guarda l'ultima visualizzazione del registro e confronta i valori di RBX e RCX. Spostando il valore da BX a CX un byte alla volta, è possibile invertire l'ordine dei due byte che costituiscono BX. La metà alta di BX (quello che a volte chiamiamo il byte più significativo, o MSB, di BX) è stata spostata nella metà bassa di CX. Poi la metà bassa di BX (quello che a volte chiamiamo il byte meno significativo, o LSB, di BX) è stata spostata nella metà alta di CX. Questo è solo un esempio dei tipi di trucchi che puoi fare con i registri a uso generale. Solo per disabituarti all'idea che l'istruzione MOV debba essere utilizzata per scambiare le due metà di un registro a 16 bit, lasciami suggerire di fare quanto segue: torna a SASM e aggiungi questa istruzione alla fine della tua sandbox:
+</p>
+
+```asm
+	xchg cl,ch
+```
+
+<p align=justify>
+Ricostruisci la sandbox e torna al debugger per vedere cosa succede. L'istruzione XCHG scambia i valori contenuti nei suoi due operandi. Ciò che è stato scambiato in precedenza viene scambiato di nuovo e il valore in RCX corrisponderà ai valori già presenti in RAX e RBX. Una buona idea durante la scrittura dei primi programmi in linguaggio assembly è quella di ricontrollare periodicamente il set di istruzioni per vedere se ciò che si è messo insieme con quattro o cinque istruzioni non sia possibile utilizzando una singola istruzione. Il set di istruzioni Intel è molto bravo a ingannarti in questo senso. C'è un'avvertenza qui: a volte un "caso speciale" è più veloce in termini di tempo di esecuzione della macchina rispetto a un caso più generale. La divisione per una potenza di 2 può essere eseguita utilizzando l'istruzione DIV, ma può anche essere eseguita utilizzando l'istruzione SHR (Shift Right). DIV è più generale (puoi usarlo per dividere per qualsiasi intero senza segno, non semplicemente potenze di 2), ma è molto più lento. La velocità delle singole istruzioni conta molto meno ora di quanto non lo fosse 30 anni fa. Detto questo, per i programmi con funzioni ripetitive complesse che vengono eseguite migliaia o centinaia di migliaia di volte in un ciclo, la velocità delle istruzioni può fare la differenza.
+</p>
+
+### Dati di Memoria ed Effective Addresses
+
+<p align=justify>
+I dati immediati sono incorporati direttamente nell'istruzione macchina. I dati di registro vengono memorizzati in uno dei registri interni della CPU. Al contrario, i dati di memoria vengono memorizzati in qualche luogo nella porzione di memoria di sistema posseduta da un programma, a un indirizzo di memoria a 64 bit. Con una o due eccezioni importanti (le istruzioni sulle stringhe), <b>solo uno dei due operandi di un'istruzione può specificare una posizione di memoria</b>. In altre parole, puoi trasferire un valore immediato in memoria, un valore di memoria in un registro, o qualche altra combinazione simile, ma <b>non puoi trasferire un valore di memoria direttamente in un altro valore di memoria</b>. Questa è una limitazione intrinseca delle CPU Intel di tutte le generazioni (non solo x64), e dobbiamo farci i conti, per quanto possa essere scomodo a volte. <b>Per specificare che desideriamo i dati nella posizione di memoria contenuta in un registro piuttosto che i dati nel registro stesso, utilizziamo le parentesi quadre attorno al nome del registro</b>. In altre parole, per spostare il quadword in memoria all'indirizzo contenuto in RBX nel registro RAX, useremmo la seguente istruzione.
+</p>
+
+```asm
+ mov rax,[rbx]
+```
+
+<p align=justify>
+Le parentesi quadre possono contenere più del nome di un singolo registro a 64 bit, come impareremo in dettaglio più avanti. Ad esempio, puoi aggiungere una costante letterale a un registro all'interno delle parentesi quadre, e NASM eseguirà il calcolo.
+</p>
+
+```asm
+	mov rax,[rbx+16]
+```
+
+<p align=justify>
+Lo stesso vale per l'aggiunta di due registri a uso generale, in questo modo:
+</p>
+
+```asm
+	mov rax,[rbx+rcx]
+```
+
+<p align=justify>
+E come se non bastasse, puoi aggiungere due registri più una costante letterale.
+</p>
+
+```asm
+	mov rax,[rbx+rcx+11]
+```
+
+<p align=justify>
+Naturalmente non tutto è consentito. <b>Ciò che si trova all'interno delle parentesi quadre è chiamato indirizzo efficace (<i>effective address</i>)</b> di un elemento dati in memoria, e ci sono regole che dettano ciò che può essere un indirizzo efficace valido e ciò che non può esserlo. Nell'attuale evoluzione dell'hardware Intel, è possibile sommare due registri per formare l'indirizzo efficace, ma non tre o più. In altre parole, queste non sono forme legali di indirizzo efficace:
+
+```asm
+	mov rax,[rbx+rcx+rdx] 
+ 	mov rax,[rbx+rcx+rsi+rdi] 
+```
+
+### Il dato e il suo indirizzo
+
+<p align=justify>
+Questo suona banale, ma fidati, è una cosa abbastanza facile da fare. Torniamo alla definizione di dati nella lista 5.1: avevamo questa definizione di dati e questa istruzione:
+</p>
+
+```asm
+	EatMsg: db "Mangia da Joe!" 
+ 	. . . . 
+ 	mov rsi, EatMsg 
+```
+
+<p align=justify>
+Se hai avuto qualche esperienza con linguaggi di alto livello, il tuo primo istinto potrebbe essere quello di assumere che qualsiasi dato conservato in EatMsg verrà copiato in RSI. L'assembly non funziona in questo modo. Quella istruzione MOV copia effettivamente l'indirizzo di EatMsg, non ciò che è memorizzato in EatMsg. <b>Nel linguaggio assembly, i nomi delle variabili rappresentano indirizzi, non dati!</b> Quindi, come si fa a "raggiungere" i dati rappresentati da una variabile come EatMsg? Ancora una volta, si fa con le parentesi quadre.
+</p>	
+
+```asm
+	mov rdx, [EatMsg]
+```
+
+<p align=justify>
+Ciò che fa questa istruzione è andare alla posizione in memoria specificata dall'indirizzo rappresentato da EatMsg, prelevare i primi 64 bit di dati da quell'indirizzo e caricare quei dati in RDX partendo dal byte meno significativo in RDX. Date le informazioni che abbiamo definito per EatMsg, questi sono gli otto caratteri E, a, t, uno spazio, a, t, uno spazio e J.
+</p>
+
+### La dimensione dei dati di memoria
+
+<p align=justify>
+Ma cosa succede se si vuole lavorare con un solo byte e non con i primi otto? Fondamentalmente, se si desidera utilizzare un byte di dati, è necessario caricarlo in un contenitore di dimensione di un byte. Il registro RAX ha una dimensione di 64 bit. Tuttavia, possiamo indirizzare il byte meno significativo di RAX come AL. AL ha una dimensione di un byte e, rendendo AL l'operando di destinazione, possiamo riportare il primo byte di EatMsg in questo modo:
+</p>
+
+```asm
+	mov al,[EatMsg]
+```
+
+<p align=justify>
+AL, ovviamente, è contenuto all'interno di RAX, non è un registro separato. Ma il nome "AL" ci permette di recuperare dalla memoria un solo byte alla volta. Possiamo eseguire un trucco simile usando il nome EAX per riferirci ai 4 byte inferiori (32 bit) di RAX:
+</p>	
+
+```asm
+ mov eax,[EatMsg]
+```
+
+<p align=justify>
+Questa volta, i caratteri E, a, t e uno spazio vengono letti dalla memoria e inseriti nei quattro byte meno significativi di RAX. Il problema delle dimensioni diventa complicato quando si scrivono i dati in un registro in memoria. NASM non "ricorda" le dimensioni delle variabili, come fanno i linguaggi di livello superiore. Sa dove inizia EatMsg nella memoria, e basta. Devi dire a NASM quanti byte di dati spostare. Questa operazione viene eseguita da un identificatore di dimensioni. Ecco un esempio:
+</p>	
+
+```asm
+  mov byte [EatMsg],'G'
+```
+
+<p align=justify>
+Qui, diciamo a NASM che vogliamo spostare solo un singolo byte in memoria utilizzando l'identificatore di dimensione BYTE. Altri identificatori di dimensioni includono WORD (16 bit), DWORD (32 bit) e QWORD (64 bit).
+</p>
+
+<p align=justify>
+Sii felice di imparare l'assembly Intel ai giorni nostri. Era molto più complicato negli anni passati. In modalità reale sotto DOS, c'erano diverse restrizioni sui componenti di un <i>effective address</i> che semplicemente non esistono oggi, né in modalità protetta a 32 bit né in modalità lunga a 64 bit. In modalità reale, solo alcuni registri generali x86 potevano contenere un indirizzo di memoria: BX, BP, SI e DI. Gli altri, AX, CX e DX, non potevano. Peggio ancora, ogni indirizzo aveva due parti. Dovevi prestare attenzione a quale segmento apparteneva un indirizzo e dovevi assicurarti di specificare il segmento quando non era ovvio.
+</p>
+
+### Il registro RFLAGS
+
+<p align=justify>
+RFlags è un vero e proprio cassetto pieno di piccoli pezzi di informazioni disgiunte ed è difficile (e forse fuorviante) sedersi e descrivere tutto in dettaglio in una volta sola. Quello che farò è descrivere brevemente i flag della CPU qui e poi in modo più dettagliato mentre li incontriamo discutendo delle varie istruzioni che modificano i valori dei flag o li usano durante un ramificamento. Un flag è un singolo bit di informazioni il cui significato è indipendente da qualsiasi altro bit. Un bit può essere impostato a 1 o azzerato a 0 dalla CPU secondo necessità. L'idea è di comunicare a te, il programmatore, lo stato di certe condizioni all'interno della CPU in modo che il tuo programma possa testarle e agire in base ai loro stati. Molto più raramente, sei tu, il programmatore, a impostare un flag come modo per segnalare qualcosa alla CPU. RFlags nel suo insieme è un singolo registro a 64 bit sepolto all'interno della CPU. è l'estensione a 64 bit del registro EFlags a 32 bit, che a sua volta è l'estensione a 32 bit del registro Flags a 16 bit presente nelle antiche CPU 8086/8088. <b>Solo 18 bit del registro RFlags sono effettivamente flag</b>. Il resto è riservato per un uso futuro nelle generazioni future di CPU Intel.
+</p>
+
+<p align=justify>
+è un po' un pasticcio, ma dai un'occhiata alla figura seguente, che riassume tutti i flag attualmente definiti nell'architettura x64. I flag su uno sfondo grigio sono quelli arcani che puoi ignorare tranquillamente per il momento. Gli spazi e le linee colorate di nero sono considerati riservati e non contengono flag definiti. Ogni flag del registro RFlags ha un simbolo di due, tre o quattro lettere con cui la maggior parte dei programmatori lo conosce. Ecco i flag più comuni, i loro simboli e brevi descrizioni di cosa rappresentano:
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/rflags_register.png">
+</div>
+
+<ul>
+	<li>
+		<p align=justify>
+			<b>OF:</b> Il flag di Overflow è impostato quando il risultato di un'operazione aritmetica su una quantità intera firmata diventa troppo grande per adattarsi all'operando che occupava originariamente. OF è generalmente usato come il "oflag di riporto" nell'aritmetica firmata.
+		</p>
+	</li>	
+ 	<li>
+		<p align=justify>
+			<b>DF:</b> Il flag di direzione è un'anomalia tra i flag in quanto comunica alla CPU qualcosa che si desidera che essa sappia, piuttosto che il contrario. Esso determina la direzione in cui l'attività si muove (verso la memoria alta o verso la memoria bassa) durante l'esecuzione delle istruzioni di stringa. Quando DF è attivato, le istruzioni di stringa procedono dalla memoria alta verso la memoria bassa. Quando DF è disattivato, le istruzioni di stringa procedono dalla memoria bassa verso la memoria alta.
+		</p>
+	</li>
+  	<li>
+		<p align=justify>
+			<b>IF:</b> Il flag di abilitazione degli interrupt è un flag a due vie. La CPU lo imposta in determinate condizioni e puoi impostarlo tu stesso utilizzando le istruzioni STI e CLI, anche se probabilmente non lo farai; vedi sotto. Quando IF è impostato, gli interrupt sono abilitati e possono verificarsi su richiesta. Quando IF è disattivato, gli interrupt sono ignorati dalla CPU. I programmi ordinari potevano impostare e disattivare questo flag senza conseguenze in modalità reale, nell'era DOS. Sotto Linux (sia a 32 bit che a 64 bit) IF è riservato all'uso del sistema operativo e talvolta dei suoi driver. Se provi a utilizzare le istruzioni STI e CLI all'interno di uno dei tuoi programmi, Linux ti mostrerà un errore di protezione generale e il tuo programma verrà terminato. Considera IF come off-limits per la programmazione in spazio utente, come stiamo discutendo in questo libro.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			<b>TF:</b> Quando impostato, il flag di trap consente ai debugger di gestire il passo singolo, costringendo la CPU a eseguire solo un'istruzione prima di chiamare una routine di interrupt. Questo non è un flag particolarmente utile per la programmazione ordinaria, e non avrò nulla di più da dire al riguardo in questo libro.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			<b>SF:</b> Il flag di segnale diventa attivo quando il risultato di un'operazione costringe l'operando a diventare negativo. Con negativo intendiamo solo che il bit di ordine più alto nell'operando (il bit di segno) diventa 1 durante un'operazione aritmetica con segno. Qualsiasi operazione che lascia il segno del risultato positivo azzererà SF.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			<b>ZF:</b> Il flag Zero viene impostato quando i risultati di un'operazione diventano zero. Se l'operando di destinazione invece diventa un valore diverso da zero, ZF viene resettato. Userai questo flag molto spesso per i salti condizionali.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			<b>A:</b> Il flag di trasporto ausiliario è utilizzato solo per l'aritmetica BCD. L'aritmetica BCD tratta ogni byte operando come una coppia di "nybble" a 4 bit e consente di eseguire direttamente nell'hardware della CPU un'aritmetica che si avvicina al decimale (base 10) utilizzando una delle istruzioni di aritmetica BCD. Queste istruzioni sono considerate obsolete e non sono presenti in x64. Non le tratto in questo libro.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			<b>PF:</b> Il flag di parità sembrerà istantaneamente familiare a chiunque comprenda le comunicazioni dati seriali e totalmente bizzarro a chi non lo fa. PF indica se il numero di bit impostati (1) nel byte di ordine inferiore di un risultato è pari o dispari. Ad esempio, se il risultato è 0F2H, PF sarà resettato perché 0F2H (11110010) contiene un numero dispari di bit a 1. Allo stesso modo, se il risultato è 3AH (00111100), PF sarà impostato perché c'è un numero pari (quattro) di bit a 1 nel risultato. Questo flag è una sopravvivenza dei tempi in cui tutte le comunicazioni informatiche venivano effettuate tramite una porta seriale, per la quale un sistema di rilevamento degli errori chiamato controllo della parità dipende dal sapere se il conteggio dei bit impostati in un byte di carattere è pari o dispari. PF è usato molto raramente e non lo descriverò ulteriormente.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			<b>CF:</b> Il flag di riporto viene utilizzato nelle operazioni aritmetiche senza segno. Se il risultato di un'operazione aritmetica o di spostamento "riporta" un bit dall'operando, CF viene impostato. Altrimenti, se non viene riportato nulla, CF viene azzerato.
+		</p>
+	</li>
+</ul>
+
+<table>
+	<td>&#9888; <b>Warning</b>
+	<p align=justify>
+Devi ricordare che le descrizioni dei flag fatte sopra sono solo generalizzazioni e sono soggette a specifiche restrizioni e casi speciali imposti da singole istruzioni. Il comportamento dei flag varia ampiamente da istruzione a istruzione, anche se il significato dell'uso dei flag può essere lo stesso in ogni caso. Ad esempio, alcune istruzioni che causano l'apparire di uno zero in un operando impostano ZF, mentre altre no. Purtroppo, non c'è un sistema e non c'è un modo facile per tenerlo chiaro nella tua mente. Quando intendi usare i flag nei test tramite istruzioni di salto condizionale, devi controllare ogni singola istruzione per vedere come vengono influenzati i vari flag.
+	</p>
+	</td>
+</table>
+
+<p align=justify>
+Il registro RFlags è un registro, proprio come RAX, e quando si è in modalità di debug, il suo valore viene visualizzato nella vista Registri di SASM. I valori dei flag sono indicati tra parentesi quadre. Quando si inizia a eseguire il debug del codice in spazio utente, SASM mostra in genere i nomi dei flag PF, ZF e IF. [ PF ZF IF ] Ciò significa che, per qualsiasi motivo, quando Linux consente di iniziare il debug, vengono impostati i flag Parity, Zero e Interrupt Enable. Questi valori iniziali sono "residui" del codice eseguito in precedenza e non sono in alcun modo causati dal codice nel debugger. I loro valori, inoltre, non hanno alcun significato nella sessione di debug e quindi non hanno bisogno di interpretazione. Quando si esegue un'istruzione che influisce sui flag in una sessione di debug, SASM mostrerà il nome di un flag se tale flag è impostato o cancellerà il nome del flag se tale flag viene cancellato.
+</p>
+
+### Aggiungere e sottrarre 1 con INC e DEC
+
+<p align=justify>
+Una semplice lezione sul comportamento dei flag coinvolge le due istruzioni INC e DEC. Diverse istruzioni macchina x86 arrivano in coppie, tra cui INC e DEC. Esse incrementano e decrementano un operando di uno, rispettivamente. Aggiungere uno a qualcosa o sottrarre uno da qualcosa sono azioni che si verificano spesso nella programmazione informatica. Se stai contando il numero di volte in cui un programma esegue un ciclo, contando i byte in una tabella, o facendo qualcosa che avanza o retrocede di uno alla volta, INC e DEC possono essere modi molto rapidi per eseguire l'aggiunta o la sottrazione. Sia INC che DEC richiedono solo un operando. Un errore verrà segnalato dall'assemblatore se provi a utilizzare INC o DEC con due operandi o senza alcun operando. Nessuno dei due funzionerà sui dati immediati. Prova entrambi aggiungendo le seguenti istruzioni nella tua sandbox. Costruisci la sandbox come al solito, entra in modalità debug ed eseguila passo per passo:
+</p>
+
+```asm
+	 mov eax,0FFFFFFFFh
+	 mov ebx,02Dh
+	 dec ebx
+	 inc eax
+```
+
+<p align=justify>
+Osserva cosa succede ai registri EAX e EBX. Decrementare EBX trasforma prevedibilmente il valore 2DH nel valore 2CH. Incrementare 0FFFFFFFFH, d'altra parte, fa ripartire il registro EAX da 0, perché 0FFFFFFFFH è il valore senza segno più grande che può essere espresso in un registro a 32 bit. (Ho usato EAX nell'esempio qui perché riempire il registro a 64 bit RAX con bit richiede molte F!) Aggiungere 1 a esso lo riporta a zero, proprio come aggiungere 1 a 99 porta le due cifre più a destra della somma a zero creando il numero 100. La differenza con INC è che non c'è carry. Il flag Carry non è influenzato da INC, quindi non cercare di usarlo per eseguire aritmetica a più cifre.
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+			Il flag di overflow (OF) è stato azzerato perché l'operando, interpretato come un intero con segno, non è diventato troppo grande per adattarsi in EBX. Questo potrebbe non esserti utile se non sai cosa rende un numero "con segno", quindi per il momento lasciamo stare.
+		</p>	
+	</li>
+ 	<li>
+		<p align=justify>
+			Il flag di segno (SF) è stato azzerato perché il bit alto di EBX non è diventato 1 a seguito dell'operazione. Se il bit alto di EBX fosse diventato 1, il valore in EBX, interpretato come un valore intero con segno, sarebbe diventato negativo, e SF è impostato quando un valore diventa negativo. Come per OF, SF non è molto utile a meno che non si stia eseguendo aritmetica con segno.
+		</p>	
+	</li>
+ 	<li>
+		<p align=justify>
+			Il flag Zero (ZF) è stato azzerato perché l'operando di destinazione non è diventato zero. Se fosse diventato zero, ZF sarebbe stato impostato a 1.
+		</p>	
+	</li>
+ 	<li>
+		<p align=justify>
+			Il flag di riporto ausiliario (AF) è stato azzerato perché non c'era alcun riporto BCD dai quattro bit inferiori di EBX ai successivi quattro bit superiori. (Le istruzioni BCD sono state rimosse dal set di istruzioni x64, quindi AF non è più utile oggi e può essere ignorato.)
+		</p>	
+	</li>
+ 	<li>
+		<p align=justify>
+			Il flag di parità (PF) è stato azzerato perché il numero di bit a 1 nell'operando dopo il decremento era tre, e PF è azzerato quando il numero di bit nell'operando di destinazione è dispari. Controllalo tu stesso: il valore in EBX dopo l'istruzione DEC è 02Ch. In binario, questo è 00101100. Ci sono tre bit a 1 nel valore, e quindi PF è azzerato.
+		</p>	
+	</li>
+</ul>
+
+<p align=justify>
+L'istruzione DEC non influisce sul flag IF, che è rimasto attivo. Infatti, quasi nulla cambia il flag IF, e alle applicazioni in user space come la sandbox (e tutto il resto che probabilmente scriverai mentre impari l'assembly) è vietato modificare IF. Ora, esegui l'istruzione INC EAX e visualizza di nuovo i registri nella vista Console. Boom! Questa volta succedono molte cose.
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+			Il flag di parità PF è stato impostato perché il numero di bit a 1 in EAX è ora zero, e PF è impostato quando il numero di bit a 1 nell'operando diventa pari. Zero è considerato un numero pari.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			Il flag Carry ausiliario AF è stato impostato perché i quattro bit inferiori in EAX sono passati da FFFF a 0000. Questo implica un riporto dai quattro bit inferiori ai quattro bit superiori, e AF è impostato quando si verifica un riporto dai quattro bit inferiori dell'operando. (Ancora una volta, non puoi usare AF nella programmazione x64.)
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			Il flag Zero ZF è stato impostato perché EAX è diventato zero.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			Come prima, il flag IF non cambia e rimane impostato in ogni momento. Ricorda che l'IF appartiene esclusivamente a Linux e non è influenzato dal codice dell'utente.
+		</p>
+	</li>
+</ul>
+
+### Come i flag cambiano l'esecuzione del programma
+
+<p align=justify>
+Osservare i flag cambiare valore dopo l'esecuzione delle istruzioni è un buon modo per imparare il comportamento dei flag. Tuttavia, lo scopo e il vero valore dei flag non risiedono nei loro valori, di per sé, ma in come influenzano il flusso delle istruzioni macchina nei tuoi programmi. Esiste un'intera categoria di istruzioni macchina che "saltano" a una posizione diversa nel tuo programma in base al valore corrente di uno o più flag. Queste istruzioni sono chiamate <b>istruzioni di salto condizionale</b>, e la maggior parte dei flag in RFLAGS ha una o più istruzioni di salto condizionale associate. La maggior parte delle istruzioni macchina sono passi effettuati in un elenco che generalmente scorre dall'alto verso il basso. Le istruzioni di salto condizionale sono test. Esse verificano la condizione di uno dei flag e continuano o saltano a una posizione diversa nel tuo programma. L'esempio più semplice di un'istruzione di salto condizionale, e quella che probabilmente utilizzerai di più, è JNZ, Salta Se Non Zero. L'istruzione JNZ verifica il valore del flag Zero. Se ZF è impostato (cioè, uguale a 1), non succede nulla, e la CPU passa a eseguire la prossima istruzione in sequenza. Tuttavia, se ZF non è impostato (cioè, se è azzerato e uguale a 0), allora l'esecuzione si sposta a una nuova destinazione nel tuo programma. Questo sembra peggio di quanto non sia. Non devi preoccuparti di aggiungere o sottrarre nulla. In quasi tutti i casi, la <b>destinazione è fornita come un'etichetta</b>. <b>Le etichette sono nomi descrittivi dati a posizioni nei tuoi programmi</b>. In NASM, un'etichetta è una stringa di caratteri seguita da due punti, generalmente posta su una riga contenente un'istruzione. Come molte cose nel linguaggio assembly, questo diventerà più chiaro con un semplice esempio. Apri un nuovo ambiente di lavoro e digita le seguenti istruzioni.
+</p>
+
+```asm
+ 	mov rax,5
+ DoMore:  dec rax
+	  jnz DoMore
+
+	nop
+```
+
+<p align=justify>
+Costruisci il codice e passa in modalità di debug. Osserva il valore di RAX nella vista Registri mentre esegui queste istruzioni. In particolare, osserva cosa succede nella finestra del codice sorgente quando esegui l'istruzione JNZ. JNZ salta all'etichetta indicata come suo operando se ZF è 0. Se ZF = 1, "cade" sull'istruzione successiva. L'istruzione DEC decrementa il valore nel suo operando; qui, RAX. Finché il valore in RAX non cambia a 0, il flag Zero rimane azzerato. E finché il flag Zero è azzerato, JNZ salta di nuovo all'etichetta DoMore. Quindi, per cinque passaggi, DEC riduce il valore in RAX e JNZ salta di nuovo a DoMore. Ma non appena DEC riduce RAX a 0, il flag Zero si attiva, e JNZ "cade" sull'istruzione NOP alla fine del codice. Strutture come questa si chiamano <b>cicli</b> e sono comuni in tutti i programmi, non solo nel linguaggio assembly. Il ciclo mostrato in precedenza non è utile, ma <b>dimostra come puoi ripetere un'istruzione quante volte ti serve, caricando un valore di conteggio iniziale in un registro e decrementando quel valore una volta per ogni passaggio nel ciclo</b>. L'istruzione JNZ testa ZF ogni volta che passa e sa di dover uscire dal ciclo quando il registro di conteggio arriva a 0. Possiamo rendere il ciclo un po' più utile senza aggiungere troppa complessità. Ciò che dobbiamo aggiungere è un elemento dati su cui il ciclo deve lavorare.
+</p>
+
+```asm
+section .data
+	Snippet	db "KANGAROO"
+
+section .text
+	global main
+
+main:
+    mov rbp,rsp ;Save stack pointer for debugger
+
+    nop     
+; Put your experiments between the two nops...
+
+	mov rbx,Snippet
+	mov rax,8
+DoMore:	add byte [rbx],32
+	inc rbx
+	dec rax
+	jnz DoMore     
+	
+; Put your experiments between the two nops...
+	nop
+```
+
+<p align=justify>
+Il programma definisce una variabile e poi la modifica. Quindi, come possiamo vedere quali modifiche vengono apportate? SASM ha la capacità di visualizzare variabili in modalità debug. Dovrei notare qui che, al momento della scrittura, non ha la capacità di visualizzare regioni arbitrarie di memoria, in stile hexdump. I debugger più avanzati lo faranno. Quello che fa SASM è visualizzare variabili con nome. Per utilizzare questa funzione, devi selezionare la casella di controllo Mostra memoria quando sei in modalità debug. (La casella di controllo è disattivata in modalità modifica.) Per impostazione predefinita, la finestra Mostra memoria è nella parte superiore della visualizzazione di SASM. Per mostrare il contenuto di una variabile nominata in un programma o in una sandbox che hai costruito, devi fare questo:
+</p>
+
+
+<ol>
+  <li>
+    <p align="justify">
+    Entra nella modalità di debug.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Nel campo Variabile O Espressione, inserisci Snippet.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Nel campo Tipo, seleziona Smart dal menu a discesa più a sinistra.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Nel campo successivo, seleziona b dal menu a discesa.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Nel campo successivo, digita la lunghezza della variabile che desideri visualizzare, in byte. Per questo esempio, poiché il contenuto di Snippet è lungo otto caratteri, inserisci 8.
+    </p>
+  </li>
+</ol>
+
+<p align=justify>
+Una volta fatto ciò, vedrai "KANGAROO" nel campo Valore. è ciò che c'è in Snippet. Una volta fatto, esegui il programma con Snippet visualizzato. Dopo otto passaggi nel ciclo, "KANGAROO" è diventato "kangaroo": come? Guarda l'istruzione ADD situata all'etichetta DoMore. In precedenza nel programma, avevamo copiato l'indirizzo di memoria di Snippet nel registro RBX. L'istruzione ADD aggiunge il valore letterale 32 a qualsiasi numero si trovi all'indirizzo memorizzato in RBX. Se guardi le tabelle ASCII, noterai che la differenza tra il valore delle lettere maiuscole ASCII e le lettere minuscole ASCII è 32. Una K maiuscola ha il valore 4Bh, e una k minuscola ha il valore 6Bh. 6Bh-4Bh è 20h, che in decimale è 32. Quindi, se consideriamo le lettere ASCII come numeri, possiamo aggiungere 32 a una lettera maiuscola e trasformarla in una lettera minuscola.
+</p>
+
+<p align=justify>
+Ciò che il ciclo fa è effettuare otto passaggi, uno per ogni lettera in "KANGAROO". Dopo ogni ADD, il programma incrementa l'indirizzo in RBX, il che mette il prossimo carattere di "KANGAROO" nel mirino. Decrementa anche RAX, che era stato caricato con il numero di caratteri nella variabile Snippet prima che il ciclo iniziasse. Quindi, all'interno dello stesso ciclo, il programma conta verso l'alto lungo la lunghezza di Snippet in RBX, mentre conta verso il basso la quantità di lettere rimaste in RAX. Quando RAX arriva a zero, significa che abbiamo esaminato tutti i caratteri in Snippet e abbiamo finito. Gli operandi dell'istruzione ADD meritano un'ulteriore analisi. <b>Mettere RBX tra parentesi quadre fa riferimento al contenuto di Snippet</b>, piuttosto che al suo indirizzo. Ma ciò che è più importante, lo specificatore di dimensione BYTE dice a NASM che stiamo scrivendo solo un singolo byte all'indirizzo di memoria in RBX. NASM non ha modo di saperlo altrimenti. è possibile scrivere un byte, due byte, quattro byte, o otto byte in memoria contemporaneamente, a seconda di ciò che dobbiamo realizzare. Tuttavia, dobbiamo dire a NASM quanti byte vogliamo che utilizzi, con uno specificatore di dimensione.
+</p>
+
+### Valori signed e unsigned
+
+<p align=justify>
+Nel linguaggio assembly possiamo lavorare sia con valori numerici con segno che senza segno. I valori con segno, ovviamente, sono valori che possono diventare negativi. Un valore senza segno è sempre positivo. Ci sono istruzioni per le quattro operazioni aritmetiche di base nel set di istruzioni x64 e queste istruzioni possono operare su valori sia con segno che senza segno. (Con moltiplicazione e divisione, ci sono istruzioni separate per i calcoli con segno e senza segno.) La chiave per comprendere la differenza tra valori numerici con segno e senza segno è sapere dove la CPU pone il segno. Non è un carattere trattino, ma effettivamente un bit nel modello binario che rappresenta il numero. Il bit più alto nel byte più significativo di un valore con segno è il <b>bit di segno</b>. Se il bit di segno è un 1, il numero è negativo. Se il bit di segno è un 0, il numero è positivo. Se intendiamo eseguire operazioni aritmetiche con segno, il bit più alto di un valore di registro o di una posizione di memoria è considerato il bit di segno. Se non intendiamo eseguire operazioni aritmetiche con segno, i bit più alti degli stessi valori negli stessi posti saranno semplicemente i bit più significativi di valori senza segno. La natura con segno o senza segno di un valore si basa su come trattiamo il valore, non sulla natura del modello di bit sottostante che rappresenta il valore. Ad esempio, il numero binario 10101111 rappresenta un valore con segno o senza segno? La domanda è priva di senso senza contesto: se abbiamo bisogno di trattare il valore come un valore con segno, trattiamo il bit più significativo come il bit di segno, e il valore è -81. Se abbiamo bisogno di trattare il valore come un valore senza segno, trattiamo il bit alto semplicemente come un'altra cifra in un numero binario, e il valore è 175.
+</p>
+
+### Complemento a due e NEG
+
+<p align=justify>
+Un errore che i principianti commettono a volte è assumere che si possa rendere un valore negativo impostando il bit di segno a 1. Non è così! Non puoi semplicemente prendere il valore 42 e trasformarlo in -42 impostando il bit di segno. Il valore che otterrai sarà certamente negativo, ma non sarà -42. Un modo per avere un'idea di come i numeri negativi siano espressi nel linguaggio assembly è decrementare un numero positivo fino a entrare nel territorio negativo. Apri una sandbox pulita e inserisci queste istruzioni.
+</p>
+
+```asm
+	mov eax,5
+ DoMore: dec eax
+	jmp DoMore
+```
+
+<p align=justify>
+(Sto usando il registro EAX a 32 bit qui perché un registro "completo" a 64 bit è complicato da visualizzare sulla pagina stampata. Il concetto è lo stesso.) Costruisci la sandbox come al solito ed entra in modalità di debug. Nota che abbiamo aggiunto una nuova istruzione qui: JMP, ed è un po' pericolosa: l'istruzione JMP non guarda i flag. Quando viene eseguita, salta sempre al suo operando; quindi, l'esecuzione tornerà all'etichetta DoMore ogni singola volta che JMP viene eseguita. Se sei astuto, noterai che non c'è modo di uscire da questa particolare sequenza di istruzioni, e sì, questo è il leggendario "ciclo infinito" in cui ti imbatterai di tanto in tanto. Quindi, assicurati di impostare un punto di interruzione sull'istruzione MOV iniziale. Se clicchi sul quadrato rosso, SASM fermerà il programma. Sotto DOS, saresti rimasto bloccato e avresti dovuto riavviare il PC. Linux è una piattaforma di programmazione molto più robusta, una che non va in crisi al tuo più piccolo errore. Inizia a eseguire la sandbox passo dopo passo, e guarda EAX nella vista Registri. Il valore iniziale di 5 scenderà a 4, poi 3, poi 2, poi 1, poi 0, e poi... 0FFFFFFFFh! Questa è l'espressione a 32 bit del valore semplice -1. Se continui a decrementare EAX, avrai un'idea di cosa succede.
+</p>
+
+```asm
+ 0FFFFFFFFh (-1)
+ 0FFFFFFFEh (-2)
+ 0FFFFFFFDh (-3)
+ 0FFFFFFFCh (-4)
+ 0FFFFFFFBh (-5)
+ 0FFFFFFFAh (-6)
+ 0FFFFFFF9h (-7)
+```
+
+<p align=justify>
+...e così via. Quando i numeri negativi vengono gestiti in questo modo, li chiamiamo <b>complemento a due</b>. Nel linguaggio assembly Intel, <b>i numeri negativi sono memorizzati come la forma in complemento a due del loro valore assoluto</b>, che, se ti ricordi dalla matematica delle scuole medie, è la distanza di un numero da 0, sia nella direzione positiva che negativa. La magia di esprimere numeri negativi in forma di complemento a due è che la CPU non ha realmente bisogno di sottrarre a livello di transistor. Genera semplicemente il complemento a due del sottraendo e lo aggiunge al minuendo. Questo è relativamente facile per la CPU, e tutto avviene in modo trasparente per i tuoi programmi, dove la sottrazione viene eseguita come ti aspetteresti. La buona notizia è che quasi mai devi calcolare manualmente un valore in complemento a due. C'è un'istruzione macchina che lo farà per te: NEG. L'istruzione NEG prenderà un valore positivo come operando e negherà quel valore, ovvero lo renderà negativo. Lo fa generando la forma in complemento a due del valore positivo. Carica le seguenti istruzioni in un'area sicura ed eseguile un passo alla volta. Guarda EAX nella vista Registri.
+</p>
+
+```asm
+ mov eax,42
+ neg eax
+ add eax,42
+```
+<p align=justify>
+In un colpo solo, 42 diventa 0FFFFFFD6h, l'espressione esadecimale del complemento a due di -42. Aggiungi 42 a questo valore e guarda EAX andare a 0. A questo punto, potrebbe sorgere la domanda: quali sono i più grandi numeri positivi e negativi che possono essere espressi in uno, due, quattro o otto byte? Quei due valori, più tutti i valori intermedi, costituiscono l'intervallo di un valore espresso in un dato numero di bit. Ho presentato questo nella figura seguente.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/range_of_signed_values.png">
+</div>
+
+<p align=justify>
+Se sei abile e sai contare in esadecimale, potresti notare qualcosa qui dalla tabella: il valore positivo massimo e il valore negativo massimo per una data dimensione sono separati da un conteggio. Cioè, se stai lavorando a 8 bit e aggiungi uno al valore positivo massimo, 7Fh, ottieni 80h, il valore negativo massimo. Puoi osservare questo accadere in SASM eseguendo le seguenti due istruzioni in una sandbox e osservando RAX nel display dei Registri:
+</p>
+
+```asm
+ mov rax,07FFFFFFFFFFFFFFFh
+ inc rax
+```
+
+<p align=justify>
+(Assicurati di avere il numero corretto di F! Ci sono un 7 e 15 F.) Dopo che l'istruzione MOV è stata eseguita, RAX mostrerà il valore decimale 9223372036854775807. Questo è il valore intero con segno più alto esprimibile in 64 bit. Incrementa il valore di 1 con l'istruzione INC e immediatamente il valore in RAX diventa -9223372036854775808.
+</p>
+
+### Estensione del segno e MOVSX
+
+<p align=justify>
+C'è un sottile problema da evitare quando si lavora con valori con segno di dimensioni diverse. Il bit di segno è il bit alto in un byte, parola o doppia parola con segno. Ma cosa succede quando devi trasferire un valore con segno in un registro o in una posizione di memoria più grande? Cosa succede, ad esempio, se devi spostare un valore con segno a 16 bit in un registro a 32 bit? Se usi l'istruzione MOV, niente di buono. Prova questo.
+</p>
+
+```asm
+ mov ax,-42
+ mov ebx,eax
+```
+
+<p align=justify>
+La forma esadecimale di -42 è 0FFD6h. Se hai quel valore in un registro a 16 bit come AX e usi MOV per spostare il valore in un registro più grande come EBX o RBX, il bit di segno non sarà più il bit di segno. In altre parole, una volta che -42 passa da un contenitore a 16 bit a un contenitore a 32 bit, cambia da -42 a 65494. Il bit di segno è ancora lì. Non è stato azzerato. Tuttavia, in un registro più grande, il vecchio bit di segno è ora solo un altro bit in un valore binario, senza significato speciale. Questo esempio è un po' fuorviante. Prima di tutto, non possiamo letteralmente spostare un valore da AX a EBX. <b>L'istruzione MOV gestirà solo operandi di registro della stessa dimensione</b>. Tuttavia, ricorda che AX è semplicemente costituito dai due byte inferiori di EAX. Possiamo spostare AX in EBX spostando EAX in EBX, ed è quello che abbiamo fatto nell'esempio precedente. Purtroppo, SASM non è in grado di mostrarci valori con segno a 8 bit, 16 bit o 32 bit. Il suo debugger può visualizzare solo RAX, e possiamo vedere AL, AH, AX o EAX solo vedendoli all'interno di RAX. Ecco perché, nell'esempio precedente, SASM mostra il valore che pensavamo fosse -42 come 65494. La visualizzazione dei Registri di SASM non ha il concetto di bit di segno tranne che nel bit più alto di un valore a 64 bit. Le moderne CPU Intel ci forniscono una via d'uscita da questa trappola, sotto forma dell'istruzione MOVSX. MOVSX significa "Sposta con Estensione del Segno", ed è una delle molte istruzioni che non erano presenti nelle CPU originali 8086/8088. MOVSX è stata introdotta con la famiglia di CPU 386, e poiché Linux non può girare su nulla di più vecchio di una 386, puoi presumere che qualsiasi PC Linux supporti l'istruzione MOVSX. Carica questo in un ambiente di test e prova.
+</p>
+
+```asm
+ xor rax,rax
+ mov ax,-42
+ movsx rbx,ax
+```
+
+<p align=justify>
+La prima riga serve semplicemente ad azzerare RAX per garantire che non ci siano "avanzi" memorizzati in esso da codice eseguito in precedenza. Ricorda che SASM non può visualizzare AX singolarmente, quindi mostrerà RAX come contenente 65494. Tuttavia, quando trasferisci AX in RBX con MOVSX, il valore di RBX verrà mostrato come -42. Ciò che è successo è che l'istruzione MOVSX ha eseguito l'estensione del segno sui suoi operandi, prendendo il bit di segno dalla quantità a 16 bit in AX e rendendolo il bit di segno della quantità a 64 bit in RBX. MOVSX è significativamente diverso da MOV in quanto <b>i suoi operandi possono essere di dimensioni diverse</b>. MOVSX ha diverse possibili variazioni, che ho riassunto nella figura seguente.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/movsx_instruction.png">
+</div>
+
+<p align=justify>
+Nota che l'operando di destinazione può essere solo un registro. La notazione qui è una di quelle che vedrai in molti riferimenti al linguaggio assembly nella descrizione degli operandi delle istruzioni. La notazione "r16" è un'abbreviazione per "qualsiasi registro a 16 bit". Allo stesso modo, "r/m" significa "registro o memoria" ed è seguita dalla dimensione in bit. Ad esempio, "r/m16" significa "qualsiasi registro a 16 bit o posizione di memoria a 16 bit". Detto ciò, potresti scoprire, dopo aver risolto alcuni problemi in assembly, che l'aritmetica con segno è usata meno spesso di quanto pensi. è bene sapere come funziona, ma non sorprenderti se passi mesi o addirittura anni senza mai averne bisogno.
+</p>
+
+### Operandi impliciti e MUL
+
+<p align=justify>
+Per la maggior parte del tempo, passi i valori alle istruzioni macchina tramite uno o due operandi posti proprio lì sulla riga accanto al mnemonico. Questo è positivo, perché quando dici MOV RAX,RBX, sai precisamente cosa si sta muovendo, da dove proviene e dove sta andando. Purtroppo, non è sempre così. Alcune istruzioni agiscono su registri o persino su posizioni di memoria che non sono dichiarate in un elenco di operandi. Queste istruzioni hanno infatti operandi, ma rappresentano assunzioni fatte dall'istruzione. Tali operandi sono chiamati <b>operandi impliciti</b> e non cambiano e non possono essere cambiati. Ad aumentare la confusione, la maggior parte delle istruzioni che hanno operandi impliciti ha anche operandi espliciti. I migliori esempi di operandi impliciti nel set di istruzioni x64 sono le istruzioni di moltiplicazione e divisione. Il set di istruzioni x64 ha due insiemi di istruzioni per moltiplicare e dividere. Un insieme, MUL e DIV, gestisce calcoli senza segno. L'altro, IMUL e IDIV, gestisce calcoli con segno. MUL e DIV sono usati molto più frequentemente delle loro alternative per la matematica con segno, e sono quelli di cui parlerò in questa sezione. L'istruzione MUL fa ciò che ti aspetteresti: moltiplica due valori e restituisce un prodotto. Tra le operazioni matematiche di base, tuttavia, la moltiplicazione ha un problema speciale: genera valori di output che sono spesso enormemente più grandi dei valori di input. Questo rende impossibile seguire il modello convenzionale negli operandi delle istruzioni Intel, dove il valore generato da un'istruzione va nell'operando di destinazione.
+</p>
+
+<p align=justify>
+Considera un'operazione di moltiplicazione a 32 bit. Il valore più grande senza segno che può essere contenuto in un registro a 32 bit è 4.294.967.295. Moltiplicalo anche solo per due e ottieni un prodotto a 33 bit, che non potrà più essere contenuto in alcun registro a 32 bit. Questo problema ha afflitto le architetture Intel (tutte le architetture, in effetti) sin dall'inizio. Quando l'x86 era un'architettura a 16 bit, il problema era dove collocare il prodotto di due valori a 16 bit, che può facilmente superare un registro a 16 bit. I progettisti di Intel hanno risolto il problema nell'unico modo possibile: <b>utilizzando due registri per contenere il prodotto</b>. Non è immediatamente ovvio per chi non è matematico, ma è vero (provalo su una calcolatrice!) che il prodotto più grande di due numeri binari può essere espresso in non più del doppio dei bit richiesti dal fattore più grande. In parole povere, qualsiasi prodotto di due valori a 16 bit può essere contenuto in 32 bit, e qualsiasi prodotto di due valori a 32 bit può essere contenuto in 64 bit. Quindi, anche se potrebbero essere necessari due registri per contenere il prodotto, non saranno mai necessari più di due registri. Questo ci porta all'istruzione MUL. MUL è un'istruzione curiosa dal punto di vista degli operandi: prende solo un operando, che contiene uno dei fattori da moltiplicare. L'altro fattore è implicito, così come la coppia di registri che riceve il prodotto del calcolo. MUL appare quindi ingannevolmente semplice.
+</p>
+
+```asm
+ mul rbx
+```
+
+<p align=justify>
+Ovviamente, se si sta eseguendo una moltiplicazione, qui è coinvolto qualcosa di più del semplice RBX. Gli operandi impliciti dipendono dalla dimensione di quello esplicito. Questo ci dà quattro variazioni, che ho riassunto nella figura seguente.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/mul_instruction.png">
+</div>
+
+<p align=justify>
+Il primo fattore è dato nel singolo operando esplicito, che può essere un valore in un registro o in una posizione di memoria. Il secondo fattore è implicito e sempre nel registro generico "A" appropriato alla dimensione del primo fattore. Se il primo fattore è un valore a 8 bit, il secondo fattore è sempre nel registro AL a 8 bit. Se il primo fattore è un valore a 16 bit, il secondo fattore si trova sempre nel registro AX a 16 bit e così via. Una volta che il prodotto richiede più di 16 bit, i registri DX vengono usati per contenere la parte di ordine superiore del prodotto. Per "di ordine superiore" qui intendo la parte del prodotto che non rientra nel registro "A". Ad esempio, se si moltiplicano due valori a 16 bit e il prodotto è 02A456Fh, il registro AX conterrà 0456Fh e il registro DX conterrà 02Ah. Si noti che quando un prodotto è abbastanza piccolo da entrare interamente nel primo dei due registri che contengono il prodotto, il registro di ordine superiore (sia esso AH, DX, EDX o RDX) viene azzerato. I registri spesso scarseggiano nel lavoro di assembly, ma anche se si è sicuri che le moltiplicazioni coinvolgano sempre prodotti di piccole dimensioni, non è possibile utilizzare il registro di ordine superiore per nient'altro mentre viene eseguita un'istruzione MUL. Si noti inoltre che i valori immediati non possono essere utilizzati come operandi per MUL; cioè, non puoi farlo, per quanto sarebbe spesso utile indicare il primo fattore come un valore immediato.
+</p>
+
+```asm
+ mul 42
+```
+
+### MUL e il Carry Flag
+
+<p align=justify>
+Non tutte le moltiplicazioni generano prodotti sufficientemente grandi da richiedere due registri. Per la maggior parte del tempo scoprirai che 64 bit sono più che sufficienti. Quindi, come puoi capire se ci sono cifre significative nel registro di ordine superiore? MUL imposta molto utilmente il flag di riporto CF quando il valore del prodotto oltrepassa il registro di ordine inferiore. Se, dopo una MUL, trovi CF impostato su 0, puoi ignorare il registro di ordine superiore, sapendo che l'intero prodotto si trova nel registro di ordine inferiore dei due registri. Vale la pena fare una rapida dimostrazione. Prima, prova una moltiplicazione "piccola" in cui il prodotto si adatterà facilmente a un singolo registro a 32 bit.
+</p>
+
+```asm
+ mov eax,447
+ mov ebx,1739
+ mul ebx
+```
+
+<p align=justify>
+Ricorda che stiamo moltiplicando EAX per EBX qui. Procedi attraverso le tre istruzioni e, dopo che l'istruzione MUL è stata eseguita, guarda nella vista dei Registri per vedere il prodotto in EDX e EAX. EAX contiene 777333 e EDX contiene 0. Guarda poi lo stato attuale dei vari flag. Nessun segno di CF, il che significa che CF è stato azzerato a 0. Successivamente, aggiungi le seguenti istruzioni al tuo sandbox, dopo le tre mostrate in precedenza:
+</p>
+
+```asm
+ mov eax,0FFFFFFFFh
+ mov ebx,03B72h
+ mul ebx
+```
+
+<p align=justify>
+Procedi come al solito, osservando il contenuto di EAX, EDX ed EBX nella vista Registri. Dopo l'istruzione MUL, guarda i flag nella vista Registri. Il flag di carry CF sarà impostato su 1 (e saranno impostati anche il flag di overflow OF, il flag di segno SF, il flag di abilitazione dell'interrupt IF e il flag di parità PF, ma questi non sono generalmente utili in aritmetica senza segno). Ciò che CF ti dice fondamentalmente qui è che ci sono cifre significative nella parte alta del prodotto, e queste sono memorizzate in EDX per le moltiplicazioni a 32 bit, RDX per le moltiplicazioni a 64 bit, e così via.
+</p>
+
+### Divisione senza segno con DIV
+
+<p align=justify>
+C'è una forte somiglianza tra l'istruzione di moltiplicazione senza segno MUL e l'istruzione di divisione senza segno DIV. DIV fa ciò che ti aspetteresti: divide un valore per un altro e ti dà un quoziente e un resto. Ricorda, qui stiamo facendo aritmetica intera e non decimale, quindi non c'è modo di esprimere un quoziente decimale come 17.76 o 3.14159. Questi richiedono la meccanica "in virgola mobile" dell'architettura della CPU, che è un argomento vasto e sottile che non affronterò. Nella divisione, non hai il problema che ha la moltiplicazione, cioè generare grandi valori di output per alcuni valori di input. Se dividi un valore a 16 bit per un altro valore a 16 bit, non otterrai mai un quoziente che non possa essere contenuto in un registro a 16 bit. D'altra parte, sarebbe utile poter dividere numeri molto grandi, e così gli ingegneri di Intel hanno creato qualcosa di molto simile a un'immagine speculare di MUL: per la divisione a 64 bit, posizioni un valore dividendo in RDX e RAX, il che significa che può avere fino a 128 bit di dimensione. Il divisore è memorizzato nell'unico operando esplicito di DIV, che può essere un registro o una posizione di memoria. (Come con MUL, non puoi utilizzare un valore immediato come operando.) Il quoziente viene restituito in RAX e il resto in RDX. Questa è la situazione per una divisione completa a 64 bit. Come per MUL, gli operandi impliciti di DIV dipendono dalla dimensione dell'unico operando esplicito, qui inteso come il divisore. Ci sono quattro "dimensioni" delle operazioni DIV, a seconda delle dimensioni dell'operando esplicito, il divisore. Questo è riassunto nella figura seguente.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/div_instruction.png">
+</div>
+
+<p align=justify>
+Non proverò nemmeno a stampare quale numero intero puoi memorizzare in 128 bit utilizzando due registri da 64 bit. In notazione scientifica, è 3,4  -  10³8. Considerando che 64 bit possono contenere 1,8  -  10¹? e che questo è appena al di sotto del numero stimato di stelle nell'universo osservabile, suggerisco di trattare il numero come un'astrazione non visualizzata. Diamo un'occhiata a DIV. Metti il seguente codice in una nuova sandbox:
+</p>
+
+```asm
+ mov rax,250   	; Dividend 
+ mov rbx,5    	; Divisor  
+ div rbx        ; Do the DIV 
+```
+
+<p align=justify>
+L'operando esplicito è il divisore, memorizzato in RBX. Il dividendo è in RAX. Procedi con l'esecuzione passo per passo. Dopo l'esecuzione di DIV, il quoziente sarà posizionato in RAX, sostituendo il dividendo. Non c'è resto, quindi RDX è zero. Inserisci un nuovo dividendo e un divisore che non si dividono uniformemente; 247 e 17 funzioneranno. Una volta eseguita l'istruzione DIV con i nuovi operandi, guarda RDX. Dovrebbe contenere 9. Questo è il tuo resto. L'istruzione DIV non posiziona dati utili in nessuno dei flag. Infatti, DIV lascerà OF, SF, ZF, AF, PF e CF in stati indefiniti. Non provare a testare nessuno di quei flag in un'istruzione di salto dopo DIV. Come puoi aspettarti, dividere per zero attiverà un errore che terminerà il tuo programma: un'eccezione aritmetica. <b>è una buona idea testare i valori del tuo divisore per assicurarti che non ci siano zeri nel divisore</b>. Ora, dividere zero per un numero diverso da zero non attiva un errore; semplicemente posizionerà valori zero nei registri del quoziente e del resto. Solo per divertimento, prova entrambi i casi nella tua sandbox per vedere cosa succede.
+</p>
+
+### MUL e DIV sono dei ritardatari
+
+<p align=justify>
+Una comune domanda da principiante su MUL e DIV riguarda le due versioni "più piccole" di entrambe le istruzioni. (Vedi le figure precedente.) Se una moltiplicazione o divisione a 64 bit può gestire qualsiasi cosa l'architettura x64 possa mettere nei registri, perché le versioni più piccole sono necessarie? è solo una questione di compatibilità con le vecchie CPU a 16 bit? Non del tutto. In molti casi, si tratta di velocità. Le istruzioni MUL e DIV sono vicine a essere le istruzioni più lente dell'intero insieme di istruzioni x64. Certamente non sono lente come una volta, ma rispetto ad altre istruzioni come MOV o ADD sono lente. Inoltre, sia le versioni a 32 bit che a 64 bit di entrambe le istruzioni sono più lente della versione a 16 bit, e la versione a 8 bit è la più veloce di tutte. DIV è più lenta di MUL, ma entrambe sono lente. Ora, l'ottimizzazione della velocità è un affare molto scivoloso nel mondo x86/x64, e non è qualcosa di cui i principianti dovrebbero preoccuparsi. Avere le istruzioni nella cache della CPU rispetto al doverle prelevare dalla memoria è una differenza di velocità che sovrasta la maggior parte delle differenze di velocità tra le istruzioni stesse. Altri fattori entrano in gioco nelle CPU più recenti e rendono le generalizzazioni sulla velocità delle istruzioni quasi impossibili, e certamente impossibili da affermare con qualsiasi precisione. Se stai eseguendo solo poche moltiplicazioni o divisioni isolate, non lasciare che tutto ciò ti disturbi. <b>Dove la velocità delle istruzioni può diventare importante è all'interno dei cicli in cui stai eseguendo molte operazioni continuamente</b>, come nella crittografia dei dati o nelle simulazioni fisiche. La mia euristica personale è di utilizzare la versione più piccola di MUL e DIV che i valori di input consentono, temperata dall'euristica ancora più forte che la maggior parte delle volte la velocità delle istruzioni non importa. Quando sarai abbastanza esperto in assembly da prendere decisioni sulle prestazioni a livello di istruzione, lo saprai. Fino ad allora, concentrati sul rendere i tuoi programmi privi di bug e lascia stare la velocità alla CPU.
+</p>
+
+### Leggere e usare una guida all'assembly
+
+<p align=justify>
+La programmazione in linguaggio assembly riguarda i dettagli. Ci sono ampie somiglianze tra le istruzioni, ma sono le differenze a metterti nei guai quando inizi a fornire programmi all'occhio inflessibile dell'assemblatore. Ricordare un mare di piccoli dettagli intrecciati riguardanti diverse dozzine di istruzioni è brutale e non necessario. Anche i grandi non cercano di tenere tutto in mente in ogni momento. La maggior parte tiene a disposizione qualche tipo di documento di riferimento per rinfrescare la memoria sui dettagli delle istruzioni macchina.
+</p>
+
+<p align=justify>
+Nel 1975, un documento completo e utile che riassumeva l'insieme delle istruzioni poteva essere stampato su entrambi i lati di una carta piegata in tre parti, che poteva essere riposta nella tasca della camicia. Carte di questo tipo erano comuni, e si potevano ottenere per quasi qualsiasi microprocessore. Per motivi non chiari, erano chiamate "carte blu", anche se la maggior parte era stampata su normale cartoncino bianco. All'inizio e a metà degli anni '80, ciò che un tempo era una singola carta era ormai un opuscolo di 89 pagine, dimensionato per entrare in tasca. La Guida di Riferimento per Programmatori di Intel per la famiglia di CPU 8086 veniva spedita con il Macro Assembler di Microsoft. Si adattava davvero alla tasca della camicia, a patto che nulla di più largo di una lista della spesa cercasse di condividere lo spazio. La potenza e la complessità dell'architettura x86 esplosero a metà degli anni '80, e un riassunto completo di tutte le istruzioni in tutte le loro forme, più tutte le spiegazioni necessarie, divenne materiale di dimensioni da libro e, con il passare degli anni, richiese non uno ma diversi libri per essere coperto completamente. Intel fornisce versioni PDF della propria documentazione sui processori come download gratuiti, e puoi trovarle nel link sottostante.
+</p>
+
+<p align="justify">
+<a href="https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html">Intel® 64 and IA-32 Architectures Software Developer Manuals</a>
+</p>
+
+<p align=justify>
+Vale la pena averli - ma dimentica di infilarli in tasca. Solo il riferimento del set di istruzioni rappresenta oltre 2.300 pagine in un singolo PDF, e ci sono diversi altri libri correlati per completare il set. Quello di cui hai bisogno è il Volume 2. La buona notizia è che puoi scaricare i file PDF gratuitamente e sfogliarli sul tuo PC o stampare solo le sezioni che potresti trovare utili per un progetto particolare. (I libri stampati sono disponibili su lulu.com, ma sono costosi.) Suggerisco decisamente di familiarizzare almeno in modo ragionevole con le istruzioni x64 comuni prima di affrontare il riferimento esaustivo (e sfinente!) di Intel. Trenta anni fa c'erano eccellenti guide di riferimento delle dimensioni di un libro per la famiglia di CPU x86, la migliore delle quali era il PC Magazine Technical Reference: The Processor and Coprocessor di Robert L. Hummel (Ziff-Davis Press, 1992). Anche se lo vedo regolarmente sui siti di libri usati, ti porterà solo fino al 486. Lo considero ancora una buona cosa da avere sulla tua libreria se lo avvisti da qualche parte e riesci a prenderlo a buon prezzo.
+</p>
+
+<p align=justify>
+Il problema con i riferimenti al linguaggio assembly è che, per essere completi, non possono essere brevi. Tuttavia, gran parte della complessità degli insiemi di istruzioni x86/x64 ai giorni nostri risiede in istruzioni e meccanismi di indirizzamento della memoria che sono utili solo per sistemi operativi e driver. Per applicazioni di dimensioni contenute che girano in modalità utente, semplicemente non si applicano. Quindi, in omaggio a chi sta iniziando con il linguaggio assembly, ho messo insieme un riferimento per principianti alle istruzioni x86/x64 più comuni, nell'<a href="https://github.com/TheBitPoets/2cornot2c/blob/main/lab/lessons/ASSEMBLY/x64_Assembly_Language_Pocket_Reference.pdf">Appendice B</a>. Contiene almeno una pagina su ogni istruzione di cui parlo in questo libro, più alcune istruzioni aggiuntive che tutti dovrebbero conoscere. Non include descrizioni di ogni istruzione, ma solo delle più comuni e utili. Una volta che sarai abbastanza abile da usare le istruzioni più arcane, dovresti essere in grado di leggere la documentazione x64 di Intel e farne buon uso. Alcune delle istruzioni dell'x86 a 32 bit sono state rimosse dall'insieme di istruzioni x64, e non le ho incluse. Il mnemonico dell'istruzione si trova in cima alla pagina al margine sinistro. A destra del mnemonico si trova il nome dell'istruzione, che è un po' più descrittivo del solo mnemonico.
+</p>
+
+<p align=justify>
+Immediatamente sotto il mnemonico c'è un minigrafico dei flag della CPU nel registro RFlags. Come ho descritto in precedenza, il registro RFlags è una raccolta di valori a 1 bit che mantengono alcune informazioni essenziali sullo stato della macchina per brevi periodi di tempo. Molte (ma non tutte) istruzioni x64 modificano i valori di uno o più flag. I flag possono quindi essere testati singolarmente da una delle istruzioni Jump On Condition, che cambiano il corso del programma a seconda degli stati dei flag. Ognuno dei flag ha un nome e ciascun flag ha un simbolo nel minigrafico dei flag. Con il tempo imparerai a conoscere i flag attraverso i loro simboli di due caratteri, ma fino ad allora i nomi completi dei flag sono mostrati a destra del minigrafico. La maggior parte dei flag non viene utilizzata spesso (se non mai) nei lavori iniziali in linguaggio assembly. I flag a cui presterai più attenzione sono il Flag Zero (ZF) e il Flag di Riporto (CF). Ci sarà un asterisco (*) sotto il simbolo di qualsiasi flag influenzato dall'istruzione. Il modo in cui il flag è influenzato dipende da cosa fa l'istruzione. Dovrai dedurlo dalla sezione Note. Quando un'istruzione non influenza affatto i flag, la parola none apparirà nel minigrafico dei flag. Nella pagina di esempio qui, il minigrafico indica che l'istruzione NEG influisce sul Flag Overflow, sul Flag di Segno, sul Flag Zero, sul Flag di Riporto Ausiliario, sul Flag di Parità e sul Flag di Riporto. I modi in cui i flag sono influenzati dipendono dai risultati dell'operazione di negazione sull'operando specificato. Questi modi sono riassunti nel secondo paragrafo della sezione Note.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/example_x86_reference.png">
+</div>
+
+### Legal Forms
+
+<p align=justify>
+Le istruzioni possono includere più di una forma legale. La forma di un'istruzione varia in base al tipo e all'ordine degli operandi che le vengono passati. Ciò che le singole forme rappresentano effettivamente sono diversi codici operativi binari (<i>opcodes</i>). Ad esempio, sotto la superficie, l'istruzione POP RAX è il numero 058h, mentre l'istruzione POP RSI è il numero 05Eh. La maggior parte dei codici operativi x64 non sono singoli valori a 8 bit, e la maggior parte è lunga almeno due byte, spesso quattro o più. Quando vuoi utilizzare un'istruzione con un certo insieme di operandi, assicurati di controllare la sezione delle Forme Legali della guida di riferimento per quell'istruzione per assicurarti che la combinazione sia legale. Ora ci sono più forme legali rispetto ai vecchi tempi del DOS, e molte delle restrizioni residue riguardano i registri di segmento, che comunque non potrai usare quando scrivi normali applicazioni utente in modalità long a 64 bit. Nella pagina di riferimento dell'istruzione NEG, vedi che un registro di segmento non può essere un operando per NEG. (Se potesse, ci sarebbe un elemento NEG sr nell'elenco delle Forme Legali.)
+</p>
+
+### Operand Symbols
+<p align=justify>
+I simboli usati per indicare la natura degli operandi nella sezione <b>Legal Forms</b> sono riassunti in fondo a ogni pagina delle istruzioni nell'Appendice A. Sono quasi autoesplicativi, ma mi prenderò un momento per ampliarli leggermente qui:
+</p>
+
+<p align=justify>
+<ul>
+	<li>
+		<p align=justify>
+			<b>r8</b> Un registro a 8 bit, cioè uno tra AH, AL, BH, BL, CH, CL, DH o DL.
+		</p>
+	</li>
+	<li>
+  		<p align=justify>
+			<b>r16</b> Un registro a uso generale a 16 bit, uno tra AX, BX, CX, DX, BP, SP, SI o DI.
+		</p>	
+	</li>
+ 	<li>
+  		<p align=justify>
+			<b>r32</b> Un registro generale a 32 bit, uno tra EAX, EBX, ECX, EDX, EBP, ESP, ESI o EDI.
+		</p>
+	</li>
+	<li> 
+    		<p align=justify>
+			<b>r64</b> Un registro a uso generale a 64 bit, uno tra RAX, RBX, RCX, RDX, RBP, RSP, RSI, RDI, o uno tra R8-R15.
+		</p>	
+	</li>
+ 	<li>
+    		<p align=justify>
+			<b>sr</b> Uno dei registri di segmento: CS, DS, SS, ES, FS o GS.
+		</p>	
+	</li>
+ 	<li>
+    		<p align=justify>
+			<b>m8</b> Un byte di memoria a 8 bit.
+		</p>	
+	</li>
+ 	<li>
+    		<p align=justify>
+			<b>m16</b> Una parola di dati di memoria a 16 bit.
+		</p>	
+	</li>
+ 	<li>
+    		<p align=justify>
+			<b>m32</b> Una parola di dati di memoria a 32 bit.
+		</p>	
+	</li>
+ 	<li>
+    		<p align=justify>
+			<b>m64</b> Una parola di 64 bit di dati in memoria.
+		</p>
+	</li>
+ 	<li>
+    		<p align=justify>
+			<b>i8</b> Un byte a 8 bit di dati immediati.
+		</p>	
+	</li>
+ 	<li>
+    		<p align=justify>
+			<b>i16</b> Una parola a 16 bit di dati immediati.
+		</p>	
+	</li>
+ 	<li>
+    		<p align=justify>
+			<b>i32</b> Una parola a 32 bit di dati immediati.
+		</p>	
+	</li>
+ 	<li>
+    		<p align=justify>
+			<b>i64</b> Una parola a 64 bit di dati immediati.
+		</p>	
+	</li>
+ 	<li>
+    		<p align=justify>
+			<b>d8</b> Uno spostamento a 8 bit con segno. Non ne abbiamo ancora parlato, ma uno spostamento è una distanza tra la posizione attuale nel codice e un'altra posizione nel codice a cui vogliamo saltare. è con segno (cioè, può essere negativo o positivo) perché uno spostamento positivo ti porta più in alto (in avanti) nella memoria, mentre uno spostamento negativo ti porta più in basso (indietro) nella memoria. Esamineremo questo concetto in dettaglio più avanti.
+		</p>	
+	</li>
+ 	<li>
+    		<p align=justify>
+			<b>d16</b> Uno spostamento con segno a 16 bit. Ancora una volta, per l'uso con istruzioni di salto e chiamata.
+		</p>	
+	</li>
+ 	<li>
+    		<p align=justify>
+			<b>d32</b> Uno spostamento con segno a 32 bit.
+		</p>
+	</li>
+ 	<li>
+  		<p align=justify>
+			<b>d64</b> Uno spostamento con segno a 64 bit.
+		</p>
+	</li>
+</ul>
+</p>
+
+### Examples
+
+<p align=justify>
+Mentre la sezione delle Forme Legali mostra quali combinazioni di operandi sono legali per una data istruzione, la sezione Esempi mostra esempi dell'istruzione in uso reale, proprio come verrebbe codificata in un programma in linguaggio assembly. Ho cercato di fornire un buon campione di esempi per ciascuna istruzione, dimostrando la gamma di diverse possibilità con l'istruzione. Non tutte le singole forme legali saranno presenti negli esempi.
+</p>
+
+### Notes
+
+<p align=justify>
+La sezione Note della pagina di riferimento descrive brevemente l'azione dell'istruzione e fornisce informazioni su come influisce sui flag, su come potrebbe essere limitata nel suo utilizzo e su qualsiasi altro dettaglio che deve essere ricordato, specialmente su cose che i principianti potrebbero trascurare o male interpretare.
+</p>
+
+### Cosa manca
+
+<p align=justify>
+Ho omesso qualsiasi istruzione dell'insieme di istruzioni x64 che non esiste più in x64. L'Appendice B si differenzia dalla maggior parte dei riferimenti dettagliati al linguaggio assembly per il fatto che non include le informazioni sulla codifica dell'opcode binario, né indicazioni su quanti cicli di macchina vengono utilizzati da ciascuna forma dell'istruzione. La codifica binaria di un'istruzione è la sequenza effettiva di byte binari che la CPU digerisce e riconosce come istruzione macchina. Quello che noi chiameremmo POP RAX, la macchina lo vede come il numero binario 58h. Quello che chiamiamo ADD RSI,07733h, la macchina lo vede come la sequenza di 7 byte 48h 81h 0C6h 33h 77h 00h 00h. Le istruzioni macchina sono codificate con un minimo di uno e un massimo di 15 byte, a seconda di quale istruzione siano e di quali siano i loro operandi. Predisporre il sistema per determinare quale sarà la codifica per qualsiasi istruzione data è estremamente complicato, in quanto i suoi byte componenti devono essere impostati bit per bit da diverse grandi tabelle. Ho deciso che questo libro non è il posto per quella particolare discussione e ho lasciato fuori le informazioni di codifica dall'Appendice B. (Questo problema è una delle ragioni per cui i libri di riferimento delle istruzioni Intel sono così grandi.)
+</p>
+
+<p align=justify>
+Infine, non ho incluso nulla in questo libro che indichi quanti cicli macchina vengono spesi da un dato comando macchina. Un ciclo macchina è un impulso dell'orologio master che fa magicamente funzionare il PC. Ogni istruzione utilizza un certo numero di quei cicli per svolgere il proprio lavoro, e il numero varia in base a criteri che non spiegherò in questo libro. Peggio ancora, il numero di cicli macchina utilizzati da una data istruzione varia da un modello di processore Intel all'altro. Un'istruzione può utilizzare meno cicli sul Pentium rispetto al 486, o forse più. (In generale, le istruzioni macchina Intel hanno iniziato a utilizzare meno cicli di clock nel corso degli anni, ma ciò non è vero per ogni singola istruzione.) Inoltre, come spiega Michael Abrash nel suo immenso libro Michael Abrash's Graphics Programming Black Book (Coriolis Group Books, 1997), conoscere i requisiti di ciclo per istruzioni individuali è raramente sufficiente per permettere anche a un programmatore esperto in linguaggio assembly di calcolare quanto tempo impiegherà una data serie di istruzioni per essere eseguita. La cache della CPU, il prefetching, la previsione dei salti, l'iperthreading e un numero qualsiasi di altri fattori si combinano e interagiscono per rendere tali calcoli quasi impossibili, tranne in termini generali. Lui e io concordiamo entrambi sul fatto che non sia un argomento adatto ai principianti, ma se desideri saperne di più in un certo momento, ti consiglio di cercare il suo libro e vedere di persona.
+</p>
+
+### Esaminiamo `EATSYSCALL.ASM`
+
+```asm
+;  Executable name : eatsyscall
+;  Version         : 1.0
+;  Created date    : 4/25/2022
+;  Last update     : 5/10/2023
+;  Author          : Jeff Duntemann
+;  Architecture    : x64
+;  From            : x64 Assembly Language Step By Step, 4th Edition
+;  Description     : A simple program in assembly for x64 Linux, using NASM 2.14,
+;                    demonstrating the use of the syscall instruction to display text.
+;                    Not for use with SASM.
+;
+;  Build using these commands:
+;    nasm -f elf64 -g -F stabs eatsyscall.asm
+;    ld -o eatsyscall eatsyscall.o
+;
+
+SECTION .data          ; Section containing initialised data
+	
+	EatMsg: db "Eat at Joe's!",10
+ 	EatLen: equ $-EatMsg	
+	
+SECTION .bss           ; Section containing uninitialized data	
+
+SECTION .text          ; Section containing code
+
+global 	_start	       ; Linker needs this to find the entry point!
+	
+_start:
+    push rbp
+    mov rbp,rsp
+
+    mov rax,1           ; 1 = sys_write for syscall
+    mov rdi,1           ; 1 = fd for stdout; i.e., write to the terminal window
+    mov rsi,EatMsg      ; Put address of the message string in rsi
+    mov rdx,EatLen      ; Length of string to be written in rdx
+    syscall             ; Make the system call
+
+    mov rax,60          ; 60 = exit the program
+    mov rdi,0           ; Return value in rdi 0 = nothing to return
+    syscall             ; Call syscall to exit
+```
+
+<p align=justify>
+Come hai visto quando l'hai eseguito, il programma EATSYSCALL.ASM visualizza una (breve) riga di testo sullo schermo: "Eat at Joe's!" Per questo, hai dovuto fornire 35 righe di testo all'assemblatore! Molte di quelle 35 righe sono commenti e non sono necessarie nel senso più stretto, ma fungono da documentazione interna per permetterti di capire cosa sta facendo il programma (o, cosa più importante, come lo sta facendo) sei mesi o un anno da adesso.
+</p>
+
+<p align=justify>
+Uno degli obiettivi della programmazione in linguaggio assembly è utilizzare il minor numero possibile di istruzioni per portare a termine il lavoro. Ciò non significa creare un file di codice sorgente il più breve possibile. La dimensione del file sorgente non ha nulla a che fare con la dimensione del file eseguibile assemblato da esso! Più commenti metti nel tuo file, meglio ricorderai come funzionano le cose all'interno del programma la prossima volta che lo riprendi. Penso che ti sorprenderà quanto velocemente la logica di un complicato programma in linguaggio assembly si affievolisca nella tua mente. Dopo non più di 48 ore di lavoro su altri progetti, sono tornato a progetti in assembly e ho dovuto faticare per riprendere la massima velocità nello sviluppo. I commenti non sono né tempo né spazio sprecato. IBM soleva dire: "Una riga di commenti per riga di codice." Questo è buono, e dovrebbe essere considerato un minimo per il lavoro in linguaggio assembly. Un approccio migliore (che seguirò in effetti negli esempi più complicati più avanti nel capitolo) è usare una breve riga di commento a destra di ogni riga di codice, insieme a un blocco di commenti all'inizio di ciascuna sequenza di istruzioni che lavorano insieme per portare a termine un compito discreto. In cima a ogni programma dovrebbe esserci una sorta di blocco di commenti standardizzato, contenente alcune informazioni importanti.
+</p>
+
+<p align=justify>
+<ul>
+	<li>
+		<p align=justify>
+		Il nome del file di codice sorgente.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Il nome del file eseguibile.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		La data in cui hai creato il file.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		La data in cui hai modificato per l'ultima volta il file.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Il nome della persona che l'ha scritto.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Il nome e la versione dell'assemblatore utilizzato per crearlo.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Una descrizione generale di cosa fa il programma o la libreria. Prendi tutto lo spazio di cui hai bisogno. Non importa la dimensione o la velocità del programma eseguibile.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Una copia dei comandi utilizzati per costruire il file, presa dal makefile se utilizzi un makefile o dalla finestra di dialogo Build di SASM se utilizzi SASM.
+		</p>
+	</li>
+</ul>
+</p>
+
+<p align=justify>
+La sfida con un blocco di commento iniziale è aggiornarlo per riflettere lo stato attuale del tuo progetto. Nessuno dei tuoi strumenti lo farà automaticamente. Sta a te.
+</p>
+
+### Sezione .data
+
+<p align=justify>
+I normali programmi utente (che girano nello spazio utente e non in quello kernel) scritti per Linux sono divisi in <b>tre sezioni</b>. L'ordine in cui queste sezioni si presentano nel tuo programma non è davvero importante, ma per convenzione la sezione <b>.data</b> viene prima, seguita dalla sezione <b>.bss</b> e poi dalla sezione <b>.text</b>. <b>La sezione .data contiene definizioni di elementi dati inizializzati</b>. I dati inizializzati sono dati che hanno un valore prima che il programma inizi a essere eseguito. Questi valori fanno parte del file eseguibile. Vengono caricati in memoria quando il file eseguibile viene caricato in memoria per l'esecuzione. Non devi caricarli con i loro valori e non vengono utilizzati cicli macchina per crearli, al di là di quanto necessario per caricare il programma nel suo insieme in memoria. La cosa importante da ricordare sulla sezione .data è che maggiore è il numero di elementi dati inizializzati che definisci, più grande sarà il file eseguibile e più tempo ci vorrà per caricarlo da disco in memoria quando lo esegui. Parleremo in dettaglio di come vengono definiti gli elementi dati inizializzati a breve.
+</p>
+
+### Sezione .bss
+
+<p align=justify>
+Non tutti gli elementi dati devono avere valori prima che il programma inizi a essere eseguito. Quando leggi dati da un file sul disco, ad esempio, hai bisogno di un posto dove inserire i dati dopo che arrivano dal disco. I buffer di dati come quello sono definiti nella sezione <b>Block Start Symbol</b> (<b>.bss</b>) del tuo programma. è stata chiamata in altri modi nel corso degli anni, come Buffer Start Symbol. L'acronimo non ha importanza. Nella sezione .bss, allochi blocchi di memoria da utilizzare in seguito e dai nomi a quei blocchi; questi blocchi conterranno dei valori solo successivamente, durante l'esecuzione del programma. Tutti gli assemblatori hanno un modo per riservare un certo numero di byte per un buffer e dare un nome a quel buffer, ma non specifichi quali valori devono essere memorizzati nel buffer. I valori appariranno dopo, a seguito dell'azione del programma mentre il programma è in esecuzione. <b>C'è una differenza cruciale tra gli elementi dati definiti nella sezione .data e gli elementi dati definiti nella sezione .bss</b>: gli elementi dati nella sezione .data aumentano la dimensione del tuo file eseguibile. Gli elementi dati nella sezione .bss non lo fanno. Un buffer che occupa 16.000 byte (o più, a volte molto di più) può essere definito in .bss e aggiungere quasi nulla (circa 50 byte per la descrizione) alla dimensione del file eseguibile. Questo è possibile grazie al modo in cui il caricatore di Linux porta il programma nella memoria. Quando compili il tuo file eseguibile, il linker di Linux aggiunge informazioni al file descrivendo tutti i simboli che hai definito, compresi i simboli che nominano gli elementi dati. Il caricatore sa quali elementi dati non hanno valori iniziali, e riserva spazio in memoria per loro quando porta l'eseguibile dal disco. Gli elementi dati con valori iniziali vengono letti insieme ai loro valori. Avere una sezione .bss vuota non aumenta la dimensione del tuo file eseguibile, e cancellare una sezione .bss vuota non riduce la dimensione del tuo file eseguibile.
+</p>
+
+### Sezione .text
+
+<p align=justify>
+Le vere istruzioni macchina che compongono il tuo programma vanno nella sezione <b>.text</b>. Ordinariamente, non ci sono elementi di dati definiti in .text. La sezione .text contiene simboli chiamati <b>etichette</b> (labels) che identificano posizioni nel codice del programma per salti e chiamate, ma al di là di questo, è tutto qui. Tutte le etichette globali devono essere dichiarate nella sezione .text, altrimenti le etichette non possono essere "visibili" al di fuori del tuo programma, né dal linker di Linux né dal caricatore di Linux. Esaminiamo la questione delle etichette con maggiore attenzione.
+</p>
+
+### Labels (Etichette)
+
+<p align=justify>
+Un'etichetta è una sorta di segnalibro, che descrive un punto nel codice del programma e gli dà un nome più facile da ricordare rispetto a un indirizzo di memoria nudo e crudo. Le etichette vengono utilizzate per indicare i luoghi verso cui le istruzioni di salto devono saltare e per dare nomi alle procedure in linguaggio assembly richiamabili. Spiegherò come tutto ciò viene fatto successivamente. Nel frattempo, ecco le cose più importanti da sapere sulle etichette.
+</p>
+
+<ul>
+	<li>
+		<p align=justify>Le etichette devono iniziare con una lettera, con un trattino basso, un punto o un punto interrogativo. Questi ultimi tre (_, ., ?) hanno significati speciali per l'assemblatore, quindi non usarli finché non sai come l'assemblatore li interpreta.</p>
+	</li>
+	<li>
+		<p align=justify>Le etichette devono essere seguite da due punti quando vengono definite. Questo è fondamentalmente ciò che dice a NASM che l'identificatore che si sta definendo è un'etichetta. NASM ignorerà la riga se non ci sono due punti e non segnalerà un errore, ma i due punti fissano la questione e impediscono che un mnemonico di istruzione digitato in modo errato venga scambiato per un'etichetta. Quindi usa i due punti!</p>
+	</li>
+	<li>
+		<p align=justify>Le etichette fanno distinzione tra maiuscole e minuscole. Ad esempio, yikes:, Yikes: e YIKES: sono tre etichette completamente diverse.</p>
+	</li>
+</ul>
+
+<p align=justify>
+Più tardi, vedremo tali etichette utilizzate come obiettivi delle istruzioni di salto e chiamata. Ad esempio, la seguente istruzione macchina trasferisce il flusso di esecuzione delle istruzioni alla posizione contrassegnata dall'etichetta GoHome:
+</p>
+
+```asm
+jmp GoHome
+```
+
+<p align=justify>
+Nota che i due punti non vengono utilizzati qui. I due punti vengono posti solo dove l'etichetta è definita, non dove viene riferita. Pensa in questo modo: usa i due punti quando stai contrassegnando una posizione, non quando ci stai andando. C'è solo un'etichetta in eatsyscall.asm, e questa è un po' speciale. <b>L'etichetta _start indica dove inizia il programma</b>. (è sensibile alle maiuscole, quindi non provare a usare _START o _Start.) <b>Questa etichetta deve essere contrassegnata come globale nella parte superiore della sezione .text</b>. Ora, se invece di utilizzare NASM (che è l'assemblatore a riga di comando) stai usando SASM, un assemblatore con interfaccia grafica (GUI), le cose cambiano un po'. Quando compili un programma in linguaggio assembly in SASM, l'etichetta _start diventa main. SASM usa il compilatore GNU C gcc per fungere da intermediario tra NASM e il linker Linux, ld. Quello che fa SASM, in un certo senso, è creare un programma C senza alcun codice C al suo interno. Tutti i programmi C devono avere un punto di partenza, e in un programma C quel punto di partenza è sempre main. Ci sono motivi per fare ciò che coinvolgono il collegamento di funzioni scritte in C al tuo programma assembly, come spiegherò più avanti. Ricorda questo: quando assembli da un makefile, usa _start. Quando assembli da dentro SASM, usa main.
+</p>
+
+### Variabili per i dati inizializzati
+
+<p align=justify>
+L'identificatore EatMsg nella sezione .data definisce una variabile. Specificamente, <b>EatMsg è una variabile di tipo stringa</b> (di cui parleremo tra poco), ma comunque, <b>come tutte le variabili, fa parte di una classe di elementi che chiamiamo dati inizializzati</b>: qualcosa che arriva con un valore e non solo una scatola vuota nella quale possiamo inserire un valore in un momento futuro. <b>Una variabile è definita associando un identificatore a una direttiva di definizione dei dati</b>. Le direttive di definizione dei dati appaiono in questo modo:
+</p>
+
+```asm
+ MyByte:	db 07h 			; 8 bits in size     
+ MyWord: 	dw 0FFFFh  		; 16 bits in size   
+ MyDouble: 	dd 0B8000000h 		; 32 bits in size 
+ MyQuad:     	dq 07FFFFFFFFFFFFFFFh  	; 64 bits in size  
+```
+
+<p align=justify>
+Pensa alla direttiva DB come "Definisci Byte". DB riserva un byte di memoria per la memorizzazione dei dati. Pensa alla direttiva DW come "Definisci Parola". DW riserva una parola (16 bit, o due byte) di memoria per la memorizzazione dei dati. Pensa alla direttiva DD come "Definisci Doppio". DD riserva una doppia word in memoria per la memorizzazione. DQ significa "Definisci Quad", cioè una quad word, che ha una dimensione di 64 bit.
+</p>
+
+### Variabili Stringa
+
+<p align=justify>
+Le variabili stringa sono un caso speciale interessante. Una stringa è proprio questo: <b>una sequenza di caratteri</b>, tutti in fila in memoria. Una variabile stringa è definita in eatsyscall.asm:
+</p>
+
+```asm
+	EatMsg: db "Eat at Joe's!", 10
+ ```
+
+<p align=justify>
+Le stringhe sono un'eccezione alla regola generale secondo cui una direttiva di definizione dei dati riserva una particolare quantità di memoria. <b>La direttiva DB di solito riserva solo un byte. Tuttavia, una stringa può essere di qualsiasi lunghezza tu desideri</b>. Poiché non esiste una direttiva di dati che riservi 17 byte o 42, le stringhe sono definite semplicemente associando un'etichetta al punto in cui la stringa inizia. L'etichetta EatMsg e la sua direttiva DB specificano un byte in memoria come punto di partenza della stringa. Il numero di caratteri nella stringa è ciò che dice all'assemblatore quanti byte di memoria riservare per quella stringa. Possono essere utilizzati caratteri di singola virgoletta ("~) o di doppia virgoletta (") per delimitare una stringa, e la scelta spetta a te, a meno che tu non stia definendo un valore di stringa che contiene uno o più caratteri di virgoletta. Nota che in eatsyscall.asm la variabile di stringa EatMsg contiene un carattere di singola virgoletta usato come apostrofo. Poiché la stringa contiene un carattere di singola virgoletta, devi delimitarla con doppi apici. Vale anche il contrario: se definisci una stringa che contiene uno o più caratteri di doppia virgoletta, devi delimitarla usando caratteri di singola virgoletta:
+</p>
+
+```asm
+	Yukkh: db 'He said, "How disgusting!" and threw up.', 10
+```
+
+<p align=justify>
+Puoi combinare più sottostringhe separate in una singola variabile di stringa separando le sottostringhe con virgole. Questo è un modo perfettamente legale (e a volte utile) per definire una variabile di stringa:
+</p>
+
+```asm
+	TwoLineMsg: db "Eat at Joe's...",10,
+	"...Ten million flies can't ALL be wrong!", 10
+```
+
+<p align=justify>
+Ma a che serve il numero letterale 10 usato nei precedenti esempi di stringa? In Linux, il carattere di fine riga (EOL) ha il valore numerico decimale pari a 10, o 0Ah. Indica al sistema operativo dove finisce una riga inviata per la visualizzazione nella console. Qualsiasi testo successivo visualizzato nella console verrà mostrato sulla riga successiva, al margine sinistro. Nella variabile TwoLineMsg, il carattere EOL tra le due sottostringhe indicherà a Linux di visualizzare la prima sottostringa su una riga della console e la seconda sottostringa sulla riga della console sottostante. <br> Puoi concatenare numeri individuali all'interno di una stringa, ma devi ricordare che, come con EOL, non appariranno come numeri. Una stringa è una stringa di caratteri. Un numero aggiunto a una stringa sarà interpretato dalla maggior parte delle routine del sistema operativo come un carattere ASCII. Per mostrare numeri in una stringa, devi rappresentarli come caratteri ASCII, sia come letterali di carattere, come il carattere cifra 7, sia come equivalenti numerici dei caratteri ASCII, come 37h.
+</p>
+
+<p align=justify>
+Nel lavoro di assemblaggio ordinario, quasi tutte le variabili di stringa sono definite utilizzando la direttiva DB e possono essere considerate stringhe di byte. (Un carattere ASCII è grande un byte.) Puoi definire variabili di stringa utilizzando DW, DD o DQ, ma vengono gestite in modo leggermente diverso rispetto a quelle definite con DB. Considera queste variabili:
+</p>
+
+ ```asm
+        WordString: dw 'CQ'
+        DoubleString: dd 'Stop'
+        QuadString: dq 'KANGAROO'
+ ```
+
+ <p align=justify>
+La direttiva DW definisce una variabile a lunghezza parola (word): una parola (16 bit) può contenere due caratteri a 8 bit. Allo stesso modo, la direttiva DD definisce una variabile a doppia parola (32 bit, double word), che può contenere quattro caratteri a 8 bit. La direttiva DQ definisce una variabile a quadrupla parola, che può contenere otto caratteri a 8 bit. La gestione differente si verifica quando carichi queste stringhe nominate nei registri. Considera queste tre istruzioni:
+ </p>
+
+ ```asm
+	mov ax,[WordString]
+	mov edx,[DoubleString]
+	mov rax,[QuadString]
+```
+
+<p align=justify>
+<b>Ricorda qui che per spostare i dati da una variabile in un registro, devi inserire il nome della variabile (che è il suo indirizzo) tra parentesi quadre</b>. Senza le parentesi quadre, ciò che sposti nel registro è l'indirizzo della variabile in memoria, non i dati che esistono a quell'indirizzo. Nella prima istruzione MOV, i caratteri CQ vengono posizionati nel registro AX, con il carattere C nel registro AL e il carattere Q in AH. Nella seconda istruzione MOV, i caratteri Stop vengono caricati in EDX <b>in ordine little-endian</b>, con il carattere S nel byte di ordine più basso di EDX, il carattere t nel secondo byte più basso, e così via. Se guardi la stringa QuadString caricata in RAX da SASM, vedrai che contiene "oOORAGNAK" scritto al contrario. Caricare stringhe in un singolo registro in questo modo (supponendo che ci stiano!) è molto meno comune (e meno utile) rispetto a usare DB per definire stringhe di caratteri, e non ti capiterà spesso di farlo. Poiché eatsyscall.asm non definisce dati non inizializzati nella sua sezione .bss, rimanderò la discussione di tali definizioni finché non esamineremo il prossimo programma di esempio.
+</p>
+
+### Derivare la lunghezza della stringa con EQU e $
+
+<p align=justify>
+Sotto la definizione di EatMsg nel file eatsyscall.asm c'è un costrutto interessante.
+</p>
+
+```asm
+	EatLen: equ $-EatMsg
+```
+
+<p align=justify>
+Questo è un esempio di una classe più ampia di cose chiamate calcoli a tempo di assemblaggio. Quello che stiamo facendo qui è calcolare la lunghezza della variabile stringa EatMsg e rendere quel valore di lunghezza accessibile al codice del programma attraverso l'etichetta EatLen. In qualsiasi punto del tuo programma, se hai bisogno di usare la lunghezza di EatMsg, puoi usare l'etichetta EatLen. Una dichiarazione contenente la direttiva EQU è chiamata <b>un'uguaglianza o simbolo</b> (<i>equate</i>). <b>Un simbolo è un modo per associare un valore a un'etichetta</b>. Tale etichetta viene quindi trattata in modo molto simile a una costante C. Ogni volta che l'assemblatore incontra un'equazione durante l'assemblaggio, sostituirà il nome dell'equazione con il suo valore. Ecco un esempio:
+</p>
+
+```asm
+ FieldWidth: equ 10
+```
+
+<p align=justify>
+Qui, stiamo dicendo all'assemblatore che l'etichetta FieldWidth rappresenta il valore numerico 10. Una volta definito il simbolo, le seguenti due istruzioni macchina di seguito fanno esattamente la stessa cosa:
+</p>
+
+```asm
+	mov eax,10
+	mov eax,FieldWidth
+```
+
+<p align=justify>
+Ci sono due vantaggi in questo:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+		Un simbolo rende l'istruzione più facile da comprendere utilizzando un nome descrittivo per un valore. Sappiamo a cosa serve il valore 10; è la larghezza di un campo.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Un simbolo rende i programmi più facili da modificare in futuro. Se la larghezza del campo cambia da 10 a 12 in un dato momento, dobbiamo modificare solo un'unica riga nel file di codice sorgente invece di farlo ovunque accediamo alla larghezza del campo.
+		</p>
+  	</li>
+</ul>
+
+<p align=justify>
+Non sottovalutare il valore di questo secondo vantaggio. Una volta che i tuoi programmi diventano più grandi e più sofisticati, potresti trovarti a utilizzare un valore particolare dozzine o centinaia di volte all'interno di un singolo programma. O rendi quel valore un simbolo e cambi una sola riga per modificare un valore utilizzato 267 volte, oppure puoi esaminare il tuo codice e cambiare individualmente tutti e 267 gli usi del valore, tranne per i cinque o sei che perdi, causando caos quando successivamente compili ed esegui il tuo programma. Combinare il calcolo in linguaggio assembly con i simboli consente di fare cose meravigliose in modo molto semplice. Come spiegherò a breve, per visualizzare una stringa in Linux, devi passare sia l'indirizzo della stringa che la sua lunghezza al sistema operativo. Puoi rendere la lunghezza della stringa un simbolo in questo modo.
+</p>
+
+```asm
+	EatMsg: db "Eat at Joe's!",10
+	EatLen: equ 14
+```
+
+<p align=justify>
+Questo funziona, perché la stringa EatMsg è in effetti lunga 14 caratteri, incluso il carattere EOL. Ma supponiamo che Joe venda il suo ristorante a Ralph e tu sostituisca "Joe" con "Ralph". Devi cambiare non solo il messaggio dell'annuncio ma anche la sua lunghezza.
+</p>
+
+```asm
+	EatMsg: db "Eat at Ralph's!",10
+	EatLen: equ 16
+```
+
+<p align=justify>
+Quali sono le probabilità che tu ti scordi di aggiornare l'equivalente di EatLen con la nuova lunghezza del messaggio? Se fai spesso questo tipo di errore, succederà. Con un calcolo a tempo di assemblaggio, cambi semplicemente la definizione della variabile stringa e la sua lunghezza viene calcolata automaticamente da NASM durante l'assemblaggio. Come? In questo modo.
+</p>
+
+```asm
+	EatMsg: db "Eat at Ralph's!",10
+	EatLen: equ $-EatMsg
+```
+
+<p align=justify>
+Tutto dipende dal token magico "qui", espresso dall'umile simbolo del dollaro. Durante la fase di assemblaggio, l'assemblatore analizza i tuoi file di codice sorgente e costruisce un file intermedio con estensione .o (il file oggetto). Il token $ segna il punto in cui l'assemblatore si trova nella costruzione del file intermedio (non del file di codice sorgente!). L'etichetta EatMsg segna l'inizio della stringa dello slogan pubblicitario. Immediatamente dopo l'ultimo carattere di EatMsg c'è l'etichetta EatLen. Ricorda, le etichette non sono dati, ma posizioni e, nel caso del linguaggio assembly, indirizzi. Quando l'assemblatore raggiunge l'etichetta EatLen, il valore di $ è la posizione immediatamente dopo l'ultimo carattere di EatMsg. Il calcolo durante l'assemblaggio consiste nel prendere la posizione rappresentata dal token $ (che, quando il calcolo è completato, contiene la posizione appena dopo la fine della stringa EatMsg) e sottrarre da essa la posizione dell'inizio della stringa EatMsg. Fine = Inizio + Lunghezza. Questo calcolo viene eseguito ogni volta che assembli il file, quindi ogni volta che modifichi il contenuto di EatMsg, il valore di EatLen sarà ricalcolato automaticamente. Puoi cambiare il testo all'interno della stringa come preferisci e non dover mai preoccuparti di cambiare un valore di lunghezza da nessuna parte nel programma. Il calcolo durante l'assemblaggio ha altri usi, ma questo è il più comune e l'unico che probabilmente userai come principiante.
+</p>
+
+
+### Lo Stack (LIFO: Last in, First out)
+
+<p align=justify>
+Lo stack è un meccanismo di memorizzazione integrato direttamente nell'hardware della CPU. Intel non l'ha inventato; lo stack è stato parte integrante dell'hardware dei computer fin dagli anni '50.
+Lo stack è un tipo di struttura dati della famiglia LIFO: last in, first out. I dati vengono inseriti sulla cima dello stack e rimangono nello stack finché non li estraiamo in ordine inverso a come li abbiamo inseriti, esattamente come faremmo con una pila di piatti. Lo stack non esiste in un'area separata della CPU. Esiste nella memoria ordinaria e, in effetti, quello che chiamiamo "olo stack" è in realtà un modo per gestire i dati nella memoria. Lo stack è un luogo in cui possiamo riporre uno o due (o quanti più si vogliono) valori per il momento e recuperarli un po' più tardi. La principale virtù dello stack è che non richiede di dare un nome ai dati memorizzati. Mettiamo quei dati nello stack e li recuperiamo più tardi in base alla loro posizione o, in alcuni casi, accedendo allo stack utilizzando un indirizzamento di memoria ordinario relativo a un punto fisso nella memoria dello stack.
+</p>
+
+<p align=justify>
+Il gergo relativo all'uso dello stack riflette la metafora della pila di piatti: quando mettiamo qualcosa nello stack, diciamo che lo spingiamo (<i>push</i>); quando recuperiamo qualcosa dallo stack, diciamo che lo estraiamo (<i>pop</i>). Lo stack cresce o si riduce man mano che i dati vengono aggiunti o rimossi. L'elemento più recentemente spinto nello stack si dice che si trovi in cima allo stack. Quando estraiamo un elemento dallo stack, ciò che otteniamo è l'elemento in cima allo stack. è tutto più chiaro concettualmente nella figura di seguito.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/stack.png">
+</div>
+
+<p align=justify>
+Nell'architettura x64, la parte superiore dello stack è contrassegnata da un registro chiamato <b>stack pointer</b>, con il nome formale <b>RSP</b>. è un registro a 64 bit e <b>contiene l'indirizzo di memoria dell'ultimo elemento inserito nello stack</b>.
+</p>
+
+<p align=justify>
+A rendere le cose un po' più difficili da visualizzare è il fatto che <b>lo stack Intel è fondamentalmente capovolto</b>. Se immagini un'area di memoria con l'indirizzo più basso nella parte inferiore e l'indirizzo più alto nella parte superiore, lo stack inizia verso l'alto, dal soffitto, e, man mano che gli elementi vengono spinti sullo stack, cresce verso il basso, verso la memoria bassa. La figura di seguito mostra in termini generali come Linux organizza la memoria che fornisce al programma quando quest'ultimo viene eseguito. Nella parte inferiore della memoria ci sono le tre sezioni che definisci nel tuo programma: .text agli indirizzi più bassi, seguita da .data, seguita da .bss. Lo stack si trova all'estremità opposta del blocco di memoria del programma. Tra la fine della sezione .bss e la parte superiore dello stack c'è fondamentalmente memoria vuota. I programmi C utilizzano abitualmente questo spazio di memoria libero per allocare variabili "al volo" in una regione chiamata <b>heap</b>. Anche i programmi assembly possono farlo, anche se non è così facile come sembra. Ho disegnato l'heap nella figura perché è importante sapere dove si trova nella mappa di memoria dello spazio utente. Analogamente allo stack, l'heap aumenta o si riduce man mano che le strutture di dati vengono create (allocando memoria) o distrutte (rilasciando memoria). La cosa importante da ricordare (soprattutto se hai avuto precedenti esperienze di scrittura di assembly per DOS) è che non siamo più in modalità reale. Quando l'app inizia l'esecuzione, Linux riserva un intervallo contiguo di memoria virtuale per lo stack che, per impostazione predefinita, è di circa 8 gigabyte. (L'esatta quantità di memoria virtuale dipende da come Linux è configurato e può variare.) Di questi, solo poche pagine vengono effettivamente mappate nella parte superiore dello spazio degli indirizzi virtuali. Quando lo stack cresce verso il basso ed esaurisce la memoria fisica, si verifica un errore di pagina e il sistema operativo mappa una quantità maggiore di memoria fisica nello spazio degli indirizzi virtuali, che quindi diventa disponibile per l'uso dello stack. Questo continua fino a quando l'intero spazio virtuale non è esaurito, cosa che in pratica non accade mai, a meno che il programma non stia consumando voracemente lo spazio dello stack a causa di un bug. La memoria virtuale è una cosa meravigliosa ma complicata. Il punto è che lo stack della tua app può avere praticamente tutta la memoria di cui ha bisogno grazie alla memoria virtuale e non devi più preoccuparti di rimanere senza. L'unica cautela da avere guardando la figura di seguito è che le dimensioni relative delle sezioni del programma rispetto allo stack non dovrebbero essere viste come letterali. Si possono avere migliaia di byte di codice di programma e decine di migliaia di byte di dati in un programma assembly mediocre, ma rispetto a questo, lo stack è ancora piuttosto piccolo: poche centinaia di byte al massimo e generalmente meno.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/linux_memory.png">
+</div>
+
+### Istruzione Push
+
+<p align=justify>
+Puoi inserire i dati nello stack in diversi modi, ma il modo più semplice comporta due istruzioni macchina correlate, PUSH e PUSHFQ. Le due sono simili nel loro funzionamento e differiscono principalmente per ciò che inseriscono nello stack:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+			PUSH inserisce nello stack (spinge, <i>push</i>) un registro a 16 bit o 64 bit o un valore di memoria specificato da te nel tuo codice sorgente. Nota che <b>non puoi spingere un valore a 8 bit o a 32 bit nello stack!</b> Riceverai un errore se ci provi.
+		</p>
+	</li>
+	<li>
+		<p align=justify>
+			PUSHFQ spinge l'intero registro RFlags a 64 bit nello stack. (La Q significa "quadword" qui.) Questo nonostante più della metà dei flag in RFlags siano riservati e non abbiano alcun uso. Non utilizzerai spesso PUSHFQ, ma è disponibile se ne hai bisogno.
+		</p>
+	</li>
+</ul>
+
+<p align=justify>
+Ecco alcuni esempi delle istruzioni della famiglia PUSH in uso:
+</p>
+
+```asm
+	pushfq		; Push the RFlags register
+	push rax	; Push the RAX register
+	push bx		; Push the 16-bit register BX
+	push [rdx]   	; Push the quadword in memory at RDX
+```
+
+<p align=justify>
+Nota che PUSHFQ non richiede operandi. Genererai un errore di assemblatore se provi a dare operandi a PUSHFQ; l'istruzione spinge il registro RFlags a 64 bit nello stack, e questo è tutto ciò che è in grado di fare.
+</p>
+
+<p align=justify>
+PUSH funziona in questo modo, per operandi a 64 bit: prima RSP viene decrementato di 64 bit (otto byte), in modo che punti a un'area vuota di memoria nello stack lunga otto byte. Poi ciò che deve essere spinto nello stack viene scritto in memoria all'indirizzo in RSP. Voilà! I dati sono al sicuro nello stack, e RSP è sceso di otto byte verso il fondo della memoria. PUSH può anche spingere valori a 16 bit nello stack e, quando lo fa, l'unica differenza è che RSP si sposta di due byte invece che otto. Tutta la memoria tra la posizione iniziale di RSP e la sua posizione attuale (la cima dello stack) contiene dati reali che sono stati esplicitamente spinti nello stack e presumibilmente verranno estratti dallo stack in seguito. Alcuni di questi dati sono stati spinti nello stack dal sistema operativo prima di eseguire il tuo programma.
+</p>
+
+<p align=justify>
+Cosa può e non può essere spinto nello stack in modalità <b>long x64</b> è ragionevolmente semplice: <b>qualsiasi registro a 16 bit e 64 bit a uso generale può essere spinto individualmente nello stack</b>. Non puoi spingere AL o BH o qualsiasi altro registro a 8 bit. <b>Dati immediati a 16 bit e 64 bit possono essere spinti nello stack</b>. I programmi user-space di Linux non possono spingere i registri di segmento nello stack in nessuna circostanza. <b>Con x64, i registri di segmento appartengono al sistema operativo e non sono disponibili per i programmi user-space</b>. Per quanto strano possa sembrare, i valori a 32 bit (inclusi tutti i registri a 32 bit) non possono essere spinti nello stack.
+</p>
+
+### Istruzione Pop
+
+<p align=justify>
+In generale, ciò che viene spinto deve essere rimosso, altrimenti si può incorrere in diversi tipi di problemi. Rimuovere un elemento di dati dallo stack si fa più facilmente con un'altra coppia di istruzioni, POP e POPFQ. Come ci si potrebbe aspettare, POP è l'istruzione generale per rimuovere un elemento alla volta, mentre POPFQ è dedicata alla rimozione dei flag del registro RFlags.
+</p>
+
+```asm
+	popfq		; Pop the top 8 bytes from the stack into RFlags
+	pop rcx		; Pop the top 8 bytes from the stack into RCX
+	pop bx		; Pop the top 2 bytes from the stack into BX
+	pop [rbx]	; Pop the top 8 bytes from the stack into memory at EBX
+```
+
+<p align=justify>
+Come per PUSH, POP opera solo su operandi a 16 bit o 64 bit. Non cercare di estrarre dati dallo stack in un registro a 8 bit o 32 bit come AH o ECX. POP funziona praticamente allo stesso modo di PUSH, ma al contrario. Come con PUSH, <b>quanto viene estratto dallo stack dipende dalla dimensione dell'operando</b>. Estrarre dallo stack in un registro a 16 bit preleva i due byte superiori dallo stack. Estrarre dallo stack in un registro a 64 bit preleva gli otto byte superiori dallo stack. Nota che niente nella CPU né in Linux ricorda le dimensioni degli elementi dati che posizioni nello stack. Spetta a te conoscere la dimensione dell'ultimo elemento inserito nello stack. Se l'ultimo elemento che hai inserito nello stack era un registro a 16 bit, estrarre dallo stack in un registro a 64 bit porterà via sei byte in più dallo stack rispetto a quelli che hai inserito. Questo è chiamato <b>disallineamento dello stack</b> e non è altro che un problema, uno dei motivi per cui dovresti lavorare con registri a 64 bit e valori di memoria ogni volta che puoi ed evitare di usare lo stack con valori a 16 bit. Quando un'istruzione POP viene eseguita, le cose funzionano in quest'ordine: prima, i dati all'indirizzo attualmente memorizzato in RSP vengono copiati dallo stack e collocati nell'operando di POP, qualunque tu abbia specificato. Dopo di che, RSP viene incrementato (anziché decrementato) della dimensione dell'operando, di 16 o 64 bit, in modo che di fatto RSP si muova rispettivamente di due o otto byte verso l'alto nello stack, lontano dalla memoria bassa. è significativo che RSP venga decrementato prima di posizionare una parola nello stack al momento di PUSH, ma incrementato dopo aver rimosso una parola dallo stack al momento di POP. Alcune altre CPU al di fuori dell'universo x86 operano in modo opposto, il che va bene: basta non confonderle. Per x86/x64, questo è sempre vero: a meno che lo stack non sia completamente vuoto, RSP punta a dati reali, non a spazio vuoto. Di solito, non devi ricordare questo fatto, poiché PUSH e POP lo gestiscono tutto per te e non devi tenere traccia manualmente di ciò a cui RSP punta.
+</p>
+
+### PUSHA E POPA sono stati rimossi
+
+<p align=justify>
+Quasi tutto ciò che avevi nell'assembly a 32 bit è ancora presente nell'assembly x64. Alcune cose sono cambiate, ma molto poco è stato rimosso quando x86 è diventato x64. Sono stati fatti dei sacrifici. Quattro istruzioni sono completamente scomparse: PUSHA, PUSHAD, POPA e POPAD. Nelle architetture precedenti, <b>queste istruzioni venivano utilizzate per inserire o estrarre tutti i registri a scopo generale contemporaneamente</b>. Quindi, perché sono scomparse? Non ho mai trovato una spiegazione autorevole, ma ho una teoria: ci sono molti più registri a scopo generale in x64. Spingere 15 registri a 64 bit nello stack invece di 7 registri a 32 bit occupa molto spazio nello stack. (Il puntatore dello stack ESP non era influenzato da PUSHA/POPA per ovvi motivi, dato che ESP definisce lo stack!) Se vuoi preservare i registri a scopo generale nello stack per qualche motivo, dovrai inserirli ed estrarli singolarmente.
+</p>
+
+### Push e Pop in dettaglio
+
+<p align=justify>
+Se hai ancora qualche dubbio su come funziona lo stack, permettimi di presentarti un esempio che mostra come opera lo stack in dettaglio, con valori reali. A scopo di chiarezza nel diagramma associato, utilizzerò registri a 16 bit piuttosto che registri a 64 bit. Questo mi permetterà di mostrare i singoli byte nello stack. Funziona allo stesso modo con valori a 64 bit. La differenza, ancora una volta, è che otto byte vengono spinti o rimossi piuttosto che due. La figura di seguito mostra come appare lo stack dopo l'esecuzione di ciascuna delle quattro istruzioni. (Sto usando valori a 16 bit nella figura per chiarezza. Il meccanismo è lo stesso per i valori a 64 bit.) I valori dei quattro registri generali X a 16 bit in un ipotetico punto dell'esecuzione di un programma sono mostrati nella parte superiore della figura. AX viene spinto per primo nello stack. Il suo byte meno significativo si trova a RSP, e il suo byte più significativo si trova a RSP+1. (Ricorda che entrambi <b>i byte vengono spinti nello stack contemporaneamente, come un'unità!</b>)
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/how_stack_works.png">
+</div>
+
+<p align=justify>
+Ogni volta che uno dei registri a 16 bit viene inserito nello stack, RSP viene decrementato di due byte, scendendo verso la memoria bassa. Le prime tre colonne mostrano AX, BX e CX che vengono spinti nello stack, rispettivamente. Ma nota cosa succede nella quarta colonna, quando viene eseguita l'istruzione POP DX. Il puntatore dello stack viene incrementato di due byte e si allontana dalla memoria bassa. DX ora contiene una copia del contenuto di CX. Di fatto, CX è stato inserito nello stack e poi immediatamente estratto in DX. Se vuoi provare le istruzioni in figura, apri un nuovo ambiente e aggiungi queste istruzioni macchina:
+</p>
+
+```asm
+	xor rax,rax  ;We first zero out all 4 64-bit "x" registers
+	xor rbx,rbx  ;so there are no "leftovers" in the high bits
+	xor rcx,rcx
+	xor rdx,rdx
+
+	mov ax,01234h  ;Place values in AX, BX, and CX
+	mov bx,04ba7h
+	mov cx,0ff17h
+
+	push ax		;Push AX,BX,& CX onto the stack
+	push bx
+	push cx
+
+	pop dx		;Pop the top of the stack into DX.
+```
+
+<p align=justify>
+Vai in modalità debug ed esegui passo-passo queste istruzioni, osservando sia il puntatore dello stack RSP sia i quattro registri a 16 bit dopo ogni passo. Puoi seguire l'azione anche nella figura qui sopra. Sì, è un modo indiretto piuttosto complesso per copiare il valore di CX in DX. MOV DX,CX è molto più veloce e diretto. Tuttavia, a volte è necessario spostare i valori dei registri tramite lo stack. Ricorda che <b>l'istruzione MOV non opererà sul registro RFlags</b>. Se vuoi caricare una copia di RFlags in un registro a 64 bit, devi prima spingere RFlags nello stack con PUSHFQ e poi estrarre il valore dei flag dallo stack nel registro di tua scelta con POP. Quindi, per ottenere RFlags in RBX, si utilizza il seguente codice. Puoi vederlo funzionare mettendo queste righe in un sandbox e procedendo passo-passo attraverso di esse.
+</p>
+
+```asm
+	xor rbx,rbx	; Clear rbx
+	pushfq		; Push the RFlags register onto the stack
+	pop qword rbx   ; ...and pop it immediately into RBX...why not POPFQ??
+```
+
+<p align=justify>
+Sebbene tu possa ripristinare i valori dei flag in RFlags utilizzando POPFQ, non tutti i bit di RFlags possono essere modificati estraendoli dallo stack in RFlags. I bit VM e RF non sono influenzati da POPFQ. Piccole insidie come questa suggeriscono che non dovresti cercare di salvare e ripristinare i flag finché non sai con precisione cosa stai facendo.
+</p>
+
+### Syscall del kernel
+
+<p align=justify>
+Lo stack dovrebbe essere considerato un luogo dove riporre temporaneamente le cose. <b>Gli oggetti memorizzati nello stack</b> non hanno nomi e, in generale, <b>devono essere rimossi dallo stack nell'ordine inverso in cui sono stati aggiunti</b>. Ultimo arrivato, primo servito, ricorda. LIFO! Un ottimo uso dello stack consente ai pochi registri di svolgere molteplici funzioni. Se hai bisogno di un registro per mantenere temporaneamente un valore da utilizzare nella CPU e tutti i registri sono occupati, spingi uno dei registri occupati nello stack. Il suo valore rimarrà sicuro nello stack mentre usi il registro per altre cose. Quando hai finito di usare il registro, estrai il suo vecchio valore dallo stack, e hai guadagnato i vantaggi di un registro aggiuntivo senza averne realmente uno. (Il costo, ovviamente, è il tempo che spendi per spostare il valore di quel registro dentro e fuori dallo stack. Non è qualcosa che vuoi fare nel mezzo di un ciclo spesso ripetuto!) <b>La memorizzazione a breve termine durante l'esecuzione del programma è l'uso più semplice e ovvio dello stack</b>, ma il suo <b>utilizzo più importante è probabilmente nell'invocazione di procedure e nei servizi del kernel di Linux</b>. E ora che comprendi lo stack, possiamo affrontare la misteriosa questione delle chiamate di sistema di Linux.
+</p>
+
+<p align=justify>
+Tutto il resto in eatsyscall.asm è preparazione per l'unica istruzione che esegue il vero lavoro del programma: visualizzare una riga di testo nella console di Linux. Al cuore del programma c'è una chiamata al sistema operativo Linux. Una seconda chiamata a Linux è alla fine, quando il programma si conclude e deve informare Linux che ha finito. Ci sono diverse centinaia di servizi del kernel Linux disponibili. Uno dei servizi che Linux fornisce è un semplice accesso in modalità testo al display del tuo PC. Per le esigenze di eatsyscall.asm, che è solo una lezione per scrivere e far funzionare il tuo primo programma in linguaggio assembly, servizi semplici sono sufficienti. Quindi, come utilizziamo i servizi di Linux? Se hai guardato da vicino eatsyscall.asm, dovresti ricordare due istanze dell'istruzione macchina SYSCALL. Nelle istanze x64 di Linux, l'istruzione SYSCALL è il modo in cui accedi ai servizi del kernel Linux.
+</p>
+
+<p align=justify>
+Nelle versioni a 32 bit di Linux, l'interruzione software INT 80h era il modo per raggiungere il dispatcher dei servizi del kernel. INT 80h non viene più utilizzato. L'architettura x64 ci offre qualcosa di molto meglio: l'istruzione SYSCALL. La sfida nell'accesso ai servizi del kernel è la seguente: passare l'esecuzione a una libreria di codice senza avere idea di dove si trovi quella libreria. L'istruzione SYSCALL guarda in un registro della CPU a cui i programmi in user-space non possono accedere. Quando il kernel di Linux si avvia, inserisce l'indirizzo del suo dispatcher dei servizi in questo registro. Una delle prime cose che fa l'istruzione SYSCALL è elevare il suo livello di privilegio dal livello 3 (utente) al livello 0 (kernel). Poi legge l'indirizzo nel registro di dispatch dei servizi e salta a quell'indirizzo per invocare il dispatcher. La maggior parte delle chiamate di sistema x64 che utilizzano SYSCALL ha parametri, che vengono passati nei registri della CPU. Quali registri? Non è casuale. Infatti, c'è qualcosa chiamata <b>System V Application Binary Interface</b> (<b>ABI</b>) per Linux, che definisce un intero sistema per passare parametri a Linux tramite SYSCALL. Fa anche di più, ma ciò che ci interessa qui è il meccanismo che ti consente di chiamare i servizi del kernel utilizzando SYSCALL.
+</p>
+
+### ABI (Application Binary Interface)
+
+<p align=justify>
+Questo è un buon punto per una breve digressione. Se hai esperienza di programmazione, probabilmente hai già sentito parlare di "chiamate API" o "l'API di Windows". Qual è, allora, la differenza tra un'ABI e un'API? API sta per interfaccia di programmazione delle applicazioni. Un'API è una raccolta di funzioni chiamabili da utilizzare principalmente da linguaggi di programmazione di alto livello come Pascal o C. è possibile per un programma in linguaggio assembly chiamare una funzione API, e te lo mostrerò più avanti. Un'interfaccia binaria applicativa, al contrario, è una descrizione dettagliata di ciò che accade a livello di codice macchina quando un pezzo di codice macchina binario parla con un altro o con hardware di CPU come i registri. è uno strato "sotto" l'API. L'ABI definisce una raccolta di funzioni fondamentali chiamabili, generalmente fornite dal sistema operativo, come avviene in Linux. Questa definizione descrive come passare parametri alle molte funzioni di servizio del kernel. Un'ABI definisce anche come i linker collegano i moduli compilati o assemblati in un unico programma eseguibile binario e molte altre cose.
+</p>
+
+### Lo schema dei parametri del registro ABI
+
+<p align=justify>
+Esaminiamo più da vicino il programma eatsyscall.asm. Il codice seguente scrive un messaggio testuale nella console di Linux:
+</p>
+
+```asm
+	mov rax,1		; 1 = sys_write for syscall
+	mov rdi,1		; 1 = fd for stdout; i.e., write to the terminal window
+
+	mov rsi,EatMsg		; Put address of the message string in rsi
+	mov rdx,EatLen		; Length of string to be written in rdx
+
+	syscall			; Make the system call
+```
+
+<p align=justify>
+In poche parole, questo codice colloca determinati valori in determinati registri e poi esegue l'istruzione SYSCALL. Il dispatcher dei servizi di Linux raccoglie i valori posti in quei registri e poi chiama la funzione specificata in RAX. C'è un sistema per specificare quali registri vengono utilizzati per quale servizio e quali parametri (se presenti) servono a quel servizio. Il modo migliore per spiegarlo è mostrarti le prime due righe della tabella delle chiamate di sistema dell'ABI System V, nella tabella di seguito.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/system_call_conventions_for_system_v_abi.png">
+</div>
+
+<p align=justify>
+Tutte le colonne tranne System Call sono registri. System Call è il nome leggibile dall'uomo della chiamata di sistema, che è il nome utilizzato da linguaggi di alto livello come Pascal e C per effettuare chiamate di sistema tramite l'istruzione SYSCALL. Il registro RAX è dedicato al codice numerico che specifica la chiamata di sistema da effettuare. Il nome della chiamata di sistema 1 è sys_write. I registri dopo il nome della chiamata di sistema (RDI, RSI) contengono i parametri. L'ABI specifica sei registri da utilizzare per i parametri. Non tutte le chiamate di sistema richiedono sei parametri. La chiamata sys_write utilizzata in eatsyscall.asm ne ha solo tre. L'elenco dei parametri inizia sempre con RDI e utilizza i registri nell'ordine dato nella tabella.
+<br>	RDI, RSI, RDX, R10, R8, R9.<br>
+Dopo che i parametri di una chiamata di sistema sono stati tutti assegnati ai registri, eventuali registri rimasti inutilizzati per la chiamata di sistema non si applicano alla chiamata di sistema e vengono lasciati vuoti. I parametri per sys_write sono questi.
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+			<b>RDI</b>: il descrittore di file su cui verrà scritto il testo. In Linux (e in tutte le varianti di Unix) il descrittore di file per sys_write è 1.
+		</p>
+	</li>
+	<li>
+		<p align=justify>
+			<b>RSI</b>: l'indirizzo del testo da scrivere nella console.
+		</p>
+	</li>
+	<li>
+		<p align=justify>
+			<b>RDX</b>: la lunghezza (numero di caratteri) del testo da scrivere sulla console.
+		</p>
+	</li>
+</ul>
+
+<p align=justify>
+Se una chiamata di sistema deve restituire un valore numerico, quel valore viene restituito dal sistema in RAX.
+</p>
+
+### Terminare un programma via SYSCALL
+
+<p align=justify>
+C'è un secondo comando SYSCALL in eatsyscall.asm, e ha un compito umile ma cruciale: chiudere il programma e restituire il controllo a Linux. Questo sembra più semplice di quanto sia, e una volta che comprendi un po' meglio gli interni di Linux, inizierai ad apprezzare il lavoro che deve essere fatto sia per avviare un processo sia per chiuderlo. Tuttavia, dal punto di vista del tuo stesso programma, è estremamente semplice: inserisci il numero del servizio sys_exit in RAX, inserisci un codice di ritorno in RDI e poi esegui SYSCALL:
+</p>
+
+```asm
+	mov rax,60	; 60 = sys_exit to exit the program gracefully
+	mov rdi,0	; Return value in rdi 0 = nothing to return
+	syscall		; Call syscall to exit this program
+```
+
+<p align=justify>
+Il codice di ritorno è un valore numerico che puoi definire come preferisci. Tecnicamente, non ci sono restrizioni su cosa sia (a parte il fatto che deve adattarsi a un registro a 64 bit), ma per convenzione, un valore di ritorno pari a 0 significa "tutto ha funzionato correttamente; arresto normale." Valori di ritorno diversi da 0 indicano tipicamente un errore di qualche tipo. Tieni presente che nei programmi più grandi devi fare attenzione alle cose che non funzionano come previsto: un file su disco non può essere trovato, un'unità disco è piena e così via. Se un programma non riesce a svolgere il proprio compito e deve terminare prematuramente, dovrebbe avere un modo per dirti (o in alcuni casi, per dire a un altro programma) cosa è andato storto. Il codice di ritorno è un buon modo per farlo. Uscire in questo modo non è solo una cortesia. Ogni programma x64 che scrivi deve uscire effettuando una chiamata a sys_exit tramite il dispatcher dei servizi del kernel. Se un programma semplicemente "scivola via" dal limite, in realtà si fermerà, ma Linux solleverà un errore di segmentazione e non avrai idea di cosa sia successo. Questa è la ragione per cui i tuoi programmi "sandbox" sono utilizzati solo per il debugging all'interno di SASM. Sono frammenti di programma e genereranno un errore di segmentazione se li lasci semplicemente funzionare. I programmi scritti in SASM utilizzano elementi della Standard C Library, che fornisce ai programmi una sezione "codice di arresto" che effettivamente effettua la chiamata di sistema per l'uscita. Tali programmi terminano eseguendo un'istruzione RET, come spiegherò in seguito.
+</p>
+
+### Registri sporcati da una SYSCALL
+
+<p align=justify>
+Anche se x64 ti offre il doppio del numero di registri a uso generale rispetto a x86, non tutti quei registri "a uso generale" sono liberi per essere utilizzati ovunque e in qualsiasi momento. Da uno a sei di quei registri sono richiesti per effettuare una chiamata di sistema Linux con SYSCALL. Quei sei sono indicati nella tabella qui sopra. Il numero di registri utilizzati varia in base alla chiamata di sistema, e dovrai consultarli in una tabella delle chiamate di sistema per vedere quanti ne servono. Se una chiamata di sistema non ha bisogno di tutti e sei i registri dei parametri SYSCALL (sys_read e sys_write ne utilizzano solo tre), puoi utilizzare quelli che non sono richiesti per quella chiamata di sistema nel tuo codice. <b>L'istruzione SYSCALL stessa utilizza internamente RAX, RCX e R11</b>. <b>Dopo che la SYSCALL restituisce, non puoi presumere che RAX, RCX o R11 avranno gli stessi valori che avevano prima della SYSCALL</b>.
+</p>
+
+### Progettare un programma
+
+<p align=justify>
+A questo punto, sai gran parte di ciò che devi sapere per progettare e scrivere piccole utility che svolgono un lavoro significativo, un lavoro che potrebbe persino essere utile. In questa sezione, affronteremo la sfida di scrivere un programma utility dal punto di vista dell'ingegneria per risolvere un problema. Questo comporta più che semplicemente scrivere codice. Comporta dichiarare il problema, suddividerlo nelle sue parti costitutive e poi ideare una soluzione al problema come una serie di passaggi e test che possono essere implementati come un programma in linguaggio assembly. è difficile scrivere un programma assembly non banale senza salti condizionali, ed è difficile spiegare i salti condizionali senza dimostrarli in un programma non banale. Abbiamo accennato ai salti nei paragrafi precedenti e li affronteremo in dettaglio in quelli successivi. I salti che sto usando nel programma dimostrativo in questa sezione sono piuttosto diretti.
+</p>
+
+<p align=justify>
+A un livello molto alto, il problema da risolvere qui può essere formulato in questo modo: <b>convertire eventuali caratteri minuscoli in un file di dati in maiuscolo</b>. Tenendo presente ciò, è una buona idea prendere appunti sul problema. In particolare, prendi appunti sui limiti di qualsiasi soluzione proposta. Una volta li chiamavamo i "olimiti" della soluzione, e devono essere tenuti a mente mentre pensiamo al programma che risolverà il problema.
+</p>
+
+
+<ul>
+	<li>
+		<p align=justify>
+			Lavoreremo sotto Linux.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			I dati esistono in file su disco.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			Non sappiamo prima quanto saranno grandi i file.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			Non c'è una dimensione massima né minima per i file.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			Utilizzeremo il reindirizzamento I/O per passare i nomi dei file al programma.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			Tutti i file di input sono nello stesso schema di codifica. Il programma può assumere che un carattere 'a' in un file sia codificato nello stesso modo di un 'a' in un altro file. (Nel nostro caso, questo è ASCII.)
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			Dobbiamo preservare il file originale nella sua forma originale, piuttosto che leggere i dati dal file originale e poi scriverli di nuovo nel file originale. (Perché? Se il processo si blocca, abbiamo distrutto il file originale senza generare completamente un file di output.)
+		</p>
+	</li>
+
+</ul>
+
+<p align=justify>
+Una volta che comprendiamo la natura del problema il più a fondo possibile, possiamo iniziare a creare una soluzione. Poi, poco a poco, affiniamo la soluzione dichiarata suddividendo i passaggi più grandi in quelli più piccoli che essi contengono. Nel nostro caso, la soluzione è piuttosto facile da esprimere in termini generali. Per iniziare, ecco una forma che la dichiarazione potrebbe assumere.
+</p>
+
+```
+ Read a character from the input file.
+ Convert the character to uppercase (if necessary)
+ Write the character to the output file.
+ Repeat until done.
+```
+
+<p align=justify>
+Questa è davvero una soluzione, sebbene possa sembrare un estremo "punto di vista dall'alto". è carente di dettagli, ma non di funzioni. Se eseguiamo i passaggi elencati, avremo un programma che fa ciò che abbiamo bisogno che faccia. Nota anche che le affermazioni fornite non sono scritte in alcun linguaggio di programmazione. Di certo non sono istruzioni di linguaggio assembly. Sono descrizioni di diverse azioni, indipendenti da qualsiasi sistema particolare per realizzare quelle azioni. Elenchi di affermazioni come questo, poiché non sono deliberatamente scritti come codice per un particolare ambiente di programmazione, sono chiamati <i>pseudocodice</i>.
+</p>
+
+<p align=justify>
+Dalla nostra prima dichiarazione completa ma priva di dettagli della soluzione, ci spostiamo verso una dichiarazione della soluzione più dettagliata. Lo facciamo affinando le dichiarazioni in pseudocodice in modo che ognuna sia più specifica su come deve essere eseguita l'azione descritta. Ripetiamo questo processo, aggiungendo più dettagli ogni volta, fino a quando ciò che abbiamo può essere prontamente tradotto in istruzioni di linguaggio assembly reali. Questo processo, chiamato affinamento successivo, non è specifico del linguaggio assembly. Viene utilizzato con tutti i linguaggi di programmazione in una misura o nell'altra, ma funziona in modo particolarmente efficace con l'assembly. Diamo un'occhiata allo pseudocodice fornito in precedenza e creiamo una nuova versione con ulteriori dettagli. Sappiamo che stiamo per usare Linux per il programma, e questo fa parte delle specifiche ed è uno dei limiti di qualsiasi soluzione, quindi possiamo iniziare ad aggiungere dettagli specifici al modo di fare tali cose in Linux. Il prossimo affinamento potrebbe apparire così.
+</p>
+
+```
+ Read a character from standard input (stdin)
+ Test the character to see if it's lowercase.
+ If the character is lowercase, convert it to uppercase by subtracting 20h.
+ Write the character to standard output (stdout).
+ Repeat until done.
+ Exit the program by calling sys_exit.
+```
+
+<p align=justify>
+Ad ogni passaggio, guarda a lungo e con attenzione ciascuna dichiarazione di azione per vedere quali dettagli potrebbe nascondere e amplia quei dettagli nell'affinamento successivo. A volte questo sarà facile; a volte, beh, non così facile. Nella versione precedente, la dichiarazione "Ripeti fino a completamento" suona piuttosto semplice e ovvia all'inizio, fino a quando non pensi a cosa significa "completamento" qui: esaurire i dati nel file di input. Come facciamo a sapere quando il file di input è privo di caratteri? Questo potrebbe richiedere un po' di ricerca, ma nella maggior parte dei sistemi operativi (incluso Linux) la routine che chiami per leggere i dati da un file restituisce un valore. Questo valore può indicare una lettura riuscita, un errore di lettura o risultati in casi speciali come "fine del file" (EOF). I dettagli precisi possono venire dopo; ciò che conta qui è che dobbiamo testare l'EOF quando leggiamo i caratteri dal file. Una versione espansa (e leggermente riorganizzata) dello pseudocodice della soluzione potrebbe apparire in questo modo.
+</p>
+
+```
+ Read a character from standard input (stdin)
+ Test if we have reached End Of File (EOF)
+ If we have reached EOF, we're done, so jump to exit
+ Test the character to see if it's lowercase.
+ If the character is lowercase, convert it to uppercase by subtracting 20h.
+ Write the character to standard output (stdout).
+ Go back and read another character.
+ Exit the program by calling sys_exit
+```
+
+<p align=justify>
+E così procediamo, aggiungendo dettagli ogni volta. Nota che ora questo inizia a sembrare un po' più simile a codice di programma. Con l'aumento del numero di istruzioni, è utile aggiungere etichette alle istruzioni che rappresentano obiettivi di salto, in modo da non confondere gli obiettivi di salto, anche in pseudocodice. Aiuta anche a suddividere lo pseudocodice in blocchi, con istruzioni correlate raggruppate insieme. Prima o poi arriveremo a qualcosa di simile al seguente.
+</p>
+
+```
+ Read:  Set up registers for the sys_read kernel call.
+ Call sys_read to read from stdin.
+ Test for EOF.
+ If we're at EOF, jump to Exit.
+ Test the character to see if it's lowercase.
+ If it's not a lowercase character, jump to Write.
+ Convert the character to uppercase by subtracting 20h.
+ Write: Set up registers for the Write kernel call.
+ Call sys_write to write to stdout.
+ Jump back to Read and get another character.
+ Exit:  Set up registers for terminating the program via sys_exit.
+ Call sys_exit
+```
+
+<p align=justify>
+Tutti i linguaggi di programmazione hanno le loro peculiarità, le loro limitazioni e una "forma" generale. Se tieni a mente questa forma mentre elabori il tuo pseudocodice, la transizione finale al codice reale sarà più semplice. A un certo punto, il tuo pseudocodice avrà tutti i dettagli che può contenere e rimarrà comunque pseudocodice. Per andare oltre, dovrai iniziare a trasformare il tuo pseudocodice in codice assembly reale. Ciò significa che devi prendere ogni istruzione e chiederti: so come convertire questa istruzione in pseudocodice in una o più istruzioni di linguaggio assembly? Questo è particolarmente vero quando sei un principiante, ma anche dopo aver acquisito esperienza come programmatore in linguaggio assembly, potresti non sapere tutto ciò che c'è da sapere. Nella maggior parte dei linguaggi di programmazione (incluso l'assembly), ci sono spesso diversi, o a volte molti, modi diversi di implementare una determinata azione. Alcuni potrebbero essere più veloci di altri; alcuni potrebbero essere più lenti ma più facili da leggere e modificare. Alcune soluzioni potrebbero essere limitate a un sottoinsieme della gamma completa delle CPU Intel. Il tuo programma deve essere eseguito su CPU x86 più vecchie? O puoi presumere che tutti avranno un sistema con una CPU a 64 bit? (Le tue note originali dovrebbero includere tali condizioni di vincolo per qualsiasi soluzione utilizzabile al problema originale.)
+</p>
+
+<p align=justify>
+Il salto dallo pseudocodice alle istruzioni potrebbe sembrare grande, ma la buona notizia è che, una volta convertito il tuo pseudocodice in istruzioni, puoi creare un file di codice sorgente in linguaggio assembly e lasciare che SASM lo analizzi per scovare i tuoi errori sintattici. Aspettati di dedicare del tempo a correggere errori assembly e poi bug del programma, ma se hai affrontato il processo di affinamento con mente chiara e pazienza ragionevole, potresti essere sorpreso da quanto sia buono un programma al tuo primo tentativo. Una traduzione competente del precedente pseudocodice in assembly reale è mostrata nel codice seguente. (Questa è la versione che si collega tramite gcc invece di ld. Aprila e compilala in SASM.) Leggila e verifica se riesci a seguire la traduzione dallo pseudocodice, sapendo ciò che già conosci sul linguaggio assembly. Il codice mostrato funzionerà, ma non è "completo" in alcun senso reale. è un "primo taglio" per il codice reale nel processo di affinamento successivo. Ha bisogno di una riflessione approfondita su quanto sia buona e quanto sia completa la soluzione al problema originale. Un programma funzionante non è necessariamente un programma finito.
+</p>
+
+```asm
+section .bss
+	Buff resb 1
+
+section .data
+
+section .text
+	global main
+
+main:
+    mov rbp, rsp   ; for correct debugging
+
+Read:
+    mov rax,0      ; Specify sys_read call
+	mov rdi,0      ; Specify File Descriptor 0: Standard Input
+	mov rsi,Buff   ; Pass address of the buffer to read to
+	mov rdx,1      ; Tell sys_read to read one char from stdin
+	syscall        ; Call sys_read
+
+	cmp rax,0      ; Look at sys_read's return value in RAX
+	je Exit        ; Jump If Equal to 0 (0 means EOF) to Exit:
+			       ; or fall through to test for lowercase
+
+	cmp byte [Buff],61h    ; Test input char against lowercase 'a'
+	jb Write               ; If below 'a' in ASCII chart, not lowercase
+	cmp byte [Buff],7Ah    ; Test input char against lowercase 'z'
+	ja Write               ; If above 'z' in ASCII chart, not lowercase
+
+                           ; At this point, we have a lowercase character
+	sub byte [Buff],20h    ; Subtract 20h from lowercase to give uppercase...
+                           ; ...and then write out the char to stdout
+Write:
+    mov rax,1      ; Specify sys_write call
+    mov rdi,1      ; Specify File Descriptor 1: Standard output
+    mov rsi,Buff   ; Pass address of the character to write
+    mov rdx,1      ; Pass number of chars to write
+    syscall	       ; Call sys_write...
+    jmp Read       ; ...then go to the beginning to get another character
+
+Exit:   ret
+
+;Exit:
+     mov rax,60    ; 60 = exit the program
+;    mov rdi,0     ; Return value in rdi 0 = nothing to return
+;    syscall       ; Call syscall to exit
+```
+
+<p align=justify>
+Sembra complicato, ma consiste quasi interamente in istruzioni e concetti di cui abbiamo già discusso. Ecco alcune note su cose che potresti non comprendere completamente a questo punto.
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+			Buff è una variabile non inizializzata e quindi si trova nella sezione .bss del programma. è uno spazio riservato con un indirizzo. Buff non ha un valore iniziale e non contiene nulla fino a quando non leggiamo un carattere da stdin e lo memorizziamo lì.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			Quando una chiamata a sys_read restituisce 0, sys_read ha raggiunto la fine del file da cui sta leggendo. Se restituisce un valore positivo, questo valore è il numero di caratteri che ha letto dal file. In questo caso, poiché abbiamo richiesto solo un carattere, sys_read restituirà un conteggio di 1 o 0 per indicare che non ci sono più caratteri.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			L'istruzione CMP confronta i suoi due operandi e imposta i flag di conseguenza. L'istruzione di salto condizionale che segue ogni istruzione CMP agisce in base allo stato dei flag.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			L'istruzione JB (Jump If Below) salta se l'operando sinistro del CMP precedente è inferiore in valore rispetto al suo operando destro.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			L'istruzione JA (Salta se Maggiore) salta se l'operando sinistro del CMP precedente è superiore in valore rispetto all'operando destro.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			Poiché un indirizzo di memoria (come Buff) punta semplicemente a una posizione in memoria di dimensioni non specificate, devi inserire il qualificatore BYTE tra CMP e il suo operando di memoria per dire all'assemblatore che vuoi confrontare due valori a 8 bit. In questo caso, i due valori a 8 bit sono un carattere ASCII come w e un valore esadecimale come 7Ah.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			Poiché i programmi scritti in SASM utilizzano la Standard C Library, di solito terminano con un'istruzione RET anziché con la funzione SYSCALL Exit.
+		</p>
+	</li>
+</ul>
+
+<p align=justify>
+L'esecuzione del programma eseguibile avviene utilizzando il reindirizzamento I/O. La riga di comando per uppercaser1 appare così.
+</p>
+
+```
+./uppercaser1> outputfile < inputfile
+```
+
+<p align=justify>
+Sia il file di input sia il file di output possono essere qualsiasi file di testo. Ecco una cosa da provare:
+</p>
+
+```asm
+./uppercaser1> allupper.txt < uppercaser1.asm
+```
+
+<p align=justify>
+Il file allupper.txt verrà creato quando esegui il programma e sarà riempito con il codice sorgente del programma, forzando tutti i caratteri a maiuscolo. Nota che se stai lavorando all'interno di SASM, puoi inserire il testo da convertire nella finestra di Input. (Carica un file di testo puro in un editor di testo ed estrai del testo tramite il comando Copia, quindi incollalo nella finestra di Input tramite Incolla.) Quando esegui il programma, leggerà il testo dalla finestra di Input, lo forzerà a maiuscolo e poi scriverà il testo convertito nella finestra di Output. SASM mappa la finestra di Input a stdin e la finestra di Output a stdout.
+</p>
+
+<p align=justify>
+Specialmente mentre sei un principiante, potresti scoprire, mentre tenti questo ultimo passo di passare dallo pseudocodice alle istruzioni per la macchina, che hai frainteso qualcosa o dimenticato qualcosa e che il tuo pseudocodice non è completo o corretto. (O entrambi!) Potresti anche renderti conto che ci sono modi migliori per fare qualcosa nelle istruzioni assembly rispetto a quello che una traduzione letterale dello pseudocodice potrebbe darti. Apprendere è un'attività disordinata e, non importa quanto tu pensi di essere bravo, continuerai sempre a imparare. Un buon esempio, e uno che potrebbe effettivamente esserti venuto in mente mentre leggi il precedente codice assembly, è questo: il programma non ha alcun rilevamento degli errori. Presume semplicemente che qualsiasi nome di file di input inserito dall'utente per il reindirizzamento I/O sia un file esistente e non corrotto con dati al suo interno, che ci sarà spazio sull'unità corrente per il file di output, e così via. è un modo di operare pericoloso, anche se Dio sa che è stato fatto. Le chiamate di sistema Linux relative ai file restituiscono valori di errore e qualsiasi programma che le utilizza dovrebbe esaminare quei valori di errore e agire di conseguenza. Ci saranno quindi momenti in cui dovrai seriamente riorganizzare il tuo pseudocodice a metà del processo, o addirittura scartarlo completamente e ricominciare da capo. Queste intuizioni hanno la fastidiosa abitudine di verificarsi quando sei in quella fase finale di conversione dello pseudocodice in istruzioni per la macchina. Sii pronto.
+</p>
+
+<p align=justify>
+E c'è un'altra questione che potrebbe esserti venuta in mente, se sai qualcosa sull'I/O di file a basso livello: la chiamata al kernel sys_read di Linux non è limitata a restituire un singolo carattere alla volta. Passi l'indirizzo di un buffer a sys_read, e sys_read cercherà di riempire quel buffer con tanti caratteri dal file di input quanti gli dici di leggere. Se configuri un buffer di 500 byte, puoi chiedere a sys_read di portare 500 caratteri da stdin e metterli in quel buffer. Una singola chiamata a sys_read può quindi fornire 500 caratteri (o 1.000, o 16.000) su cui lavorare, tutti in una volta. Questo riduce il tempo che Linux impiega a muoversi avanti e indietro tra il suo filesystem e il tuo programma, ma cambia anche in modo significativo la forma del programma. Riempie il buffer, e poi devi scorrere il buffer un carattere alla volta, convertendo quello che è in minuscolo in maiuscolo. Sì, avresti dovuto saperlo in anticipo, mentre affinavi una soluzione in pseudocodice al tuo problema, e dopo un po' di tempo lo farai. C'è un numero scoraggiante di dettagli di questo tipo che devi avere a portata di mano nella tua mente, e non li memorizzerai tutti in un pomeriggio. Di tanto in tanto, una tale rivelazione può costringerti a "riavvolgere" un paio di iterazioni e riformulare parte del tuo pseudocodice.
+</p>
+
+### Scansionare un Buffer
+
+<p align=justify>
+è il caso dell'esempio attuale. Il programma ha bisogno di gestione degli errori, che in questo caso implica principalmente il test dei valori di ritorno da sys_read e sys_write e la visualizzazione di messaggi significativi sulla console Linux. Non c'è differenza tecnica tra la visualizzazione dei messaggi di errore e la visualizzazione di slogan per i diner a buon mercato, quindi potrei lasciarti aggiungere la gestione degli errori da solo come esercizio. (Non dimenticare stderr.) La sfida più interessante, tuttavia, riguarda l'I/O di file bufferizzato. Le chiamate di sistema Unix read e write sono orientate ai buffer e non ai caratteri, quindi dobbiamo rielaborare il nostro pseudocodice per riempire i buffer con i caratteri e poi elaborare i buffer.
+</p>
+
+<p align=justify>
+Torniamo allo pseudocodice e proviamo.
+</p>
+
+```
+ Read:  Set up registers for the sys_read kernel call.
+        Call sys_read to read a buffer full of characters from stdin.
+        Test for EOF.
+        If we're at EOF, jump to Exit.
+
+        Set up registers as a pointer to scan the buffer.
+ Scan:  Test the character at buffer pointer to see if it's lowercase.
+        If it's not a lowercase character, skip conversion.
+        Convert the character to uppercase by subtracting 20h.
+        Decrement buffer pointer.
+        If we still have characters in the buffer, jump to Scan.
+
+Write: Set up registers for the Write kernel call.
+       Call sys_write to write the processed buffer to stdout.
+       Jump back to Read and get another buffer full of characters.
+
+Exit:  Set up registers for terminating the program via sys_exit.
+       Call sys_exit.
+```
+
+<p align=justify>
+Questo aggiunge tutto ciò di cui hai bisogno per leggere un buffer da disco, esaminare e convertire i caratteri nel buffer e poi scrivere di nuovo il buffer su disco. (Naturalmente, il buffer deve essere ingrandito da un carattere a una dimensione utile, come 1024 caratteri.) Il succo del trucco del buffer è impostare un puntatore nel buffer e poi esaminare e, se necessario, convertire il carattere all'indirizzo espresso dal puntatore. Poi spostiamo il puntatore al carattere successivo nel buffer e facciamo la stessa cosa, ripetendo il processo finché non abbiamo trattato tutti i caratteri nel buffer. Scansionare un buffer è un ottimo esempio di ciclo in linguaggio assembly. Ad ogni passaggio attraverso il ciclo dobbiamo testare qualcosa per vedere se abbiamo finito e se dobbiamo uscire dal ciclo. Il "oqualcosa" in questo caso è il puntatore. Possiamo impostare il puntatore all'inizio del buffer e testare per vedere quando raggiunge la fine, oppure potremmo impostare il puntatore alla fine del buffer e lavorare verso l'inizio, testando per vedere quando raggiungiamo l'inizio del buffer. Entrambi gli approcci funzioneranno. Tuttavia, partire dalla fine e lavorare verso l'inizio del buffer può essere fatto un po' più rapidamente e con meno istruzioni. (Spiegherò il perché a breve.) Il nostro prossimo affinamento dovrebbe iniziare a parlare di specifiche: quali registri fanno cosa, e così via.
+</p>
+
+```
+ Read:  Set up registers for the sys_read kernel call.
+        Call sys_read to read a buffer full of characters from stdin.
+        Store the number of characters read in RSI
+        Test for EOF (rax = 0).
+        If we're at EOF, jump to Exit.
+
+        Put the address of the buffer in rsi.
+        Put the number of characters read into the buffer in rdx.
+ Scan:  Compare the byte at [r13+rbx] against 'a'.
+        If the byte is below 'a' in the ASCII sequence, jump to Next.
+        Compare the byte at [r13+rbx] against 'z'.
+        If the byte is above 'z' in the ASCII sequence, jump to Next.
+        Subtract 20h from the byte at [r13+rbx].
+ Next:  Decrement rbx by one.
+        Jump if not zero to Scan.
+ Write: Set up registers for the Write kernel call.
+        Call sys_write to write the processed buffer to stdout.
+        Jump back to Read and get another buffer full of characters.
+ Exit:  Set up registers for terminating the program via sys_exit.
+        Call sys_exit.
+```
+
+<p align=justify>
+Questo affinamento riconosce che non c'è un solo test da effettuare, ma due. I caratteri minuscoli rappresentano un intervallo nella sequenza ASCII, e gli intervalli hanno inizio e fine. Dobbiamo determinare se il carattere in esame rientra nell'intervallo. Per farlo, è necessario testare il carattere per vedere se è inferiore al carattere più basso nell'intervallo delle minuscole (a) o superiore al carattere più alto nell'intervallo delle minuscole (z). Se il carattere in questione non è minuscolo, non è necessaria alcuna elaborazione, e passiamo al codice che aumenta il puntatore al carattere successivo. Navigare all'interno del buffer coinvolge due registri. L'indirizzo dell'inizio del buffer è posto in R13. Il numero di caratteri nel buffer è posto nel registro RBX. Se si sommano i due registri, si ottiene l'indirizzo dell'ultimo carattere nel buffer. Se si decrementa il contatore dei caratteri in RBX, la somma di R13 e RBX punterà al penultimo carattere nel buffer. Ogni volta che si decrementa RBX, si avrà l'indirizzo di un carattere più vicino all'inizio del buffer. Quando RBX viene decrementato di uno fino a zero, sarete all'inizio del buffer e tutti i caratteri saranno stati elaborati.
+</p>
+
+<p align=justify>
+Ma aspetta... non è del tutto vero. C'è un bug nello pseudocodice, ed è uno dei bug più comuni per i principianti in tutto il linguaggio assembly: il leggendario errore "off by one". La somma di R13 e RBX punterà a un indirizzo oltre la fine del buffer. E quando il conteggio in RBX scende a zero, un carattere, quello all'inizio del buffer, rimarrà inesaminato e, se è minuscolo, intoccato. Il modo più semplice per spiegare da dove proviene questo bug è disegnarlo, come ho fatto nella figura di seguito. C'è un file di testo molto breve nell'archivio dei listati per questo libro chiamato gazabo.txt. Contiene solo la singola parola senza senso gazabo e il marcatore EOL, per un totale di sette caratteri. La figura di seguito mostra il file gazabo.txt come apparirebbe dopo che Linux lo carica in un buffer in memoria. L'indirizzo del buffer è stato caricato nel registro R13, e il numero di caratteri (qui, 7) è stato caricato in RBX. Se sommi R13 e RBX, l'indirizzo risultante va oltre la fine del buffer in una memoria non utilizzata (si spera!).
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/off_by_one_error.png">
+</div>
+
+<p align=justify>
+Questo tipo di problema può verificarsi ogni volta che si iniziano a mescolare gli offset degli indirizzi e i conteggi delle cose. I conteggi iniziano da 1, e gli offset iniziano da 0. Il carattere #1 si trova realmente all'offset 0 dall'inizio del buffer, il carattere #2 si trova all'offset 1, e così via. Stiamo cercando di utilizzare un valore in RBX sia come conteggio sia come offset, e se gli offset nel buffer partono da 0, un errore di uno è inevitabile. La soluzione è semplice: decrementare l'indirizzo del buffer (che è memorizzato in R13) di 1 prima di cominciare la scansione. R13 ora punta alla posizione di memoria immediatamente prima del primo carattere nel buffer. Con R13 impostato in questo modo, possiamo utilizzare il valore di conteggio in RBX sia come conteggio sia come offset. Quando il valore in RBX viene decrementato a 0, abbiamo elaborato il carattere g e usciamo dal ciclo. Un esperimento interessante è "ocommentare" l'istruzione macchina DEC R13 e poi eseguire il programma. Questo si fa semplicemente mettendo un punto e virgola all'inizio della riga contenente DEC R13 e ricompilando. Digita gazabo o qualsiasi altra cosa in minuscolo nella finestra di input e poi esegui il programma.
+</p>
+
+### Dallo pseudocodice al codice assembly
+
+<p align=justify>
+A questo punto farò quel salto spaventoso verso le istruzioni macchina reali, ma per brevità mostrerò solo il ciclo stesso.
+</p>
+
+```asm
+ ; Set up the registers for the process buffer step:
+     mov rbx,rax          ; Place the number of bytes read into rbx
+     mov r13,Buff         ; Place address of buffer into r13
+     dec r13              ; Adjust r13 to offset by one
+
+; Go through the buffer and convert lowercase to uppercase characters:
+ Scan:
+     cmp byte [r13+rbx],61h  ; Test input char against lowercase 'a'
+     jb Next                 ; If below 'a' in ASCII, not lowercase
+     cmp byte [r13+rbx],7Ah  ; Test input char against lowercase 'z'
+     ja Next                 ; If above 'z' in ASCII, not lowercase
+                             ; At this point, we have a lowercase char
+     sub byte [r13+rbx],20h  ; Subtract 20h to give uppercase...
+ Next:
+     dec rbx                 ; Decrement counter
+     jnz Scan                ; If characters remain, loop back
+```
+
+<p align=justify>
+Lo stato del buffer e dei registri puntatore prima di iniziare la scansione è mostrato nella seconda parte della figura qui sopra. La prima volta, il valore in RBX è il conteggio dei caratteri nel buffer. La somma R13 + RBX punta al carattere EOL alla fine del buffer. La volta successiva, RBX viene decrementato a 6, e R13 + RBX punta alla lettera o in gazabo. Ogni volta che decrementiamo RBX, controlliamo il flag Zero usando l'istruzione JNZ, che salta di nuovo all'etichetta Scan quando il flag Zero non è impostato. Nell'ultima passata attraverso il ciclo, RBX contiene 1, e R13 + RBX punta alla lettera g nella primissima posizione del buffer. Solo quando RBX viene decrementato a zero JNZ "scorre" e il ciclo termina. I puristi potrebbero pensare che decrementare l'indirizzo in R13 prima che inizi il ciclo sia un trucco rischioso. Hanno in parte ragione: dopo essere stato decrementato, R13 punta a una posizione in memoria al di fuori dei limiti del buffer. Se il programma tentasse di scrivere in quella posizione, un'altra variabile potrebbe essere corrotta, o potrebbe verificarsi un errore di segmentazione. La logica del ciclo non richiede di scrivere in quell'indirizzo particolare, ma potrebbe facilmente farlo per errore.
+</p>
+
+<p align=justify>
+Il codice di seguito mostra il programma completato, completamente commentato con tutto lo pseudocodice convertito in codice assembly.
+</p>
+
+```asm
+ ;  Executable name  : 	uppercaser2gcc
+ ;  Version          : 	2.0
+ ;  Created date     : 	6/17/2022
+
+ ;  Last update      : 	5/8/2023
+
+ ;  Author           : 	Jeff Duntemann
+
+ ;  Description      : 	A simple program in assembly for Linux, using NASM 2.15.05
+ ;		       	demonstrating simple text file I/O
+ ;			(through redirection) for reading an input file to
+ ;			a buffer in blocks, forcing lowercase characters to
+ ;			uppercase, and writing the modified buffer to
+ ;			an output file.
+ ;
+ ;
+ ;  Run it this way in a terminal window:
+ ;
+ ;    uppercaser2> (output file) < (input file)
+ ;
+ ;  Build in SASM using the default make lines and x64 checked
+ ;
+
+ SECTION .bss      		; Section containing uninitialized data
+
+	BUFFLEN  equ 128	; Length of buffer
+	Buff:	 resb BUFFLEN  	; Text buffer itself
+
+ SECTION .data			; Section containing initialised data
+
+ SECTION .text			; Section containing code
+
+global main           		; Linker needs this to find the entry point
+main:
+    mov rbp,rsp       ; for correct debugging
+; Read a buffer full of text from stdin:
+Read:
+    mov rax,0        ; Specify sys_read call
+    mov rdi,0        ; Specify File Descriptor 0: Standard Input
+    mov rsi,Buff     ; Pass offset of the buffer to read to
+    mov rdx,BUFFLEN  ; Pass number of bytes to read at one pass
+    syscall          ; Call sys_read to fill the buffer
+    mov r12,rax      ; Copy sys_read return value to r12 for later
+    cmp rax,0        ; If rax=0, sys_read reached EOF on stdin
+    je Done          ; Jump If Equal (to 0, from compare)
+; Set up the registers for the process buffer step:
+    mov rbx,rax      ; Place the number of bytes read into rbx
+    mov r13,Buff     ; Place address of buffer into r13
+    dec r13          ; Adjust count to offset
+; Go through the buffer and convert lowercase to uppercase characters:
+Scan:
+    cmp byte [r13+rbx],61h  ; Test input char against lowercase 'a'
+    jb .Next                ; If below 'a' in ASCII, not lowercase
+    cmp byte [r13+rbx],7Ah  ; Test input char against lowercase 'z'
+    ja .Next                ; If above 'z' in ASCII, not lowercase
+                            ; At this point, we have a lowercase char
+    sub byte [r13+rbx],20h  ; Subtract 20h to give uppercase...
+.Next:
+    dec rbx                 ; Decrement counter
+    cmp rbx,0
+    jnz Scan                ; If characters remain, loop back
+; Write the buffer full of processed text to stdout:
+Write:
+    mov rax,1		    ; Specify sys_write call
+    mov rdi,1               ; Specify File Descriptor 1: Standard output
+    mov rsi,Buff            ; Pass offset of the buffer
+    mov rdx,r12             ; Pass # of bytes of data in the buffer
+    syscall            	    ; Make kernel call
+    jmp Read                ; Loop back and load another buffer full
+
+; All done! Let's end this party:
+ Done:
+   ret
+```
+
+<p align=justify>
+C'è un difetto in SASM su cui potresti inciampare, se stai testando programmi come uppercaser2gcc all'interno di SASM, utilizzando le finestre di Input e Output. Il problema è che la finestra di Output può contenere solo una certa quantità di testo. Se riempi il buffer della finestra di Output, ulteriore output non genererà errori, ma l'ultimo pezzo di testo spingerà il primo pezzo di testo fuori dal bordo superiore della finestra di Output. Una volta che hai un programma ragionevolmente funzionante in SASM, salva il file EXE su disco. Poi esci da SASM, apri una finestra del terminale, naviga nella directory del progetto ed esegui il tuo programma lì. Non so se Linux imponga un limite su quanto testo può passare attraverso stdout, ma ho passato alcuni file piuttosto grandi a stdout senza che alcun testo andasse perso.
+</p>
+
+### Operazioni sui Bit
+
+<p align=justify>
+Il linguaggio assembly si basa molto sui bit. I bit, dopotutto, sono ciò di cui sono composti i byte, e una competenza essenziale del linguaggio assembly è costruire byte e smontarli di nuovo. Una tecnica chiamata bit mapping è ampiamente utilizzata nel linguaggio assembly. Il bit mapping assegna significati speciali ai singoli bit all'interno di un byte per risparmiare spazio e spremere l'ultimo piccolo bit di utilità da una certa quantità di memoria. C'è una famiglia di istruzioni nel set di istruzioni x64 che ti consente di manipolare i bit all'interno dei byte applicando operazioni logiche booleane tra byte su base bit per bit. Queste sono le istruzioni logiche bitwise: AND, OR, XOR e NOT. Un'altra famiglia di istruzioni ti consente di spostare i bit avanti e indietro all'interno di un singolo byte o parola. Queste sono le istruzioni di shift/rotate più utilizzate: ROL, ROR, RCL, RCR, SHL e SHR.
+</p>
+
+### Numerazione dei bit
+
+<p align=justify>
+Gestire i bit richiede un modo per specificare quali bit stiamo trattando. Per convenzione, nel linguaggio assembly i bit sono numerati, partendo da 0, dal bit meno significativo nel byte, word, doubleword o altro elemento che stiamo utilizzando come mappa di bit. Il bit meno significativo è quello con il valore più basso nel sistema numerico binario. è anche il bit all'estrema destra, se scrivi il valore come un numero binario nel modo convenzionale. L'ho mostrato nella figura di seguito, per una word a 16 bit. La numerazione dei bit funziona esattamente allo stesso modo, indipendentemente da quanti bit stai trattando: byte, word, doubleword o quadword. Il bit 0 è sempre all'estremità destra, e i numeri dei bit aumentano verso sinistra.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/bit_numbering.png">
+</div>
+
+<p align=justify>
+Quando conti i bit, inizia con il bit all'estremità destra e numerali verso sinistra a partire da 0.
+</p>
+
+### Operazioni Binarie
+
+<p align=justify>
+Il termine logica booleana suona arcano e minaccioso, ma sorprendentemente riflette le realtà del pensiero e dell'azione ordinari. L'operatore booleano AND, ad esempio, si presenta in molte delle decisioni che prendi ogni giorno della tua vita. Per esempio, per scrivere un assegno che non venga rifiutato, devi avere denaro nel tuo conto corrente AND assegni nel tuo libretto degli assegni. Nessuno dei due da solo svolgerà il lavoro. Non puoi scrivere un assegno che non hai, e un assegno senza denaro dietro di esso verrà rifiutato. Le persone che vivono con i loro libretti degli assegni utilizzano spesso l'operatore AND. Quando i matematici parlano di logica booleana, manipolano valori astratti chiamati Vero e Falso. L'operatore AND funziona in questo modo: <i>Condizione1 AND Condizione2</i> sarà considerato Vero se Condizione1 e Condizione2 sono entrambe Vere. Se una delle condizioni è Falsa, il risultato sarà Falso. Ci sono infatti quattro diverse combinazioni dei due valori di input, quindi le operazioni logiche tra due valori sono solitamente riassunte in una forma chiamata tabella di verità. La tabella di verità per l'operatore logico AND (non ancora l'istruzione AND; ci arriveremo a breve) è mostrata nella figura di seguito.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/and_table.png">
+</div>
+
+<p align=justify>
+Non c'è nulla di misterioso nella tabella di verità. è solo un riepilogo di tutte le possibilità dell'operatore AND applicato a due condizioni di input. La cosa importante da ricordare riguardo all'AND è che solo quando entrambi i valori di input sono Veri, anche il risultato sarà Vero. Questo è il modo in cui i matematici vedono l'AND. In termini di linguaggio assembly, l'istruzione AND analizza due bit e produce un terzo bit in base ai valori dei primi due bit. Per convenzione, consideriamo un bit 1 come Vero e un bit 0 come Falso. La logica è identica; stiamo solo usando simboli diversi per rappresentare Vero e Falso. Tenendo presente questo, possiamo riscrivere la tabella di verità dell'AND per renderla più significativa per il lavoro in linguaggio assembly. Vedi la figura di seguito.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/and_table_asm.png">
+</div>
+
+### Istruzione AND
+
+<p align=justify>
+L'istruzione AND incarna questo concetto nel set di istruzioni x64. L'istruzione AND esegue l'operazione logica AND su due operandi di dimensioni simili e sostituisce l'operando di destinazione con il risultato dell'operazione nel suo complesso. (Ricorda che l'operando di destinazione è l'operando più vicino al mnemonico.) In altre parole, considera questa istruzione:
+</p>
+
+```asm
+	and al,bl
+```
+
+<p align=justify>
+Ciò che accadrà qui è che la CPU eseguirà un gruppo di otto operazioni AND bitwise sugli otto bit in AL e BL. Il bit 0 di AL viene messo in AND con il bit 0 di BL, il bit 1 di AL viene messo in AND con il bit 1 di BL, e così via. Ogni operazione AND genera un bit di risultato, e quel bit viene posizionato nell'operando di destinazione (qui, AL) dopo che tutte e otto le operazioni AND sono state eseguite. Questo è un tema ricorrente tra le istruzioni macchina che eseguono un'operazione su due operandi e producono un risultato: il risultato sostituisce il primo operando (l'operando di destinazione) e non il secondo!
+</p>
+
+### Mascherare i Bit
+
+<p align=justify>
+Un uso importante dell'istruzione AND è isolare uno o più bit da un valore di byte, word, dword o qword. Isolare qui significa semplicemente impostare tutti i bit indesiderati su un valore affidabile di 0. Per esempio, supponiamo di essere interessati a testare i bit 4 e 5 di un valore per vedere quali sono. Per farlo, dobbiamo essere in grado di ignorare gli altri bit (dal bit 0 al 3 e dal 6 al 7), e l'unico modo per ignorare in modo sicuro i bit è impostarli su 0. AND è la soluzione. Impostiamo una maschera di bit in cui i numeri dei bit che vogliamo esaminare e testare sono impostati su 1, e i bit che desideriamo ignorare sono impostati su 0. Per mascherare tutti i bit tranne i bit 4 e 5, dobbiamo configurare una maschera in cui i bit 4 e 5 sono impostati su 1, mentre tutti gli altri bit sono 0. Questa maschera in binario è 00110000B o 30H. (Per verificarlo, conta i bit dall'estremità destra del numero binario, iniziando da 0.) Questa maschera di bit viene quindi messa in AND con il valore in questione. La figura di seguito mostra questa operazione in azione, con la maschera di bit 30H appena descritta e un valore iniziale di 9DH.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/and_instruction.png">
+</div>
+
+<p align=justify>
+I tre valori binari coinvolti sono mostrati disposti verticalmente, con il bit meno significativo (cioè, l'estremità destra) di ciascun valore in cima. Dovresti essere in grado di seguire ogni operazione AND e verificarla consultando la tabella precedente. Il risultato finale è che tutti i bit tranne i bit 4 e 5 sono garantiti come 0 e possono quindi essere ignorati in sicurezza. I bit 4 e 5 potrebbero essere sia 0 sia 1. (Ecco perché dobbiamo testarli; non sappiamo quale sia il loro valore.) Con il valore iniziale di 9DH, il bit 4 risulta essere 1 e il bit 5 risulta essere 0. Se il valore iniziale fosse stato un altro, i bit 4 e 5 potrebbero essere entrambi 0, entrambi 1, o qualche combinazione dei due. Non dimenticare: <b>il risultato dell'istruzione AND sostituisce l'operando di destinazione dopo che l'operazione è completata</b>.
+</p>
+
+### Istruzione OR
+
+<p align=justify>
+Strettamente correlata all'operazione logica AND è l'operazione OR, che, come l'operazione logica AND, ha una realizzazione con lo stesso nome nel set di istruzioni x86/x64. Strutturalmente, l'istruzione OR funziona in modo identico ad AND. Solo la sua tabella di verità è diversa: mentre AND richiede che entrambi i suoi operandi siano 1 affinché il risultato sia 1, OR richiede che almeno un operando abbia un valore di 1. La tabella di verità per OR è mostrata nella figura di seguito.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/or_instruction.png">
+</div>
+
+<p align=justify>
+Poiché è inadeguato per isolare i bit, l'istruzione OR viene utilizzata molto meno frequentemente rispetto all'AND.
+</p>
+
+### Istruzione XOR
+
+<p align=justify>
+In una classe a sé stante c'è l'operazione OR esclusivo, incarnata nell'istruzione XOR. XOR, di nuovo, fa in termini generali ciò che fanno AND e OR: esegue un'operazione logica bit per bit sui suoi due operandi, e il risultato sostituisce l'operando di destinazione. L'operazione logica, tuttavia, è un OR esclusivo, il che significa che <b>il risultato è 1 solo se i due operandi sono diversi</b> (cioè 1 e 0 oppure 0 e 1). La tabella di verità per XOR (vedi figura di seguito) dovrebbe rendere questa nozione leggermente scivolosa un po' più chiara.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/xor_instruction.png">
+</div>
+
+<p align=justify>
+Guarda la figura qui sopra con attenzione! Nei primi e ultimi casi, dove i due operandi sono gli stessi, il risultato è 0. Nei due casi centrali, dove i due operandi sono diversi, il risultato è 1. Si possono fare alcune cose interessanti con l'istruzione XOR, ma la maggior parte di esse è un po' arcana per un libro per principianti come questo. Un uso non ovvio ma utile di XOR è questo: eseguire l'XOR di qualsiasi valore contro se stesso produce 0. In altre parole, se esegui l'istruzione XOR con entrambi gli operandi come lo stesso registro, quel registro verrà azzerato a 0:
+</p>
+
+```asm
+ xor rax,rax ; Azzerare il registro rax.
+```
+
+<p align=justify>
+Nei tempi passati, questo era più veloce che caricare uno 0 in un registro da dati immediati utilizzando MOV. Anche se non è più il caso, è un trucco interessante da conoscere. Come funziona dovrebbe essere ovvio dalla lettura della tabella di verità, ma per chiarirlo l'ho mostrato nella figura di seguito. Segui ciascuna delle singole operazioni di OR esclusivo attraverso la figura fino al suo valore di risultato. Poiché ogni bit in AL è messo in XOR contro se stesso, in ogni caso le operazioni di XOR avvengono tra due operandi identici. A volte entrambi sono 1, a volte entrambi sono 0, ma in ogni caso i due sono gli stessi. Con l'operazione XOR, quando i due operandi sono gli stessi, il risultato è sempre 0. Voilà! Zero in un registro.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/xor_to_zero_register.png">
+</div>
+
+### Istruzione NOT
+
+<p align=justify>
+La più facile da capire tra tutte le istruzioni logiche bit a bit è NOT. La tabella di verità per NOT è più semplice rispetto alle altre esaminate perché NOT prende solo un operando. E ciò che fa è semplice: NOT prende lo stato di ciascun bit nel suo unico operando e cambia quel bit nel suo stato opposto. Ciò che era 1 diventa 0, e ciò che era 0 diventa 1. Mostro questo nella figura di seguito.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/not_instruction.png">
+</div>
+
+### I segmenti di registro non rispondono alla logica
+
+<p align=justify>
+Non accederai direttamente ai registri di segmento fino a quando non ti immergerai nelle profondità della programmazione del sistema operativo. I registri di segmento ora appartengono al sistema operativo, e i programmi nello spazio utente non possono modificarli in alcun modo. Ma anche quando inizi a lavorare a livello di sistema operativo, i registri di segmento presentano limitazioni significative. Una di queste limitazioni è che non possono essere utilizzati con nessuna delle istruzioni logiche bit a bit. Se ci provi, l'assemblatore ti darà un errore "Uso illegale del registro di segmento". Se hai bisogno di eseguire un'operazione logica su un registro di segmento, devi prima copiare il valore del registro di segmento in uno dei registri a uso generale, eseguire l'operazione logica sul registro GP, e poi copiare il risultato dal registro GP di nuovo nel registro di segmento. I registri a uso generale sono chiamati "a uso generale" per una ragione, e i registri di segmento non sono in alcun modo a uso generale. Sono specialisti nell'indirizzamento della memoria, e se mai devi lavorare sui valori dei segmenti, l'approccio generale è fare il lavoro in un registro a uso generale e poi copiare il valore modificato di nuovo nel registro di segmento in questione.
+</p>
+
+### Shiftare i bit
+
+<p align=justify>
+L'altro modo di manipolare i bit all'interno di un byte è un po' più diretto: li sposti verso un lato o l'altro. Ci sono alcuni dettagli nel processo, ma le istruzioni di spostamento più semplici sono piuttosto ovvie: SHL sposta il suo operando a sinistra, mentre SHR sposta il suo operando a destra. Tutte le istruzioni di spostamento (comprese quelle leggermente più complesse che descriverò tra poco) hanno la stessa forma generale, illustrata qui dall'istruzione SHL:
+</p>
+
+```asm
+ shl <register/memory>,<count>
+```
+
+<p align=justify>
+Il primo operando è l'obiettivo dell'operazione di spostamento, cioè il valore che stai per spostare. Può essere costituito da dati di registro o dati di memoria, ma non da dati immediati. Il secondo operando specifica il numero di bit con cui spostare.
+</p>
+
+<p align=justify>
+Questo operando &lt;count&gt; ha una storia peculiare. Sugli antichi 8086 e 8088, poteva essere una delle due cose: il numero immediato 1, o il registro CL. (Non CX!) Se specificavi il conteggio come 1, allora lo spostamento sarebbe stato di un bit. Se volevi spostare più di un bit alla volta, dovevi prima caricare il conteggio dello spostamento nel registro CL. Nei tempi precedenti a quando i registri generali x86 divennero davvero generali, contare le cose era l'"agenda nascosta" di CX (e quindi di CL). Contava gli spostamenti, i passaggi nei cicli, gli elementi di stringa e alcune altre cose. è per questo che a volte viene chiamato registro conteggio e può essere ricordato dalla C in conteggio. A partire dal 286 e per tutte le CPU x86/x64 più recenti, l'operando &lt;count&gt; può essere qualsiasi valore immediato da 0 a 255. Il conteggio degli spostamenti può anche essere passato in CL se lo preferisci. Nota che non puoi specificare RCX per il conteggio, anche se "ocontiene" CL. <b>Anche in x64, le istruzioni di spostamento richiedono davvero un valore immediato da 0 a 255 o CL</b>. <b>Qualsiasi altro registro specificato per il valore di conteggio attiverà un errore dell'assemblatore</b>. Ovviamente, spostare di 0 bit è inutile, ma è possibile e non è considerato un errore. Fai attenzione alla tua digitazione. Ora, c'è un asterisco importante nel paragrafo precedente: non puoi spostare più posizioni di quante ne abbia il registro di destinazione. In modalità lunga a 64 bit, non puoi spostare (o ruotare; vedi la sezione successiva) più di 63 conteggi. Tentare di farlo non attiverà un errore. Semplicemente non funzionerà.
+</p>
+
+### Come funziona lo shifting dei bit
+
+<p align=justify>
+Comprendere le istruzioni di spostamento richiede di pensare ai numeri spostati come numeri binari, e non come numeri esadecimali o decimali. Un esempio semplice partirebbe dal registro AX che contiene un valore di 0B76FH. (Sto usando AX per l'esempio qui per mantenere i numeri binari brevi e comprensibili, ma le istruzioni di spostamento possono essere utilizzate su registri di qualsiasi dimensione.) Espressa come numero binario (e quindi come modello di bit), 0B76FH è la seguente:
+</p>
+
+```
+ 1011011101101111
+```
+
+<p align=justify>
+Tieni presente che ogni cifra in un numero binario è un bit. Se esegui un'istruzione SHL AX,1, ciò che troveresti in AX dopo lo spostamento è il seguente:
+</p>
+
+```
+0110111011011110
+```
+
+<p align=justify>
+Un 0 è stato inserito all'estremità destra del numero, e tutto quanto è stato spostato verso sinistra di una cifra. Nota che un bit 1 è stato spostato all'estremità sinistra del numero nel nulla cosmico. Puoi persino usare le istruzioni di shift su CL, con CL che contiene il conteggio. Questo è legale, anche se sembra peculiare, e potrebbe non essere la migliore idea:
+</p>
+
+```asm
+ mov cl,1
+ shl cl,cl
+```
+
+<p align=justify>
+Quello che accade in questo esempio è che il valore di conteggio in CL viene spostato a sinistra del valore contenuto in CL. Qui il bit 1 in CL viene spostato fino a diventare un bit 2. Se questo sembra ancora strano, mettilo in una sandbox e osserva i registri.
+</p>
+
+### Colpire i bit nel Carry Flag
+
+<p align=justify>
+Spostare un bit a sinistra in un valore binario non significa esattamente mandare quel bit nel nulla cosmico. Un bit spostato fuori dall'estremità sinistra di un valore binario viene spostato in un contenitore temporaneo per i bit chiamato Flag di Riporto (CF, Carry Flag). Il Flag di Riporto è uno di quei bit informativi raccolti insieme nel registro RFlags, che ho descritto nei paragrafi precedenti. Puoi testare lo stato del Flag di Riporto con un'istruzione di branching, come spiegherò un po' più avanti. Tuttavia, tieni presente, quando usi le istruzioni di shift, che molte altre istruzioni usano il Flag di Riporto (non solo le istruzioni di shift). Se sposti un bit nel Flag di Riporto con l'intento di testare quel bit più tardi per vedere cos'è, testalo prima di eseguire un'altra istruzione che influisce sul Flag di Riporto. Quella lista include tutte le istruzioni aritmetiche, tutte le istruzioni logiche bit a bit, alcune altre istruzioni varie e, naturalmente, tutte le altre istruzioni di shift. Se sposti un bit nel Flag di Riporto e poi esegui immediatamente un'altra istruzione di shift, il bit spostato in precedenza nel Flag di Riporto verrà spedito fuori dall'estremità del mondo nel nulla cosmico.
+</p>
+
+### L'istruzione Rotate
+
+<p align=justify>
+Detto questo, se il destino di un bit non è quello di perdersi nel nulla cosmico, è necessario utilizzare le istruzioni di rotazione RCL, RCR, ROL e ROR. Le istruzioni di rotazione sono quasi identiche alle istruzioni di spostamento, ma con una differenza cruciale: il bit spinto fuori da un'estremità dell'operando riappare all'estremità opposta dell'operando. Quando si ruota un operando di più di un bit, i bit marciano costantemente in una direzione, cadendo dall'estremità e riapparendo immediatamente all'estremità opposta. I bit quindi "ruotano" attraverso l'operando mentre viene eseguita l'istruzione di rotazione. Come tante cose, questo si vede meglio graficamente che a parole. Dai un'occhiata alla figura di seguito. L'esempio mostrato qui è l'istruzione ROL (Rotate Left), ma l'istruzione ROR funziona allo stesso modo, con i bit che si muovono nella direzione opposta. Un valore binario iniziale di 10110010 (0B2h) viene inserito in AL. Quando viene eseguita un'istruzione ROL AL,1, tutti i bit in AL marciano verso sinistra di una posizione. Il bit a 1 in posizione 7 esce dal registro AL a sinistra, ma gira e riappare immediatamente a destra in posizione 0. Anche in questo caso, ROR funziona esattamente allo stesso modo, ma il movimento dei bit è da sinistra a destra invece che (come con ROL) da destra a sinistra. Il numero di bit in base ai quali viene ruotato un operando può essere un valore immediato o un valore in CL.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/how_rotate_works.png">
+</div>
+
+### Ruotare i bit attraverso il Carry Flag
+
+<p align=justify>
+C'è un secondo paio di istruzioni di rotazione nel set di istruzioni x86/x64: RCR (Ruota Carry a destra, Rotate Carry Right) e RCL (Ruota Carry a sinistra, Rotate Carry Left). Queste operano come ROL e ROR, ma con una differenza: i bit che vengono spostati fuori dalla fine di un operando e rientrano nell'operando all'inizio viaggiano attraverso il flag Carry. Il percorso che un singolo bit percorre in una rotazione tramite CF è quindi di un bit più lungo rispetto a quello che sarebbe in ROL e ROR. L'ho mostrato graficamente nella figura di seguito.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/how_rotate_with_carry_flag_works.png">
+</div>
+
+### Settare un valore noto nel Carry Flag
+
+<p align=justify>
+è anche utile ricordare che le istruzioni precedenti possono lasciare valori nel CF, e quei valori verranno ruotati in un operando durante un'istruzione RCL o RCR. Alcune persone hanno la comprensione errata che il CF venga forzato a 0 prima di un'istruzione di shift o rotate, e questo non è affatto vero. Se un'altra istruzione lascia un bit 1 nel CF immediatamente prima di un'istruzione RCR o RCL, quel bit 1 entrerà obbedientemente nell'operando di destinazione, che tu lo voglia o meno. Se è importante iniziare una rotazione con un valore noto nel CF, c'è una coppia di istruzioni x86 che faranno il lavoro per te: CLC e STC. CLC azzera il flag di carry a 0. STC imposta il flag di carry a 1. Nessuna delle due istruzioni prende operandi e nessuna ha altri effetti.
+</p>
+
+### Bit-Bashing
+
+<p align=justify>
+Linux ha un metodo piuttosto conveniente per visualizzare il testo sullo schermo. Il problema è che visualizza solo testo: se vuoi visualizzare un valore numerico da un registro come una coppia di cifre esadecimali, Linux non può aiutarti. Devi prima convertire il valore numerico nella sua rappresentazione stringa e poi visualizzare la rappresentazione stringa chiamando il servizio kernel sys_write tramite syscall. Convertire numeri esadecimali in cifre esadecimali non è difficile, e il codice che svolge questo compito dimostra diversi dei nuovi concetti che stiamo esplorando in questo capitolo. Il codice di seguito è il nucleo essenziale di un'utilità di dump esadecimale. Quando reindirizzi il suo input da un file di qualsiasi tipo, leggerà quel file 16 byte alla volta e visualizzerà quei 16 byte in una riga, come 16 valori esadecimali separati da spazi. Il codice contiene diverse nuove tecniche che vale la pena discutere.
+</p>
+
+```asm
+;  Executable name : hexdump1gcc
+;  Version         : 2.0
+;  Created date    : 5/9/2022
+;  Last update     : 5/8/2023
+;  Author          : Jeff Duntemann
+;  Description     : A simple program in assembly for Linux, using NASM 2.15
+;    under the SASM IDE, demonstrating the conversion of binary values to
+;    hexadecimal strings. It acts as a very simple hex dump utility for files,
+;    without the ASCII equivalent column.
+;
+;  Run it this way:
+;    hexdump1gcc < (input file)
+;
+;  Build using SASM's default build setup for x64
+
+;
+SECTION .bss              ; Section containing uninitialized data
+
+	BUFFLEN	equ 16        ; We read the file 16 bytes at a time
+	Buff: 	resb BUFFLEN  ; Text buffer itself, reserve 16 bytes
+
+SECTION .data             ; Section containing initialised data
+
+    HexStr:	db " 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",10
+    HEXLEN equ $-HexStr
+
+    Digits: db "0123456789ABCDEF"
+
+SECTION .text             ; Section containing code
+
+global  main              ; Linker needs this to find the entry point!
+
+main:
+    mov rbp,rsp       ; SASM Needs this for debugging
+
+; Read a buffer full of text from stdin:
+Read:
+    mov rax,0             ; Specify sys_read call 0
+    mov rdi,0             ; Specify File Descriptor 0: Standard Input
+    mov rsi,Buff          ; Pass offset of the buffer to read to
+    mov rdx,BUFFLEN       ; Pass number of bytes to read at one pass
+    syscall               ; Call sys_read to fill the buffer
+    mov r15,rax           ; Save # of bytes read from file for later
+    cmp rax,0             ; If rax=0, sys_read reached EOF on stdin
+    je Done               ; Jump If Equal (to 0, from compare)
+
+; Set up the registers for the process buffer step:
+    mov rsi,Buff          ; Place address of file buffer into esi
+    mov rdi,HexStr        ; Place address of line string into edi
+    xor rcx,rcx           ; Clear line string pointer to 0
+
+; Go through the buffer and convert binary values to hex digits:
+Scan:
+    xor rax,rax           ; Clear rax to 0
+
+; Here we calculate the offset into the line string, which is rcx X 3
+    mov rdx,rcx               ; Copy the pointer into line string into rdx
+;   shl rdx,1                 ; Multiply pointer by 2 using left shift
+;   add rdx,rcx               ; Complete the multiplication X3
+    lea rdx,[rdx*2+rdx]       ; This does what the above 2 lines do!
+                              ; See discussion of LEA later in Ch. 9
+
+; Get a character from the buffer and put it in both rax and rbx:
+    mov al,byte [rsi+rcx]     ; Put a byte from the input buffer into al
+    mov rbx,rax               ; Duplicate byte in bl for second nybble
+
+; Look up low nybble character and insert it into the string:
+    and al,0Fh                   ; Mask out all but the low nybble
+    mov al,byte [Digits+rax]     ; Look up the char equivalent of nybble
+    mov byte [HexStr+rdx+2],al   ; Write the char equivalent to line string
+
+; Look up high nybble character and insert it into the string:
+    shr bl,4                     ; Shift high 4 bits of char into low 4 bits
+    mov bl,byte [Digits+rbx]     ; Look up char equivalent of nybble
+    mov byte [HexStr+rdx+1],bl   ; Write the char equivalent to line string
+
+; Bump the buffer pointer to the next character and see if we're done:
+    inc rcx         ; Increment line string pointer
+    cmp rcx,r15     ; Compare to the number of characters in the buffer
+    jna Scan        ; Loop back if rcx is <= number of chars in buffer
+
+; Write the line of hexadecimal values to stdout:
+    mov rax,1       ; Specify syscall call 1: sys_write
+    mov rdi,1       ; Specify File Descriptor 1: Standard output
+    mov rsi,HexStr  ; Pass address of line string in rsi
+    mov rdx,HEXLEN  ; Pass size of the line string in rdx
+    syscall         ; Make kernel call to display line string
+    jmp Read        ; Loop back and load file buffer again
+
+; All done! Let's end this party:
+Done:
+    ret             ; Return to the glibc shutdown code
+```
+
+<p align=justify>
+Il programma hexdump1 è fondamentalmente un programma di filtro e ha lo stesso meccanismo generale di filtro utilizzato nel programma uppercaser. Le parti importanti del programma per questa discussione sono quelle che leggono 16 byte dal buffer di input e li convertono in una stringa di caratteri da visualizzare sulla console Linux. Questo è il codice tra l'etichetta Scan e l'istruzione RET. Farò riferimento a quel blocco di codice nella discussione che segue.
+</p>
+
+### Dividere un byte in due nibble
+
+<p align=justify>
+Ricorda che i valori letti da Linux da un file vengono letti in memoria come valori binari. L'esadecimale è un modo per visualizzare i valori binari, e per visualizzare i valori binari come cifre esadecimali ASCII visibili, devi fare alcune conversioni. Visualizzare un singolo valore binario a 8 bit richiede due cifre esadecimali. I quattro bit inferiori in un byte sono rappresentati da una cifra (la cifra meno significativa o la cifra più a destra), e i quattro bit superiori del byte sono rappresentati da un'altra cifra (la cifra più significativa o la cifra più a sinistra). Il valore binario 11100110, per esempio, è equivalente a E6 in esadecimale. Convertire un valore a 8 bit in due cifre a 4 bit deve essere fatto una cifra alla volta, il che significa che dobbiamo separare il singolo byte in due quantità a 4 bit, che sono spesso chiamate <b>nibble</b>, specialmente nel lavoro di assemblaggio. Nel programma hexdump1, un byte viene letto da Buff e viene collocato in due registri, RAX e RBX. Questo viene fatto perché separare il nibble alto da quello basso in un byte è distruttivo, in quanto di fatto annulliamo il nibble che non vogliamo. Per isolare il nibble basso in un byte, dobbiamo mascherare il nibble alto indesiderato. Questo viene fatto con un'istruzione AND:
+</p>
+
+```asm
+ and al,0Fh
+```
+
+<p align=justify>
+La costante immediata 0Fh espressa in binario è 00001111. Se segui l'operazione attraverso la tabella di verità AND (Tabella 9.2), vedrai che qualsiasi bit messo in AND con 0 è 0. Mettiamo in AND il nibble alto del registro AL con 0000, che azzera qualsiasi cosa possa esserci. Mettere in AND il nibble basso con 1111 lascia i bit del nibble basso esattamente come erano. Quando abbiamo finito, abbiamo il nibble basso del byte letto da Buff in AL.
+</p>
+
+### Shiftare il nibble alto nel nibble basso
+
+<p align=justify>
+Mascherare l'high nybble dal byte di input in AL lo distrugge. Abbiamo bisogno di quell'high nybble, ma abbiamo una seconda copia in RBX, ed è da quella copia che estrarremo l'high nybble. Come per il low nybble, lavoreremo effettivamente con gli otto bit meno significativi di RBX, detti BL. Ricorda che BL è solo un modo diverso di riferirsi agli otto bit più bassi di RBX. Non è un registro diverso. Se un valore è caricato in RBX, i suoi otto bit meno significativi sono in BL. Potremmo mascherare il low nybble in BL con un'istruzione AND, lasciando indietro l'high nybble, ma c'è un problema: mascherare i quattro bit bassi di un byte non rende i quattro bit alti un nybble. Dobbiamo in qualche modo spostare i quattro bit alti del byte di input nei quattro bit bassi. Il modo più veloce per farlo è spostare semplicemente BL a destra di quattro bit. Questo è ciò che fa l'istruzione SHR BL,4. Il low nybble viene semplicemente spostato fuori dal bordo di BL, nel flag di carry, e poi nel nulla cosmico. Dopo lo shift, ciò che era l'high nybble in BL è ora il low nybble. A questo punto, abbiamo il low nybble del byte di input in AL e l'high nybble del byte di input in BL. La prossima sfida è convertire il numero binario a quattro bit in un nybble (ad esempio, 1110) nel suo carattere esadecimale ASCII visualizzabile; in questo esempio, è il carattere "oE".
+</p>
+
+### Usare una Lookup Table
+
+<p align=justify>
+Nella sezione .data del programma è definita una lookup table molto semplice. La tabella Digits ha questa definizione:
+</p>
+
+```asm
+	Digits db '0123456789ABCDEF'
+```
+
+<p align=justify>
+è importante notare che ogni cifra occupa una posizione nella stringa il cui offset dall'inizio della stringa è il valore che rappresenta. In altre parole, il carattere ASCII 0 si trova all'inizio della stringa, a zero byte dall'inizio della stringa. Il carattere 7 si trova a sette byte dall'inizio della stringa, e così via. Noi "cerchiamo" un carattere nella tabella Digits usando un riferimento di memoria:
+</p>
+
+```asm
+mov al,byte [Digits+rax]
+```
+
+<p align=justify>
+Come nella maggior parte del linguaggio assembly, tutto qui dipende dall'addressing della memoria. Il primo carattere esadecimale nella tabella di ricerca si trova all'indirizzo in Digits. Per ottenere la cifra desiderata, dobbiamo indicizzare nella tabella di ricerca. Lo facciamo aggiungendo un offset nella tabella all'indirizzo all'interno delle parentesi quadre. Questo offset è il nybble in AL. Aggiungere l'offset in AL all'indirizzo di Digits (usando RAX) ci porta direttamente al carattere che è l'equivalente ASCII del valore in AL. Ho illustrato questo graficamente nella figura di seguito. Ci sono due aspetti che potrebbero risultare confusi riguardo all'istruzione MOV che recupera una cifra da Digits e la posiziona in AL:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+			Dobbiamo usare RAX nel riferimento di memoria piuttosto che AL, perché AL non può partecipare ai calcoli degli indirizzi effettivi. Non dimenticare che AL è "all'interno" di RAX! (Parleremo meglio dei calcoli degli indirizzi effettivi un po' più tardi in questo capitolo.)
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			Stiamo sostituendo il nybble in AL con il suo carattere equivalente. L'istruzione prima recupera dalla tabella il carattere equivalente del nybble e poi memorizza di nuovo quel carattere in AL. Il nybble che era in AL viene sovrascritto e quindi scompare.
+		</p>
+	</li>
+</ul>
+
+<p align=justify>
+Finora, abbiamo letto un carattere dalla tabella di ricerca in AL. La conversione di quel nybble è stata completata. Il compito successivo sembra semplice ma in realtà è sorprendentemente complesso: scrivere il carattere ASCII esadecimale ora memorizzato in AL nella stringa di visualizzazione in HexStr.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/using_a_lookup_table.png">
+</div>
+
+### Moltiplicare attraverso Shifting e Somme
+
+<p align=justify>
+Il programma hexdump1 legge i byte da un file e li visualizza in righe, con 16 byte rappresentati in esadecimale in ciascuna riga. Un campione dell'output di hexdump1 è mostrato qui.
+</p>
+
+```
+3B 20 20 45 78 65 63 75 74 61 62 6C 65 20 6E 61
+6D 65 20 3A 20 45 40 54 53 59 53 43 40 4C 4C 0D
+0A 3B 20 20 56 65 72 73 69 6F 6E 20 20 20 20 20
+20 20 20 20 3A 20 30 2E 30 0D 0A 3B 20 20 43 72
+65 60 74 65 64 20 64 60 74 65 20 20 20 20 3A 20
+30 2F 37 2F 32 30 30 39 0D 0A 3B 20 20 4C 60 73
+74 20 75 70 64 60 74 65 20 20 20 20 20 3A 20 32
+2F 30 38 2F 32 30 30 39 0D 0A 3B 20 20 40 75 74
+68 6F 72 20 20 20 20 20 20 20 20 20 20 3A 20 4A
+```
+
+<p align=justify>
+Ognuna di queste righe è una visualizzazione dello stesso elemento di dati: HexStr, una stringa di 48 caratteri con un valore EOL (0ah) alla fine. Ogni volta che hexdump1 legge un blocco di 16 byte dal file di input, li formatta come cifre esadecimali ASCII e li inserisce in HexStr. In un certo senso, questo è un altro tipo di manipolazione tabellare, tranne per il fatto che invece di cercare qualcosa in una tabella, stiamo scrivendo valori in una tabella basata su un indice. Un modo per pensare a HexStr è come una tabella di 16 voci, ciascuna lunga tre caratteri. (Vedi figura di seguito.) In ciascuna voce, il primo carattere è uno spazio, e il secondo e il terzo carattere sono le cifre esadecimali stesse. I caratteri di spazio sono già presenti, come parte della definizione originale di HexStr nella sezione .data. L'originale HexStr "vuoto" ha 0 caratteri in tutte le posizioni delle cifre esadecimali. Per "riempire" HexStr con dati "reali" per la visualizzazione di ciascuna riga, dobbiamo scorrere HexStr in un ciclo di linguaggio assembly, scrivendo separatamente il carattere del nybble inferiore e il carattere del nybble superiore in HexStr.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/table_of_16_three_byte_entries.png">
+</div>
+
+<p align=justify>
+Il problema difficile qui è che ad ogni passaggio attraverso il ciclo, dobbiamo "aumentare" l'indice in HexStr di tre invece che solo di uno. L'offset di una di quelle voci da 3 byte in HexStr è l'indice della voce moltiplicato per tre. Ho già descritto le istruzioni MUL, che gestiscono la moltiplicazione senza segno arbitraria nel set di istruzioni x86/x64. Tuttavia, MUL è lenta rispetto ad altre istruzioni. Ha anche altre limitazioni, specialmente nei modi in cui richiede registri specifici per i suoi operandi impliciti. Fortunatamente, con un po' di astuzia, ci sono altri modi più veloci per moltiplicare in assembly. Questi modi si basano sul fatto che è molto facile e veloce moltiplicare per potenze di due, usando l'istruzione SHL (Shift Left). Potrebbe non essere immediatamente ovvio per te, ma <b>ogni volta che sposti una quantità di un bit a sinistra, stai moltiplicando quella quantità per due</b>. Sposta una quantità di due bit a sinistra e la moltiplichi per quattro. Spostala di tre bit a sinistra e stai moltiplicando per otto, e così via. Puoi credermi, oppure puoi vedere davvero che cosa succede in una sandbox. Configura una nuova sandbox in SASM e inserisci le seguenti istruzioni:
+</p>
+
+```asm
+ mov al,3
+ shl al,1
+ shl al,1
+ shl al,2
+```
+
+<p align=justify>
+Costruisci la sandbox e vai in modalità debug. Poi segui le istruzioni, osservando il valore di RAX cambiare nella vista Registri per ogni passaggio. La prima istruzione carica il valore 3 in AL. L'istruzione successiva sposta AL a sinistra di un bit. Il valore in AL diventa 6. La seconda istruzione SHL sposta ancora AL a sinistra di un bit, e il 6 diventa 12. La terza istruzione SHL sposta AL di due bit, e il 12 diventa 48. L'ho mostrato graficamente nella figura di seguito.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/multiplying_by_shifting.png">
+</div>
+
+<p align=justify>
+Ma cosa fai se vuoi moltiplicare per tre? Facile: moltiplichi per 2 e poi aggiungi un'altra copia del moltiplicando al prodotto. Nel programma hexdump1, si fa in questo modo:
+</p>
+
+```asm
+ mov rdx,rcx   ; Copy the character counter into edx
+ shl rdx,1     ; Multiply pointer by 2 using left shift
+ add rdx,rcx   ; Complete the multiplication X3
+```
+
+<p align=justify>
+Qui, il moltiplicando viene caricato dal contatore di ciclo RCX in RDX. RDX viene poi spostato a sinistra di un bit per moltiplicarlo per 2. Infine, RCX viene aggiunto una volta al prodotto RDX per effettuare una moltiplicazione per 3. La moltiplicazione per altri numeri che non sono potenze di due può essere eseguita combinando un SHL e uno o più ADD. Per moltiplicare un valore in RCX per sette, faresti così:
+</p>
+
+```asm
+ mov rdx,rcx   ; Keep a copy of the multiplicand in rcx
+ shl rdx,2     ; Multiply rdx by 4
+ add rdx,rcx   ; Makes it X 5
+ add rdx,rcx   ; Makes it X 6
+ add rdx,rcx   ; Makes it X 7
+```
+
+<p align=justify>
+Questo potrebbe sembrare goffo, ma sorprendentemente, è ancora più veloce rispetto all'uso di MUL! (E c'è un modo ancora più veloce per moltiplicare per tre che ti mostrerò un po' più avanti in questo capitolo.) Una volta che hai capito come è impostata la tabella delle stringhe HexStr, scrivere le cifre esadecimali al suo interno è semplice. La cifra esadecimale meno significativa è in AL, e la cifra esadecimale più significativa è in BL. Scrivere entrambe le cifre esadecimali in HexStr avviene attraverso un indirizzo di memoria effettivo a tre parti:
+</p>
+
+```asm
+ mov byte [HexStr+rdx+2],al ; Write LSB char digit to line string
+ mov byte [HexStr+rdx+1],bl ; Write MSB char digit to line string
+```
+
+<p align=justify>
+Riferisciti alla figura di due sezioni fa per calcolarlo da solo: inizi con l'indirizzo di HexStr nella sua interezza. RDX contiene l'offset del primo carattere in una data voce. Per ottenere l'indirizzo della voce in questione, aggiungi HexStr e RDX. Tuttavia, quell'indirizzo è quello del primo carattere nella voce, che in HexStr è sempre un carattere spazio. La posizione del digit LSB in una voce è l'offset della voce +2, e la posizione del digit MSB in una voce è l'offset della voce +1. L'indirizzo del digit LSB è quindi HexStr + l'offset della voce + 2. L'indirizzo del digit MSB è quindi HexStr + l'offset della voce + 1.
+</p>
+
+### Flag, test e branch
+
+<p align=justify>
+L'idea delle istruzioni di salto condizionale è semplice e senza di essa non si può fare molto in assembly. Ho usato i salti condizionali in modo informale negli ultimi programmi di esempio senza dire molto al riguardo, perché il senso dei salti era piuttosto ovvio dal contesto ed erano necessari per dimostrare altre cose. Ma sotto la semplicità dell'idea dei salti in linguaggio assembly si nasconde una grande complessità. è tempo di approfondire e trattarla in dettaglio.
+</p>
+
+### Salti incondizionati
+
+<p align=justify>
+Un salto è proprio questo: un cambiamento brusco nel flusso di esecuzione delle istruzioni. Ordinariamente, le istruzioni vengono eseguite una dopo l'altra, in ordine, passando dalla memoria bassa alla memoria alta. Le istruzioni di salto alterano l'indirizzo dell'istruzione successiva da eseguire. Esegui un'istruzione di salto e, zac!, all'improvviso sei in un'altra posizione. Un'istruzione di salto può spostare l'esecuzione avanti nella memoria o indietro. Può piegare l'esecuzione in un ciclo (e può legare la logica del tuo programma in nodi). Ci sono due tipi di salti: condizionali e incondizionati. Un salto incondizionato è un salto che avviene sempre. Ha questa forma:
+</p>
+
+```asm
+  jmp <label>
+```
+
+<p align=justify>
+Quando questa istruzione viene eseguita, la sequenza di esecuzione passa all'istruzione situata all'etichetta specificata da label. è così semplice.
+</p>
+	
+### Salti condizionati
+
+<p align=justify>
+Un'istruzione di salto condizionale è uno di quei famosi test che ho introdotto nel Capitolo 1. Quando viene eseguita, un salto condizionale testa qualcosa, di solito uno, occasionalmente due o, molto più raramente, tre dei flag nel registro RFlags. Se il flag o i flag testati si trovano in uno stato particolare, l'esecuzione salterà a un'etichetta situata altrove; altrimenti, passerà semplicemente all'istruzione successiva nella sequenza. Questa natura a due vie è importante. O un'istruzione di salto condizionale salta o passa. Salto o nessun salto. Non può saltare in uno di due luoghi o tre. Se salta o meno dipende dal valore corrente di un insieme molto ristretto di bit all'interno della CPU. Come ho menzionato in precedenza in questo libro discutendo del registro RFlags nel suo insieme, c'è un flag che viene impostato a 1 da alcune istruzioni quando il risultato di quella istruzione è zero: il flag Zero ZF. L'istruzione DEC (DECrement) è un buon esempio. DEC sottrae 1 dal suo operando. Se con quella sottrazione l'operando diventa zero, ZF viene impostato a 1. Una delle istruzioni di salto condizionale, JZ (Jump if Zero), testa ZF. Se ZF risulta impostato a 1, si verifica un salto e l'esecuzione si trasferisce all'etichetta dopo il mnemonico JZ. Se ZF risulta essere 0, l'esecuzione passa all'istruzione successiva nella sequenza. Questo potrebbe essere il salto condizionale più comune nell'intero set di istruzioni x86/x64. è spesso usato quando si conta un registro fino a zero mentre si esegue un ciclo e, quando il conteggio del registro raggiunge zero grazie all'istruzione DEC, il ciclo termina e l'esecuzione riprende dall'istruzione subito dopo il ciclo. Ecco un esempio semplice (sebbene non ottimale), usando istruzioni che dovresti già capire.
+</p>
+
+```asm
+ mov [RunningSum],0 ; Clear the running total
+ mov rcx,17         ; We're going to do this 17 times
+
+ WorkLoop:
+   add [RunningSum],3 ; Add three to the running total
+   dec rcx            ; Subtract 1 from the loop counter
+   jz SomewhereElse    ; If the counter is 0, we're done!
+   jmp WorkLoop
+```
+
+<p align=justify>
+La variabile RunningSum è stata definita in precedenza con il modificatore DQ, rendendola di dimensione 64 bit. Prima che inizi il ciclo, impostiamo un valore in RCX, che funge da registro contatore e contiene il numero di volte che attraverseremo il ciclo. Il corpo del ciclo è il punto in cui viene eseguita un'operazione ad ogni passaggio attraverso il ciclo. In questo esempio è un'unica istruzione ADD, ma il corpo potrebbe contenere decine o centinaia di istruzioni. Dopo che il lavoro del ciclo è completato, il registro contatore viene decrementato di 1 con un'istruzione DEC. Subito dopo, l'istruzione JZ testa il flag Zero. Decrementare RCX da 17 a 16, o da 4 a 3, non attiva ZF, e l'istruzione JZ semplicemente passa oltre. L'istruzione dopo JZ è un'istruzione di salto incondizionato, che obbedientemente e costantemente riporta l'esecuzione all'etichetta WorkLoop ogni volta. Ora, decrementare RCX da 1 a 0 attiva ZF... e questo è il momento in cui il ciclo termina. JZ ci porta finalmente fuori dal ciclo saltando a SomewhereElse (un'etichetta nel programma più grande che non è mostrata qui), e l'esecuzione esce dal ciclo. Potresti essere abbastanza acuto (o abbastanza esperto) da pensare che questo sia un modo orribile per impostare un ciclo, e hai ragione. (Ciò non significa che non sia mai stato fatto, né che tu stesso non possa farlo in un momento di impazienza nel cuore della notte.) Ciò che stiamo realmente cercando ogni volta che attraversiamo il ciclo è quando una condizione, il flag Zero, non è impostata, e c'è un'istruzione per questo.
+</p>
+
+### Saltare sull'assenza di una condizione
+
+<p align=justify>
+Ci sono diverse istruzioni di salto condizionale, di cui discuterò alcune, ma non tutte, in questo libro. Il loro numero aumenta per il fatto che quasi ogni istruzione di salto condizionale ha un alter ego: un salto quando la condizione specificata non è impostata su 1. L'istruzione JZ fornisce un buon esempio di salto su una condizione. JZ salta a una nuova posizione nel segmento di codice se il flag Zero (ZF) è impostato su 1. L'alter ego di JZ è JNZ (Salta se Non Zero). JNZ salta a un'etichetta se ZF è 0 e passa avanti se ZF è 1. Questo può essere confuso all'inizio, perché JNZ salta quando ZF è uguale a 0. Tieni presente che il nome dell'istruzione si applica alla condizione testata e non necessariamente al valore binario del flag. Nell'esempio di codice precedente, JZ è saltato quando l'istruzione DEC ha decrementato un contatore a zero. La condizione testata è qualcosa di connesso con un'istruzione precedente, non semplicemente lo stato di ZF. Pensala in questo modo: una condizione solleva un flag. "oAlzare un flag" significa impostare il flag su 1. Quando una delle numerose istruzioni costringe un operando a un valore di zero (che è la condizione), il flag Zero viene alzato. La logica dell'istruzione si riferisce alla condizione, non al flag. Come esempio, miglioriamo il piccolo ciclo mostrato prima cambiando la logica del ciclo per utilizzare JNZ:
+</p>
+
+```asm
+ mov word [RunningSum],0  ; Clear the running total
+ mov ecx,17               ; We're going to do this 17 times
+
+ WorkLoop:
+ add word [RunningSum],3  ; Add 3 to the running total
+ dec ecx                  ; Subtract 1 from the loop counter
+ jnz WorkLoop             ; If the counter is 0, we're done!
+```
+
+<p align=justify>
+L'istruzione JZ è stata sostituita con un'istruzione JNZ. Questo ha molto più senso, poiché per continuare il ciclo dobbiamo saltare, e continuiamo il ciclo solo quando il contatore è maggiore di 0. Il salto di ritorno all'etichetta WorkLoop avverrà solo quando il contatore è maggiore di 0. Una volta che il contatore si riduce a 0, il ciclo è considerato completato. JNZ "continua" e il codice che segue il ciclo (che non mostro qui) viene eseguito. Il punto è che se puoi posizionare il compito successivo del programma immediatamente dopo l'istruzione JNZ, non hai affatto bisogno di utilizzare l'istruzione JMP incondizionata. L'esecuzione delle istruzioni passerà semplicemente in modo naturale al compito successivo da eseguire. Il programma avrà un flusso più naturale e meno ingarbugliato dall'alto verso il basso e sarà più facile da leggere e comprendere.
+</p>
+
+### Flags
+
+<p align=justify>
+In precedenza, ho spiegato il registro RFlags e descritto brevemente gli scopi di tutti i flag in esso contenuti. RFlags è scarso; più della metà è riservata per usi futuri e quindi indefinita. La maggior parte dei flag definiti non è particolarmente utile, specialmente quando stai appena iniziando come programmatore assembly. Il flag Carry (CF) e il flag Zero (ZF) costituiranno il 90 percento del tuo coinvolgimento con i flag come principiante, mentre il flag Direction (DF), il flag Sign (SF) e il flag Overflow (OF) insieme rappresentano un ulteriore 9,998 percento. Potrebbe essere una buona idea rileggere quella parte su RFlags ora, nel caso in cui la tua comprensione dell'etichetta dei flag sia un po' arrugginita. Come ho spiegato in precedenza, JZ salta quando ZF è 1, mentre JNZ salta quando ZF è 0. La maggior parte delle istruzioni che eseguono un'operazione su un operando (come AND, OR, XOR, INC, DEC e tutte le istruzioni aritmetiche) impostano ZF in base ai risultati dell'operazione. D'altra parte, le istruzioni che semplicemente spostano dati (come MOV, XCHG, PUSH e POP) non influenzano ZF né alcuno degli altri flag. (Ovviamente, POPF influisce sui flag estraendo in essi il valore in cima allo stack.) Un'eccezione irritante è l'istruzione NOT, che esegue un'operazione logica sul suo operando ma non imposta alcun flag, anche quando fa sì che il suo operando diventi 0. Prima di scrivere codice che dipende dai flag, controlla il tuo riferimento delle istruzioni per assicurarti di aver compreso correttamente l'etichetta dei flag per quella particolare istruzione.
+</p>
+
+### Confronti con CMP
+
+<p align=justify>
+Un uso principale dei flag è nel controllo dei cicli. Un altro è nelle comparazioni tra due valori. I tuoi programmi dovranno spesso sapere se un valore in un registro o nella memoria è uguale a un altro valore. Inoltre, potresti voler sapere se un valore è maggiore o minore di un altro valore, se non è uguale a quel valore. Esiste un'istruzione di salto per soddisfare ogni esigenza, ma qualcosa deve impostare i flag a beneficio dell'istruzione di salto. L'istruzione CMP (CoMPare) è quella che imposta i flag per i compiti di confronto. L'uso di CMP è semplice e intuitivo. Il secondo operando viene confrontato con il primo e diversi flag vengono impostati di conseguenza:
+</p>
+
+```asm
+cmp <op1>,<op2>    ; Sets OF, SF, ZF, AF, PF, and CF
+```
+
+<p align=justify>
+Il senso del confronto può essere ricordato se si riformula semplicemente il confronto in termini aritmetici.
+</p>
+
+```asm
+ Result = <op1> - <op2>
+```
+
+<p align=justify>
+CMP è in gran parte un'operazione di sottrazione in cui il risultato della sottrazione viene scartato e solo i flag vengono influenzati. Il secondo operando viene sottratto dal primo. In base ai risultati della sottrazione, i flag interessati vengono impostati ai valori appropriati. Dopo un'istruzione CMP, puoi saltare in base a diverse condizioni aritmetiche. Le persone che hanno una ragionevole conoscenza della matematica, e i programmatori FORTRAN o Pascal, riconosceranno le condizioni: Uguale, Diverso, Maggiore di, Minore di, Maggiore o uguale a, e Minore o uguale a. Il senso di questi operatori deriva dai loro nomi ed è esattamente come il senso degli operatori equivalenti nella maggior parte dei linguaggi di alto livello.
+</p>
+
+### Una giungla di istruzioni JUMP
+
+<p align=justify>
+C'è una serie disorientante di istruzioni di salto, ma quelle che trattano le relazioni aritmetiche si suddividono bene in sole sei categorie, una categoria per ciascuna delle sei condizioni che ho appena elencato. La complicazione nasce dal fatto che ci sono due mnemonici per ogni istruzione macchina, ad esempio, JLE (Salta se Minore o Uguale) e JNG (Salta se Non Maggiore di). Questi due mnemonici sono sinonimi in quanto l'assemblatore genera l'identico opcode binario quando incontra uno dei due mnemonici. I sinonimi sono una comodità per te programmatore, in quanto offrono due modi alternativi di pensare a una data istruzione di salto. Nell'esempio precedente, Salta se Minore o Uguale è logicamente identico a Salta se Non Maggiore. (Pensaci!) Se l'importanza del confronto precedente era vedere se un valore è minore o uguale a un altro, useresti il mnemonico JLE. D'altra parte, se stavi testando per essere sicuro che una quantità non fosse maggiore di un'altra, useresti JNG. La scelta è tua. Un'altra complicazione è che c'è un insieme separato di istruzioni per i confronti aritmetici firmati e non firmati. Non ho parlato molto della matematica del linguaggio assembly in questo libro e quindi non ho detto molto sulla differenza tra quantità firmate e non firmate. Una quantità firmata è quella in cui il bit alto della quantità è considerato un flag incorporato che indica se la quantità è negativa. Se quel bit è 1, la quantità è considerata negativa. Se quel bit è 0, la quantità è considerata positiva. L'aritmetica firmata nel linguaggio assembly è complessa e sottile e non è così utile come potresti pensare immediatamente. Non la tratterò in dettaglio in questo libro, anche se la maggior parte dei libri di linguaggio assembly la tratta in una certa misura. Tutto ciò che devi sapere per avere una comprensione di alto livello dell'aritmetica firmata è che, nell'aritmetica firmata, le quantità negative sono legali e il bit più significativo di un valore è trattato come il bit di segno. (Se il bit di segno è impostato su 1, il valore è considerato negativo.) L'aritmetica non firmata, d'altra parte, non riconosce numeri negativi, e il bit più significativo è solo un bit in più nel numero binario che esprime il valore in esame.
+</p>
+
+<p align=justify>
+Per distinguere i salti firmati da quelli non firmati, i mnemonici usano due espressioni diverse per la relazione tra due valori:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+			I valori con segno sono considerati maggiori o minori. Ad esempio, per verificare se un operando con segno è maggiore di un altro, utilizzeresti il mnemonico JG (Salta se Maggiore) dopo un'istruzione CMP.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			I valori non firmati sono considerati come se fossero sopra o sotto. Ad esempio, per determinare se un operando non firmato è maggiore (sopra) di un altro, utilizzeresti il mnemonico JA (Salta se sopra) dopo un'istruzione CMP.
+		</p>
+	</li>
+</ul>
+
+<p align=justify>
+La tabella di seguito riassume i mnemonici di salto aritmetico e i loro sinonimi. Qualsiasi mnemonico contenente le parole sopra o sotto è per valori senza segno, mentre qualsiasi mnemonico contenente le parole maggiore o minore è per valori con segno. Confronta i mnemonici con i loro sinonimi e osserva come i due rappresentino punti di vista opposti da cui guardare istruzioni identiche.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/Jump_Instruction_Mnemonics.png">
+</div>
+
+<p align=justify>
+La figura qui sopra serve semplicemente a espandere i mnemonici in una forma più comprensibile e ad associare un mnemonico al suo sinonimo. La figura di seguito, d'altra parte, ordina i mnemonici in base alla condizione logica e al loro utilizzo con valori con segno e senza segno. Nella figura di seguito sono inoltre elencati i flag i cui valori vengono testati da ciascuna istruzione di salto. Nota che alcune delle istruzioni di salto richiedono uno dei due possibili valori del flag per eseguire il salto, mentre altre richiedono entrambi i valori del flag. Diversi salti con segno confrontano due dei flag l'uno contro l'altro. JG, ad esempio, salterà quando ZF è 0 o quando il Flag di Segno (SF) è uguale al Flag di Overflow (OF). Non spenderò ulteriore tempo a spiegare la natura del Flag di Segno o del Flag di Overflow. Finché non hai compreso il significato di ciascuna istruzione, capire esattamente come le istruzioni testano i flag può aspettare finché non hai acquisito un po' di esperienza nella programmazione.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/Arithmetic_Tests_Useful_After_CMP_Instruction.png">
+</div>
+
+<p align=justify>
+Alcune persone hanno difficoltà a capire come i mnemonici JE e JZ siano sinonimi, così come lo sono JNE e JNZ. Pensa di nuovo a come viene effettuato un confronto all'interno della CPU: il secondo operando viene sottratto dal primo, e se il risultato è 0 (indica che i due operandi erano in effetti uguali), il flag Zero ZF viene impostato su 1. Ecco perché JE e JZ sono sinonimi: entrambi stanno semplicemente testando lo stato del flag Zero.
+</p>
+
+### Cercare un bit a 1 con TEST
+
+<p align=justify>
+L'insieme di istruzioni x86/x64 riconosce che il testing dei bit è molto comune nel linguaggio assembly e fornisce quello che equivale a un'istruzione CMP per i bit: TEST. TEST esegue un'operazione logica AND tra due operandi e poi imposta i flag come farebbe l'istruzione AND, senza alterare l'operando di destinazione come farebbe AND. Ecco la sintassi dell'istruzione TEST:
+</p>
+
+```asm
+test <operand>,<bit mask>
+```
+
+<p align=justify>
+L'operando della maschera di bit dovrebbe contenere un bit 1 in ogni posizione in cui si desidera cercare un bit 1 nell'operando, e bit 0 in tutti gli altri bit. Ciò che fa TEST è eseguire l'operazione logica AND tra l'operando di destinazione dell'istruzione e la maschera di bit e poi impostare i flag come farebbe l'istruzione AND. Il risultato dell'operazione AND viene scartato e l'operando di destinazione non cambia. Ad esempio, se vuoi determinare se il bit 3 di RAX è impostato su 1, potresti utilizzare questa istruzione:
+</p>
+
+```asm
+ test rax,08h       ; Bit 3 in binary is 00001000B, or 08h
+```
+
+<p align=justify>
+Il bit 3, ovviamente, non ha il valore numerico 3: devi guardare il pattern di bit della maschera ed esprimerlo come un valore binario o esadecimale. (Il bit 3 rappresenta il valore 8 in binario.) Usare il binario per costanti letterali è perfettamente legale in NASM ed è spesso l'espressione più chiara di ciò che stai facendo quando lavori con le maschere di bit.
+</p>
+
+```asm
+ test rax,00001000B ; Bit 3 in binary is 00001000B, or 08h
+```
+
+<p align=justify>
+L'operando di destinazione RAX non cambia a seguito dell'operazione, ma la tabella di verità AND viene applicata tra RAX e il modello binario 00001000. Se il bit 3 in RAX è un bit 1, allora il flag Zero viene azzerato a 0. Se il bit 3 in RAX è un bit 0, allora il flag Zero viene impostato a 1. Perché? Se esegui un AND tra 1 (nella maschera di bit) e 0 (in RAX), ottieni 0. (Controlla nella tabella di verità di AND, che ho mostrato nei paragrafi precedenti.) E se tutte e otto le operazioni AND bitwise restituiscono 0, il risultato è 0 e il flag Zero viene alzato a 1, indicando che il risultato è 0. La chiave per comprendere TEST è pensare a TEST come a una sorta di fantasma dell'opcode, dove l'opcode è AND. TEST indossa una maschera (per così dire) e finge di essere AND, ma poi non porta a termine i risultati dell'operazione. Imposta semplicemente i flag come se fosse avvenuta un'operazione AND. L'istruzione CMP di cui abbiamo parlato prima è un altro fantasma dell'opcode e ha la stessa relazione con SUB che TEST ha con AND. CMP sottrae il suo secondo operando dal primo, ma non completa l'operazione e non memorizza il risultato nell'operando di destinazione. Imposta semplicemente i flag come se fosse avvenuta una sottrazione. Come abbiamo già visto, questo può essere molto utile quando è combinato con istruzioni di salto condizionale. Ecco qualcosa di importante da tenere a mente: TEST è utile solo per trovare bit 1. Se hai bisogno di identificare bit 0, devi prima invertire ogni bit nel suo stato opposto con l'istruzione NOT. NOT cambia tutti i bit 1 in bit 0 e cambia tutti i bit 0 in bit 1. Una volta che tutti i bit 0 sono stati invertiti in bit 1, puoi testare un bit 1 dove hai bisogno di trovare un bit 0. (A volte è utile disegnarlo su un foglio per tenere tutto chiaro nella tua mente.) Infine, TEST non testerà in modo affidabile la presenza di due o più bit 1 nell'operando contemporaneamente. TEST non verifica la presenza di un modello di bit; verifica la presenza di un singolo bit 1. In altre parole, se hai bisogno di verificare che entrambi i bit 4 e 5 siano impostati a 1, TEST non funzionerà.
+</p>
+
+### Cercare un bit a 0 con BT
+
+<p align=justify>
+Come ho spiegato, TEST ha i suoi limiti: non è adatto a determinare quando un bit è impostato a 0. TEST è presente sin dalle prime CPU x86, ma i processori 386 e più recenti hanno un'istruzione che ti consente di testare sia i bit 0 sia i bit 1. BT (Bit Test) svolge un compito molto semplice: copia il bit specificato dal primo operando nel flag di carry CF. In altre parole, se il bit selezionato era un bit 1, il flag di carry viene impostato. Se il bit selezionato era un bit 0, il flag di carry viene azzerato. Puoi quindi usare qualsiasi istruzione di salto condizionale che esamini e agisca sullo stato di CF. BT è facile da usare. Richiede due operandi: l'operando di destinazione è il valore che contiene il bit in questione. L'operando sorgente è il numero ordinale del bit che vuoi testare, contando da 0:
+</p>
+
+```asm
+  bt <value containing bit>,<bit number>
+```
+
+<p align=justify>
+Una volta eseguita un'istruzione BT, dovresti immediatamente testare il valore nel flag Carry e diramarti in base al suo valore. Ecco un esempio.
+</p>
+
+```asm
+ bt  rax,4   ; Test bit 4 of RAX
+ jnc quit    ; We're all done if bit 4 = 0
+```
+
+<p align=justify>
+Un aspetto a cui fare attenzione, specialmente se sei abituato a usare TEST, è che non stai creando una maschera di bit. Con l'operando sorgente di BT stai specificando il numero ordinale di un bit. La costante letterale 4 mostrata nel codice precedente è il numero del bit, non il valore del bit, e questa è una differenza cruciale. Nota anche nel codice precedente che stiamo facendo un salto se CF non è impostato; questo è ciò che fa JNC (Salta se Non C'è Riporto).
+</p>
+
+### X64 Long Mode Memory Addressing
+
+<p align=justify>
+In molti modi, la vita è migliore ora. E non sto parlando solo di odontoiatria moderna, networking plug-and-play e CPU a otto core. Programmavo in assembly per le CPU 8088 in modalità reale nel primo IBM PC. E ricordo l'indirizzamento della memoria in modalità reale. Come l'odontoiatria negli anni '50, l'indirizzamento della memoria in modalità reale basato su 8088 era semplicemente... doloroso. Era un terribile groviglio di restrizioni, insidie e limiti, tutti i quali urlavano che la CPU aveva disperatamente bisogno di più transistor sul die. Ad esempio, l'indirizzamento della memoria era limitato a BX e BP nella maggior parte delle istruzioni, il che significava un sacco di manovre ingegnose quando diversi elementi separati dovevano essere indirizzati in memoria contemporaneamente. E pensare alla gestione dei segmenti ancora mi fa rabbrividire. Beh, negli ultimi 40 anni le nostre CPU della famiglia Intel hanno ottenuto praticamente tutti i transistor di cui avevano bisogno, e la maggior parte di quelle frustranti limitazioni di indirizzamento della memoria a 16 bit è semplicemente scomparsa. Puoi indirizzare la memoria con uno qualsiasi dei registri a scopo generale. Puoi persino indirizzare la memoria direttamente con il puntatore dello stack RSP, qualcosa che il suo antenato a 16 bit SP non poteva fare. (Non dovresti cambiare il valore in RSP senza molta attenzione, ma RSP può ora partecipare a modalità di indirizzamento dalle quali il puntatore dello stack era escluso nel regno della modalità reale a 16 bit.)
+</p>
+
+<p align=justify>
+La modalità protetta a 32 bit sulla famiglia di CPU 386 ha introdotto uno schema di indirizzamento della memoria a uso generale in cui tutti i registri GP potevano partecipare in modo uguale. L'indirizzamento della memoria nella modalità long x64 implementa lo stesso schema con pochissime modifiche. L'ho schematizzato nella Figura 9.9, che potrebbe benissimo essere la figura più importante di tutto questo libro. L'indirizzamento della memoria è l'abilità chiave nel lavoro con il linguaggio assembly. Se non capisci come la CPU indirizza la memoria, niente altro ha importanza.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/x64_long_mode_memory_addressing.png">
+</div>
+
+<p align=justify>
+Quando ho studiato e compreso per la prima volta questo schema, con ferite ancora sanguinanti dall'indirizzamento della memoria segmentata a 16 bit 8088, sembrava troppo bello per essere vero. Ma è vero! Ecco le regole:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+		I registri base e indice possono essere qualsiasi registro generale a 64 bit, incluso RSP.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Lo spostamento può essere qualsiasi costante a 32 bit, sia un valore letterale sia un valore nominato. è ovvio che 0, sebbene legale, non è utile.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		La scala deve essere uno dei valori 1, 2, 4 o 8. Ecco tutto! Il valore 1 è legale, ma dato che la scala è usata per moltiplicare un altro valore, 1 non fa nulla di utile.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Il registro degli indici viene moltiplicato per la scala prima che vengano effettuate le addizioni. In altre parole, non è (base + indice)  -  scala. Solo il registro degli indici può essere moltiplicato per la scala.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Tutti gli elementi sono facoltativi e possono essere utilizzati in quasi qualsiasi combinazione.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Sia i registri a 32 bit sia quelli a 64 bit possono essere utilizzati, ma non è possibile mescolare le dimensioni dei registri in un singolo indirizzo. Cioè, i registri in un'unica operazione di indirizzamento della memoria devono essere tutti a 32 bit o tutti a 64 bit.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		I registri a 16 bit e a 8 bit non possono essere utilizzati nell'indirizzamento della memoria.
+		</p>
+	</li>
+</ul>
+
+<p align=justify>
+All'interno di queste regole, ci sono diversi modi per accedere alla memoria, combinando in modi diversi i componenti dell'indirizzo mostrati nella figura qui sopra. Gli esempi sono mostrati nella figura di seguito.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/64_Bit_Long_Mode_Memory_Addressing_Schemes.png">
+</div>
+
+### Calcolo dell'effective address
+
+<p align=justify>
+Ognuna delle righe nella figura qui sopra riassume un metodo per esprimere un indirizzo di memoria in modalità lunga a 64 bit. Tutti tranne i primi due coinvolgono un po' di aritmetica tra due o più termini all'interno delle parentesi che indicano un indirizzo. Questa aritmetica è chiamata calcolo dell'effective address, e il risultato del calcolo è l'effective address. Questo termine indica l'indirizzo che verrà utilizzato per leggere o scrivere nella memoria, indipendentemente da come viene espresso. Il calcolo dell'effective address viene eseguito dall'istruzione quando l'istruzione viene eseguita. L'effective address nello schema Base è semplicemente il valore a 64 bit memorizzato nel registro GP tra le parentesi. Non è coinvolto alcun calcolo, ma ciò che vediamo nel codice sorgente non è un indirizzo letterale o simbolico. Quindi, anche se l'istruzione è codificata con un nome di registro tra le parentesi, l'indirizzo che verrà inviato al sistema di memoria quando il codice viene eseguito è memorizzato all'interno del registro. Nella maggior parte dei casi in cui si tratta di un effective address, c'è una qualche operazione aritmetica. Ad esempio, nello schema Base + Indice, il contenuto dei due registri GP tra le parentesi viene sommato quando l'istruzione viene eseguita per formare l'effective address.
+</p>
+
+### Displacement (scostamento)
+
+<p align=justify>
+Tra i diversi componenti di un indirizzo legale in modalità long x64, il termine di spostamento è in realtà il più difficile da comprendere. Come ho indicato nel paragrafo precedente, il termine di spostamento può essere un indirizzo letterale, ma in tutti i miei anni di programmazione assembly in modalità protetta non l'ho mai fatto né ho visto qualcun altro farlo. Il motivo? Non conosci quasi mai l'indirizzo letterale di qualcosa al momento della compilazione. C'è un altro motivo per non utilizzare indirizzi letterali, di cui parlerò a breve. Quando il termine di spostamento è isolato, è praticamente sempre un indirizzo simbolico. Con questo intendo un elemento di dati con un nome che hai definito nelle tue sezioni .data o .bss, come la variabile HexStr del programma hexdump1 nell'elenco 9.1:
+</p>
+
+```asm
+ mov rax,HexStr
+```
+
+<p align=justify>
+Ciò che viene posto in RAX qui è l'indirizzo dato alla variabile HexStr quando il programma viene caricato in memoria dal sistema operativo. Come tutti gli indirizzi, è solo un numero, ma viene determinato quando il programma viene caricato piuttosto che al momento della codifica, come farebbe un indirizzo numerico costante letterale. Si noti anche che il precedente blocco di codice sorgente carica un indirizzo in RAX, non il valore in memoria a quell'indirizzo. Per quello hai bisogno delle parentesi:
+</p>
+
+```asm
+ mov rax,[HexStr]
+```
+
+<p align=justify>
+Molti principianti si confondono quando vedono quelli che sembrano essere due termini di spostamento in un unico indirizzo. La confusione deriva dal fatto che se NASM vede due (o più) valori costanti in un riferimento di memoria, li combinerà durante il tempo di assemblaggio in un unico valore di spostamento, che viene posizionato in RAX dall'istruzione MOV. è ciò che viene fatto qui:
+</p>
+
+```asm
+ mov rax,HexStr+3
+```
+
+<p align=justify>
+Nota l'assenza di parentesi. L'indirizzo a cui si fa riferimento simbolicamente tramite la variabile chiamata HexStr viene semplicemente aggiunto alla costante letterale 3 per formare un singolo valore di spostamento. La caratteristica chiave di un termine di spostamento è che non viene memorizzato in un registro.
+</p>
+
+### Il problema della dimensione dello scostamento in x64
+
+<p align=justify>
+Ora, c'è un problema specifico di x64 riguardo ai displacement: un valore di displacement non deve superare i 32 bit di dimensione. Perché? Come a volte devo dire... è complicato. E non ha nulla a che fare con il numero di bit di indirizzo supportati nel silicio di una data CPU x64. In parole povere, limitare i displacement a 32 bit è stata una decisione di design di AMD all'alba dell'era x64 che "è rimasta". Potrebbe essere corretta un giorno, oppure no. Ma, ehi, non dire mai "mai". Nel frattempo, dobbiamo solo conviverci.
+</p>
+
+### Base Addressing (indirizzamento di base)
+
+<p align=justify>
+Quando escludi l'indirizzamento per spostamento, tutto l'indirizzamento della memoria x64 si basa su registri. Lo schema di indirizzamento Base utilizza semplicemente un singolo registro nel quale è stato caricato un indirizzo. Si chiama Base perché tutti gli schemi di indirizzamento più complessi partono da Base e lo estendono. Ecco un esempio di indirizzamento Base:
+</p>
+
+```asm
+ mov qword rax,[rcx]
+```
+
+<p align=justify>
+Questa istruzione prende il valore a 64 bit memorizzato nella memoria all'indirizzo contenuto nel registro RCX e lo carica nel registro RAX.
+</p>
+
+### Base + Displacement Addressing
+
+<p align=justify>
+Uno schema di indirizzamento semplice e comune è Base + Displacement, e l'ho dimostrato nel programma hexdump1 nella Lista 9.1. L'istruzione che inserisce un carattere ASCII nella riga di output si presenta così:
+</p>
+
+```asm
+ mov byte [HexStr+rdx+2],al
+```
+
+<p align=justify>
+Ciò che accade qui è che un valore di carattere a 8 bit memorizzato nel registro AL viene scritto nel byte in memoria indirizzato come HexStr+RDX+2. Questo è un perfetto esempio di un caso in cui ci sono due termini di spostamento che NASM combina in uno. Il nome della variabile HexStr si risolve in un numero (l'indirizzo di HexStr) e si aggiunge facilmente alla costante letterale 2. Quindi, in verità, c'è solo un termine di base (RDX) e un termine di spostamento. è anche un buon esempio di come i registri a 8 bit abbiano ancora il loro utilizzo, soprattutto quando si trattano valori a 8 bit come i caratteri ASCII. Nota anche che l'ordine dei termini in un indirizzo non conta. L'effective address avrebbe potuto essere RDX+HexStr+2.
+</p>
+
+### Base + Index Addressing
+
+<p align=justify>
+Forse il sistema di indirizzamento singolo più comune è Base + Indice, nel quale l'effective address viene calcolato sommando il contenuto di due registri GP all'interno delle parentesi. Ho dimostrato questo schema di indirizzamento nel Capitolo 8, nel programma uppercaser2 nell'Elenco 8.2. Convertire un carattere nel buffer di input da minuscolo a maiuscolo viene effettuato sottraendo 20h da esso:
+</p>
+
+```asm
+ sub byte [r13+rbx],20h
+```
+
+<p align=justify>
+L'indirizzo del buffer era precedentemente posizionato in R13, e il numero in RBX è lo spostamento dall'inizio del buffer del carattere in fase di elaborazione durante un dato passaggio nel ciclo. Aggiungere all'indirizzo del buffer uno spostamento nel buffer porta all'effective address del carattere su cui agisce l'istruzione SUB. Ma aspetta... perché non usare l'indirizzamento Base + Displacement? Questa istruzione sarebbe legale:
+</p>
+
+```asm
+ sub byte [Buff+rbx],20h
+```
+
+<p align=justify>
+Tuttavia, se ricordi il programma (e varrebbe la pena tornare indietro e leggere il testo associato), dovevamo decrementare l'indirizzo di Buff di 1 prima di iniziare il ciclo. Ma aspetta ancora... potremmo far fare a NASM quella piccola modifica aggiungendo un secondo termine di spostamento di -1? In effetti, potremmo farlo, e funzionerebbe. Il ciclo centrale del programma uppercaser2 apparirebbe quindi così:
+</p>
+
+```asm
+; Set up the registers for the process buffer step:
+
+     mov rbx,rax          ; Place the number of bytes read into rbx
+     mov r13,Buff         ; Place address of buffer into r13
+ ;    dec r13                We don't need this instruction anymore!
+
+; Go through the buffer and convert lowercase to uppercase characters:
+
+Scan:
+     cmp byte [r13-1+rbx],61h  ; Test input char against lowercase 'a'
+     jb Next                   ; If below 'a' in ASCII, not lowercase
+     cmp byte [r13-1+rbx],7Ah  ; Test input char against lowercase 'z'
+     ja Next                  ; If above 'z' in ASCII, not lowercase
+
+                              ; Now we have a lowercase char
+     sub byte [r13-1+rbx],20h ; Subtract 20h to give uppercase"
+ 
+Next:
+     dec rbx                  ; Decrement counter
+     jnz Scan                 ; If characters remain, loop back
+
+```
+
+<p align=justify>
+L'istruzione DEC R13 nel primo blocco non è più necessaria, e nel codice precedente quella riga è commentata. NASM fa i calcoli, e l'indirizzo di Buff viene decrementato di 1 all'interno dell'espressione dell'effective address quando il programma viene caricato. Questo è effettivamente il modo corretto di programmare questo particolare ciclo, e ci ho pensato a lungo se mostrarlo di nuovo nel Capitolo 8 o aspettare di poter spiegare gli schemi di indirizzamento della memoria in dettaglio. Alcune persone trovano il nome "oBase + Displacement" confuso, perché nella maggior parte dei casi il termine Displacement contiene un indirizzo, e il termine Base è un registro che contiene un offset in un elemento di dati a quell'indirizzo. La parola displacement somiglia alla parola offset nell'esperienza della maggior parte delle persone, il che può portare a confusione. Questo è uno dei motivi per cui non metto in evidenza i nomi dei vari schemi di indirizzamento della memoria in questo libro e certamente non raccomando di memorizzare i nomi. Comprendi come funziona il calcolo dell'effective address e ignora i nomi degli schemi.
+</p>
+
+### Index - Scale + Displacement Addressing
+
+<p align=justify>
+L'indirizzamento Base + Index è ciò che tipicamente utilizzerai per esaminare un buffer in memoria byte per byte. Ma cosa succede se hai bisogno di accedere a un elemento di dati in un buffer o in una tabella dove ogni elemento di dati non è un singolo byte, ma una word o una doubleword? Questo richiede una logica di indirizzamento della memoria leggermente più potente. A proposito, array è il termine generale per ciò che ho definito buffer o tabella. Altri autori possono chiamare una tabella un array, specialmente quando il contesto della discussione è un linguaggio di alto livello. Ma tutti e tre i termini si riducono alla stessa definizione: una sequenza di elementi di dati in memoria, tutti della stessa dimensione e della stessa definizione interna. Nei programmi che ti ho mostrato finora, abbiamo parlato solo di tabelle e buffer molto semplici, costituiti da una sequenza di valori a 1 byte tutti in fila. La tabella Digits nel programma hexdump1 è una di queste tabelle:
+</p>
+
+```asm
+ Digits: db "0123456789ABCDEF"
+```
+
+<p align=justify>
+Consiste in 16 caratteri ASCII a byte singolo in sequenza in memoria, a partire dall'indirizzo rappresentato da Digits. Puoi accedere al carattere "oC" all'interno di Digits in questo modo, utilizzando l'indirizzamento Base + Displacement:
+</p>
+
+```asm
+ mov rcx,12
+ mov rdx,[Digits+rcx]
+```
+
+<p align=justify>
+Ma cosa succede se hai una tabella contenente valori numerici a 64 bit? Una tale tabella è abbastanza facile da definire:
+</p>
+
+```asm
+ Sums: dq "15,12,6,0,21,14,4,0,0,19"
+```
+
+<p align=justify>
+Il qualificatore DQ informa NASM che ogni elemento nella tabella Sums è una quantità di 64 bit (quadword). Le costanti letterali inseriscono un valore numerico in ciascun elemento della tabella. L'indirizzo del primo elemento (qui, 15) in Sums è semplicemente l'indirizzo della tabella nel suo insieme. Quindi qual è l'indirizzo del secondo elemento, 12? E come si accede a esso dal codice assembly? Tieni presente che la memoria è indirizzata byte per byte, e non doubleword per doubleword o quadword per quadword. La seconda voce nella tabella si trova a un offset di 8 byte all'interno della tabella. Se provassi a fare riferimento alla seconda voce nella tabella usando un indirizzo [Sums+1], otterresti uno dei byte all'interno della quadword del primo elemento della tabella, e questo non sarebbe utile. Qui entra in gioco il concetto di scaling. Un indirizzo può includere un termine di scala, che è un moltiplicatore e può essere uno dei valori letterali 2, 4 o 8. (La costante letterale 1 è tecnicamente legale, ma poiché la scala è un moltiplicatore, 1 non è un valore di scala utile.) Il prodotto dell'indice e del termine di scala viene aggiunto allo spostamento per dare l'effective address. Questo è noto come schema di indirizzamento Indice  -  Scala + Displacement. Tieni presente che il termine di scala può essere utilizzato solo con il termine di indice. Tipicamente, il termine di scala è la dimensione dei singoli elementi nella tabella. Se la tua tabella consiste in valori di word da 2 byte, la scala sarebbe 2. Se la tua tabella consiste in valori di doubleword da 4 byte, la scala sarebbe 4. Se la tua tabella consiste in valori di quadword da 8 byte, la scala sarebbe 8.
+</p>
+
+<p align=justify>
+Il modo migliore per spiegare questo è con un diagramma. Nella figura di seguito, ci troviamo di fronte all'indirizzo [DQTable+ECX*8]. DQTable è una tabella di valori a parola quadrupla (64 bit). L'indirizzo di DQTable è lo spostamento. Il registro RCX è l'indice e, per questo esempio, contiene 2, che è il numero dell'elemento della tabella a cui vuoi accedere. Poiché si tratta di una tabella di parole quadruple di 8 byte, il valore di scala è 8. Nota anche che il simbolo di moltiplicazione non è una "ox" ma un asterisco. Il simbolo di moltiplicazione "o - " non fa parte del set di caratteri ASCII, quindi, come nella maggior parte dei linguaggi di alto livello, l'assembly utilizza l'asterisco come simbolo dell'operatore di moltiplicazione. Poiché ogni elemento della tabella è di 8 byte, l'offset dell'elemento #2 dall'inizio della tabella è 16. L'effective address dell'elemento viene calcolato moltiplicando prima l'indice per la scala e poi aggiungendo il prodotto all'indirizzo di DQTable. Eccolo!
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/how_address_scaling_works.png">
+</div>
+
+### Altri schemi d'indirizzamento
+
+<p align=justify>
+Qualsiasi schema di indirizzamento che include lo scaling funziona in questo modo. Le differenze risiedono in quali altri termini vengono considerati nell'effective address. Lo schema Base + Indice  -  Scala aggiunge un indice scalato a un valore base in un registro piuttosto che a uno spostamento:
+</p>
+
+```asm
+mov rcx,2           ; Index is in rcx
+mov rbp,DDTable     ; Table address is in rbp
+mov rdx,[rbp+rcx*8] ; Put the selected element into rdx
+```
+
+<p align=justify>
+Non lavorerai sempre con l'indirizzo di una variabile predefinita come DDTable. A volte l'indirizzo della tabella verrà da qualche altra parte, più spesso da una tabella bidimensionale composta da un certo numero di sotto-tabelle in memoria, ciascuna delle quali contiene un certo numero di elementi. A tali tabelle si accede in due fasi: prima si deriva l'indirizzo della sotto-tabella nella tabella esterna, e poi si deriva l'indirizzo dell'elemento desiderato all'interno della sotto-tabella. L'esempio più conosciuto di questo tipo di tabella bidimensionale è qualcosa che ho presentato in edizioni precedenti di questo libro, scritto per DOS. Il buffer di memoria video testo di 25 righe  -  80 caratteri sotto DOS era una tabella bidimensionale. Ciascuna delle 25 righe era una tabella di 80 caratteri, e ciascun carattere era rappresentato da una parola di 2 byte. (Un byte era il valore ASCII, e l'altro byte specificava attributi come colore, sottolineatura, e così via.) Quindi, il buffer nel suo insieme era una tabella complessiva di 25 tabelle più piccole, ciascuna contenente 80 valori di parola di 2 byte. Quel tipo di sistema di accesso video è morto con DOS; Linux non consente l'accesso diretto alla memoria video del PC. è stato fatto molto nell'era DOS, tuttavia, ed è un buon esempio di tabella bidimensionale. Lo scaling ti servirà bene per tabelle con elementi di 2 byte, 4 byte o 8 byte. E se la tua tabella è composta da elementi di 3 byte? O di 5 byte? O di 17 byte? Ahimè, in tali casi dovrai fare dei calcoli aggiuntivi per concentrarti su un particolare elemento. Il calcolo dell'effective address non farà tutto il lavoro da solo. La stringa di visualizzazione della riga è una tabella di elementi di 3 byte. Ciascun elemento contiene un carattere di spazio seguito dai due caratteri esadecimali. Poiché gli elementi sono lunghi tre caratteri, lo scaling non può essere effettuato all'interno dell'istruzione e deve essere gestito separatamente. Non è difficile. Lo scaling per gli elementi di 3 byte nella tabella HexStr nel programma hexdump1 è fatto in questo modo:
+</p>
+
+```asm
+mov rdx,rcx     ; Copy the character counter into rdx
+shl rdx,1       ; Multiply counter by 2 using left shift
+add rdx,rcx     ; Complete the multiplication X3
+```
+
+<p align=justify>
+Il calcolo per moltiplicare un valore in RDX per 3 viene effettuato con una combinazione di un'istruzione SHL per moltiplicare per 2, seguita da un'istruzione ADD che aggiunge una terza copia del valore dell'indice al valore dell'indice spostato, moltiplicando di fatto il valore originale per 3. Lo scaling per altri valori di indice può essere effettuato allo stesso modo. Lo scaling per 5 sarebbe eseguito spostando il valore dell'indice a sinistra di 2 bit, moltiplicandolo così per 4, e poi aggiungendo un'altra copia del valore dell'indice per completare la moltiplicazione per 5. In termini generali, per scalare un valore di indice per X:
+</p>
+
+<ol>
+  <li>
+    <p align="justify">
+    Trova la potenza di 2 più grande di X.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Sposta il valore dell'indice a sinistra di quella potenza di 2.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Aggiungi una copia del valore dell'indice originale alla copia spostata tante volte quanto è necessario per completare la moltiplicazione per X.
+    </p>
+  </li>
+</ol>
+
+<p align=justify>
+Ad esempio, se X è 11, il calcolo della scala verrebbe fatto in questo modo:
+</p>
+
+```asm
+ mov rdx,rcx ; Copy the index into rdx
+ shl rdx,3   ; Multiply index X 8 by shifting index left 3X
+ add rdx,rcx ; Add first of 3 additional copies of index
+ add rdx,rcx ; Add second of 3 additional copies of index
+ add rdx,rcx ; Add third of 3 additional copies of index
+```
+
+<p align=justify>
+Questo funziona meglio per valori di dimensioni relativamente piccole; una volta che superi 20, ci saranno molte istruzioni ADD. A quel punto, la risposta non è calcolare la scala ma cercare la scala in una tabella appositamente definita per un determinato valore di scala. Ad esempio, supponi che gli elementi della tua tabella siano lunghi ciascuno 25 byte. Potresti definire una tabella con multipli di 25:
+</p>
+
+```asm
+ScaleValues: dd 0,25,50,75,100,125,150,175,200,225,250,275
+```
+
+<p align=justify>
+Per scalare un valore indice di 6 per una dimensione di voce di 25, dovresti cercare il prodotto di 6  -  25 nella tabella in questo modo.
+</p>
+
+```asm
+ mov rcx,6
+ mov rax,[ScaleValues+rcx*4]
+```
+
+<p align=justify>
+Il valore in RAX ora contiene l'effective address del primo byte dell'elemento 6, contando gli elementi (come al solito) da 0.
+</p>
+
+### Istruzione LEA
+
+<p align=justify>
+Ma aspetta, c'è di più. Una delle istruzioni più bizzarre e sotto alcuni aspetti più meravigliose nell'architettura Intel è LEA, Carica Indirizzo Efficace. In superficie, ciò che fa è semplice: calcola un effective address utilizzando i termini tra le parentesi del suo operando sorgente e carica quell'indirizzo in un qualsiasi registro a 64 bit dato come operando di destinazione. Guarda di nuovo il codice mostrato poco prima dell'inizio di questa sezione. L'istruzione MOV cerca l'elemento con indice 6 nella tabella ScaleValues. Per cercare l'elemento all'indice 6, deve prima calcolare l'effective address dell'elemento all'indice 6. Questo indirizzo viene poi utilizzato per accedere alla memoria. Ma cosa succede se vuoi salvare quell'indirizzo in un registro per utilizzarlo successivamente senza doverlo calcolare di nuovo? Ecco cosa fa LEA. Ecco LEA in azione:
+</p>
+
+```asm
+ lea rbx,[ScaleValues+rcx*4]
+```
+
+<p align=justify>
+Quello che succede qui è che la CPU calcola l'effective address fornito all'interno delle parentesi e carica quell'indirizzo nel registro RBX. Tieni presente che le singole voci di una tabella non dispongono di etichette e quindi non è possibile farvi riferimento direttamente. LEA ti dà la possibilità di calcolare l'effective address di qualsiasi elemento in una tabella (o qualsiasi indirizzo calcolabile!) e di inserire quell'indirizzo in un registro. Di per sé questo è molto utile. Tuttavia, LEA ha uno scopo "off-label": fare matematica veloce senza shift, addizioni o MUL. Se ricordi, c'è un calcolo nel programma hexdump1gcc che moltiplica per 3 usando uno spostamento e un'addizione:
+</p>
+
+```asm
+ mov rdx,rcx   ; Copy the character counter into rdx
+ shl rdx,1     ; Multiply pointer by 2 using left shift
+ add rdx,rcx   ; Complete the multiplication X3
+```
+
+<p align=justify>
+Questo funziona. Ma guarda cosa possiamo usare per fare esattamente la stessa cosa.
+</p>
+
+```asm
+ mov rdx,rcx         ; Copy the character counter into rdx
+ lea rdx,[rdx*2+rdx] ; Multiply rdx X 3
+```
+
+<p align=justify>
+Non solo questo è praticamente sempre più veloce rispetto alle operazioni di spostamento combinate con le addizioni, ma rende anche più chiaro nel codice sorgente quale tipo di calcolo viene effettivamente eseguito. Il fatto che ciò che finisce in RDX potrebbe non essere in realtà l'indirizzo legale di nulla è irrilevante. LEA non cerca di fare riferimento all'indirizzo che calcola. Esegue i calcoli sui valori all'interno delle parentesi e deposita il risultato nell'operando di destinazione. Lavoro terminato. La memoria non viene toccata e i flag non vengono influenzati. Naturalmente, sei limitato dai calcoli che possono essere effettuati per produrre effective address. Ma già così puoi moltiplicare qualsiasi registro GP per 2, 3, 4, 5, 8 e 9. Non è matematica arbitraria, ma moltiplicare per 2, 3, 4, 5, 8 e 9 capita regolarmente nel lavoro di assembly, e puoi combinare LEA con spostamenti e addizioni per fare calcoli più complessi e "oriempire i buchi". Puoi anche usare più istruzioni LEA in fila. Due istruzioni LEA consecutive possono moltiplicare un valore per 10, il che è davvero utile:
+</p>
+
+```asm
+ lea rbx,[rbx*2]      ; Multiply rbx X 2, put product in RBX
+ lea rbx,[rbx*4+rbx]  ; Multiply rbx X 5 for a total of X 10
+```
+
+<p align=justify>
+Alcune persone considerano questo uso di LEA un trucco meschino, ma in tutti gli anni in cui ho lavorato con l'assembly x86/x64 non ho mai visto un inconveniente. Prima di lanciare cinque o sei istruzioni nella pentola per cucinare una particolare moltiplicazione, verifica se due o tre LEA possono fare lo stesso lavoro. LEA svolge il suo lavoro in un ciclo di macchina, e la matematica della CPU non diventa più veloce di così!
+</p>
+
+
+### Tabella di traduzione caratteri
+
+<p align=justify>
+Esiste un tipo di ricerca in tabella che è (o forse era) talmente comune che gli ingegneri di Intel hanno integrato un'intera istruzione nell'architettura x86 per gestirlo. Il tipo di ricerca in tabella a cui alludevo è la conversione dei caratteri. Nei primi anni '80 avevo bisogno di convertire i set di caratteri in modi diversi, il più semplice dei quali era forzare tutti i caratteri minuscoli in maiuscolo. E così nei paragrafi precedenti abbiamo costruito un programma semplice che scorreva un file un buffer alla volta, acquisendo caratteri, convertendo tutti i caratteri minuscoli in maiuscolo e poi riscrivendoli in un nuovo file. La conversione stessa era semplice: facendo riferimento alla tabella ASCII per la relazione tra tutti i caratteri maiuscoli e i caratteri minuscoli associati, potevamo convertire un carattere minuscolo in maiuscolo semplicemente sottraendo 20h (32) dal carattere. Questo è affidabile, ma è un caso molto speciale. Succede proprio che i caratteri minuscoli ASCII siano sempre 32 posizioni più avanti nella tabella rispetto ai loro equivalenti maiuscoli. Cosa fai se hai bisogno di convertire tutti i caratteri "obarra verticale" (ASCII 124) in punti esclamativi? (Dovetti farlo una volta, perché uno dei vecchi mainframe non riusciva a gestire le barre verticali.) Puoi scrivere codice speciale per ciascun caso individuale con cui devi confrontarti... oppure puoi usare una tabella di traduzione.
+</p>
+
+### Tabella di traduzione
+
+<p align=justify>
+Una tabella di traduzione è un tipo speciale di tabella e funziona nel seguente modo: si imposta una tabella di valori, con una voce per ogni possibile valore da tradurre. Un numero (o un carattere, trattato come valore numerico) viene utilizzato come indice nella tabella. Alla posizione dell'indice nella tabella c'è un valore che viene utilizzato per sostituire il valore originale usato come indice. In breve, il valore originale accede alla tabella e trova un nuovo valore che lo sostituisce, traducendo così il vecchio valore in uno nuovo. Lo abbiamo già fatto una volta, nel programma hexdump1gcc nella sezione 9.1. Ricorda la tabella delle cifre:
+</p>
+
+```asm
+Digits: db "0123456789ABCDEF"
+```
+
+<p align=justify>
+Questa è una tabella di traduzione, anche se all'epoca non l'ho chiamata così. L'idea, se ricordi, era separare le due metà da 4 bit di un byte da 8 bit e convertire quei valori da 4 bit in caratteri ASCII che rappresentano cifre esadecimali. All'epoca l'attenzione era concentrata sulla separazione dei byte in due nybble tramite operazioni logiche bit a bit, ma c'era anche una traduzione in corso. La traduzione è stata realizzata da queste tre istruzioni:
+</p>
+
+```asm
+mov al,byte [rsi+rcx]    ; Put a byte from the input buffer
+ 			 ; into al
+and al,0Fh               ; Mask out all but the low nybble
+mov al,byte [Digits+rax] ; Look up the char equivalent of nybble
+```
+
+<p align=justify>
+La prima istruzione carica un byte dal buffer di input nel registro AL a 8 bit. La seconda istruzione maschera tutto tranne il nybble basso di AL. La terza istruzione esegue un accesso alla memoria: utilizza il valore in AL per indicizzare la tabella Digits e restituisce qualsiasi valore si trovi nella voce corrispondente ad AL. (Questo deve essere fatto utilizzando RAX tra parentesi, perché AL non può prendere parte ai calcoli dell'effective address. Ricorda solo che AL è il byte meno significativo nel registro RAX.) Se AL contiene 0, il calcolo dell'effective address aggiunge 0 all'indirizzo di Digits, restituendo la voce 0 della tabella, che è il carattere ASCII per 0. Se AL contiene 5, il calcolo dell'effective address aggiunge 5 all'indirizzo di Digits, restituendo la quinta voce della tabella, che è il carattere ASCII per 5. E così via per tutti i 16 possibili valori che possono essere espressi in un nybble a 4 bit. Fondamentalmente, il codice viene utilizzato per tradurre un numero nell'equivalente carattere ASCII di quel numero. Ci sono solo 16 cifre esadecimali possibili, quindi la tabella di conversione in hexdump1gcc deve essere lunga solo 16 byte. Un byte contiene abbastanza bit per rappresentare 256 valori diversi, quindi se vogliamo tradurre valori della dimensione di un byte, avremo bisogno di una tabella con 256 voci. Tecnicamente, il set di caratteri ASCII utilizza solo i primi 128 valori, ma, come ho descritto in precedenza in questo libro, i valori "alti" da 128 a 255 sono stati spesso assegnati a caratteri speciali come lettere non inglesi, caratteri "box-draw", simboli matematici e così via. Un uso comune della traduzione dei caratteri consiste nel convertire tutti i caratteri con valori superiori a 128 in qualcosa di inferiore a 128, per evitare il caos nei sistemi più vecchi che non sono in grado di gestire valori ASCII estesi. Una tabella di questo tipo è abbastanza facile da definire in un programma in linguaggio assembly:
+</p>
+
+```asm
+UpCase:
+ db 20h,20h,20h,20h,20h,20h,20h,20h,20h,09h,0Ah,20h,20h,20h,20h,20h
+ db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+ db 20h,21h,22h,23h,24h,25h,26h,27h,28h,29h,2Ah,2Bh,2Ch,2Dh,2Eh,2Fh
+ db 30h,31h,32h,33h,34h,35h,36h,37h,38h,39h,3Ah,3Bh,3Ch,3Dh,3Eh,3Fh
+ db 40h,41h,42h,43h,44h,45h,46h,47h,48h,49h,4Ah,4Bh,4Ch,4Dh,4Eh,4Fh
+ db 50h,51h,52h,53h,54h,55h,56h,57h,58h,59h,5Ah,5Bh,5Ch,5Dh,5Eh,5Fh
+ db 60h,41h,42h,43h,44h,45h,46h,47h,48h,49h,4Ah,4Bh,4Ch,4Dh,4Eh,4Fh
+ db 50h,51h,52h,53h,54h,55h,56h,57h,58h,59h,5Ah,7Bh,7Ch,7Dh,7Eh,20h
+ db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+ db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+ db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+ db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+ db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+ db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+ db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+ db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+```
+
+<p align=justify>
+La tabella UpCase è definita in 16 righe di 16 valori esadecimali separati. Il fatto che sia suddivisa in 16 righe nell'elenco del codice serve solo alla leggibilità su schermo o su pagina stampata e non influisce sulla tabella binaria che NASM genera nel file .o di output. Una volta in binario, si tratta di 256 valori a 8 bit in fila. Una rapida nota sintattica: quando si definiscono tabelle (o qualsiasi struttura dati contenente più valori predefiniti), le virgole vengono utilizzate per separare i valori all'interno di una singola definizione. Non è necessario usare virgole alla fine delle righe delle definizioni DB nella tabella precedente. Ogni definizione DB è separata e indipendente, ma poiché sono adiacenti in memoria possiamo trattare le 16 definizioni DB come un'unica tabella di 256 byte. Qualsiasi tabella di traduzione può essere vista come espressione di una o più "oregole" che governano cosa avviene durante il processo di traduzione. La tabella UpCase mostrata in precedenza esprime queste regole di traduzione:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+		Tutti i caratteri ASCII minuscoli vengono tradotti in maiuscolo.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Tutti i caratteri ASCII stampabili inferiori a 127 che non sono minuscoli vengono tradotti in se stessi. (Non vengono esattamente "lasciati in pace", ma vengono comunque tradotti, solo negli stessi caratteri.)
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Tutti i valori dei caratteri "alti" da 127 a 255 vengono tradotti nel carattere di spazio ASCII (32, o 20h).
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Tutti i caratteri ASCII non stampabili (fondamentalmente, i valori 0"31, più 127) vengono tradotti in spazi tranne che per i valori 9 e 10.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		I valori dei caratteri 9 e 10 (tabulazione e fine riga) sono tradotti come se stessi.
+		</p>
+	</li>
+</ul>
+
+<p align=justify>
+Non male per un singolo dato, eh? (Immagina solo quanto lavoro servirebbe per fare tutto quel pasticcio solo con istruzioni macchina!)
+</p>
+
+### Tradurre con MOV o XLAT
+
+<p align=justify>
+Quindi, come utilizziamo la tabella UpCase? Il modo più ovvio sarebbe questo:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+			Carica il carattere da tradurre in AL.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			Crea un riferimento di memoria utilizzando AL come termine base e UpCase come termine di spostamento, quindi sposta in AL il byte presente al riferimento di memoria, sostituendo il valore originale usato come termine base.
+		</p>
+	</li>
+</ul>
+
+<p align=justify>
+L'istruzione MOV ipotetica si presenterebbe così:
+</p>
+
+```asm
+ mov al, byte [UpCase+al]
+```
+
+<p align=justify>
+C'è solo un problema: NASM non ti permette di farlo. In modalità protetta a 32 bit e in modalità long x64, il registro AL non può partecipare ai calcoli dell'effective address, né possono farlo gli altri registri a 8 bit. Entra in gioco XLAT. L'istruzione XLAT è codificata in modo rigido per utilizzare determinati registri in modi specifici. I suoi due operandi sono entrambi impliciti:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+			L'indirizzo della tabella di traduzione deve essere in RBX.
+   		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			Il carattere da tradurre deve essere in AL.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			Il carattere tradotto sarà restituito in AL, sostituendo il carattere originariamente posto in AL.
+		</p>
+	</li>
+</ul>
+
+<p align=justify>
+Con i registri configurati, l'istruzione XLAT non ha operandi e viene utilizzata da sola:
+</p>
+
+```asm
+ xlat
+```
+
+<p align=justify>
+Sarò onesto: XLAT è meno vantaggioso di quanto fosse in passato. In modalità long x64, la stessa cosa può essere fatta con la seguente istruzione:
+</p>
+
+```asm
+ mov al, byte [UpCase+rax]
+```
+
+<p align=justify>
+Il registro a 64 bit RAX può sostituire il piccolo AL a 8 bit quando si calcola l'effective address del carattere usato per tradurre il carattere in AL. C'è solo un problema: devi rimuovere eventuali valori "residui" nei 56 bit superiori di RAX, altrimenti potresti indicizzare accidentalmente ben oltre i limiti della tabella di traduzione. Il problema non si presenta con XLAT, poiché l'istruzione XLAT utilizza solo AL per l'indice, ignorando qualsiasi altra cosa possa trovarsi nei bit superiori di RAX. Azzerare RAX prima di caricare il valore da tradurre in AL può essere fatto in uno di questi due modi comuni:
+</p>
+
+```asm
+ xor rax,rax
+ mov rax,0
+```
+
+<p align=justify>
+In verità, dato il requisito di XLAT di utilizzare AL e RBX, la scelta è neutra, ma il tema più ampio della traduzione dei caratteri tramite tabelle è ciò che sto cercando di presentare qui. Il codice di seguito mette tutto in azione. Il programma mostrato fa esattamente quello che fa il programma uppercaser2: forza tutti i caratteri minuscoli in un file di input a diventare maiuscoli e li scrive in un file di output. Non l'ho chiamato "uppercaser3" perché è un traduttore di caratteri per scopi generali. In questo particolare esempio, con la tabella UpCase, traduce i caratteri minuscoli in maiuscoli; tuttavia, questa è semplicemente una delle regole che esprime la tabella UpCase. Cambia la tabella e cambiano le regole. Puoi tradurre qualsiasi valore, o tutti i 256 valori differenti di un byte, in qualsiasi valore o insieme di valori a 8 bit. Ho aggiunto una seconda tabella al programma per farti sperimentare. La tabella Custom esprime queste regole:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+		Tutti i caratteri ASCII stampabili inferiori a 127 vengono tradotti in se stessi. (Non vengono esattamente "lasciati in pace", ma vengono comunque tradotti, solo negli stessi caratteri.)
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Tutti i valori dei caratteri "alti" da 127 a 255 vengono tradotti nel carattere di spazio ASCII (32, o 20h).
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Tutti i caratteri ASCII non stampabili (fondamentalmente, i valori 0"31, più 127) vengono tradotti in spazi, tranne i valori 9 e 10.
+		</p>
+	</li>
+	 <li>
+		<p align=justify>
+		I valori dei caratteri 9 e 10 (tabulazione e fine riga) sono tradotti come se stessi.
+		</p>
+	</li>
+</ul>
+
+<p align=justify>
+Fondamentalmente, lascia inalterati tutti i caratteri stampabili (più tab e EOL) e converte tutti gli altri valori dei caratteri in 20h, il carattere spazio. Puoi sostituire l'etichetta UpCase con Custom nel programma, apportare modifiche alla tabella Custom e provarla. Converti quella fastidiosa barra verticale in un punto esclamativo. Cambia tutti i caratteri "oZ" in "oQ". Cambiare le regole significa modificare la tabella. Il codice non cambia affatto! Come nei programmi precedenti, xlat1gcc legge dall'input standard e scrive nell'output standard. Copia del testo negli appunti e incollalo nella finestra di input di SASM. Poi esegui il programma e guarda cosa scrive nella finestra di output.
+</p>
+
+```asm
+;  Executable name : xlat1gcc
+;  Version         : 2.0
+;  Created date    : 8/21/2022
+;  Last update     : 7/17/2023
+;  Author          : Jeff Duntemann
+;  Description     : A simple program in assembly for Linux, 
+;                  : using NASM 2.15, demonstrating the XLAT 
+;                  : instruction to translate characters using 
+;                  : translation tables.
+;
+;  Run it either in SASM or using this command in the Linux terminal:
+;
+;     xlat1gcc < input file > output file
+;
+;       If an output file is not specified, output goes to stdout
+;
+;  Build using SASM's default build setup for x64
+;  To test from a terminal, save out the executable to disk.
+
+SECTION .data       ; Section containing initialised data
+	
+    StatMsg: db "Processing...",10
+    StatLen: equ $-StatMsg
+    DoneMsg: db "...done!",10
+    DoneLen: equ $-DoneMsg
+	
+; The following translation table translates all lowercase characters
+; to uppercase. It also translates all non-printable characters to 
+; spaces, except for LF and HT. This is the table used by default in 
+; this program.
+    UpCase: 
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,09h,0Ah,20h,20h,20h,20h,20h
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+    db 20h,21h,22h,23h,24h,25h,26h,27h,28h,29h,2Ah,2Bh,2Ch,2Dh,2Eh,2Fh
+    db 30h,31h,32h,33h,34h,35h,36h,37h,38h,39h,3Ah,3Bh,3Ch,3Dh,3Eh,3Fh
+    db 40h,41h,42h,43h,44h,45h,46h,47h,48h,49h,4Ah,4Bh,4Ch,4Dh,4Eh,4Fh
+    db 50h,51h,52h,53h,54h,55h,56h,57h,58h,59h,5Ah,5Bh,5Ch,5Dh,5Eh,5Fh
+    db 60h,41h,42h,43h,44h,45h,46h,47h,48h,49h,4Ah,4Bh,4Ch,4Dh,4Eh,4Fh
+    db 50h,51h,52h,53h,54h,55h,56h,57h,58h,59h,5Ah,7Bh,7Ch,7Dh,7Eh,20h
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+
+; The following translation table is "stock" in that it translates all
+; printable characters as themselves, and converts all non-printable
+; characters to spaces except for LF and HT. You can modify this to
+; translate anything you want to any character you want. To use it,
+; replace the default table name (UpCase) with Custom in the code below.
+    Custom: 
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,09h,0Ah,20h,20h,20h,20h,20h
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+    db 20h,21h,22h,23h,24h,25h,26h,27h,28h,29h,2Ah,2Bh,2Ch,2Dh,2Eh,2Fh
+    db 30h,31h,32h,33h,34h,35h,36h,37h,38h,39h,3Ah,3Bh,3Ch,3Dh,3Eh,3Fh
+    db 40h,41h,42h,43h,44h,45h,46h,47h,48h,49h,4Ah,4Bh,4Ch,4Dh,4Eh,4Fh
+    db 50h,51h,52h,53h,54h,55h,56h,57h,58h,59h,5Ah,5Bh,5Ch,5Dh,5Eh,5Fh
+    db 60h,61h,62h,63h,64h,65h,66h,67h,68h,69h,6Ah,6Bh,6Ch,6Dh,6Eh,6Fh
+    db 70h,71h,72h,73h,74h,75h,76h,77h,78h,79h,7Ah,7Bh,7Ch,7Dh,7Eh,20h
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+    db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h
+
+SECTION .bss            ; Section containing uninitialized data
+
+    READLEN	    equ 1024        ; Length of buffer
+    ReadBuffer: resb READLEN    ; Text buffer itself
+	
+SECTION .text           ; Section containing code
+
+global  main
+
+main:
+    mov rbp,rsp      ; This keeps gdb happy...
+
+; Display the "I'm working..." message via stderr:
+    mov rax,1        ; Specify sys_write call
+    mov rdi,2        ; Specify File Descriptor 2: Standard error
+    mov rsi,StatMsg  ; Pass address of the message
+    mov rdx,StatLen  ; Pass the length of the message
+    syscall          ; Make kernel call
+
+; Read a buffer full of text from stdin:
+read:
+    mov rax,0           ; Specify sys_read call
+    mov rdi,0           ; Specify File Descriptor 0: Standard Input
+    mov rsi,ReadBuffer  ; Pass address of the buffer to read to
+    mov rdx,READLEN     ; Pass number of bytes to read at one pass
+    syscall
+    mov rbp,rax         ; Copy sys_read return value for safekeeping
+    cmp rax,0           ; If rax=0, sys_read reached EOF
+    je done             ; Jump If Equal (to 0, from compare)
+
+; Set up the registers for the translate step:
+    mov rbx,UpCase      ; Place the address of the table into rbx
+    mov rdx,ReadBuffer  ; Place the address of the buffer into rdx
+    mov rcx,rbp         ; Place number of bytes in the buffer into rcx
+    
+; Use the xlat instruction to translate the data in the buffer:
+translate:
+    xor rax,rax             ; Clear rax
+    mov al,byte [rdx-1+rcx] ; Load character into AL for translation
+    xlat                    ; Translate character in AL via table
+    mov byte [rdx-1+rcx],al ; Put the xlated character back in buffer
+    dec rcx                 ; Decrement character count
+    jnz translate           ; If there are more chars in the buffer, repeat
+
+; Write the buffer full of translated text to stdout:
+write:
+    mov rax,1           ; Specify sys_write call
+    mov rdi,1           ; Specify File Descriptor 1: Standard output
+    mov rsi,ReadBuffer  ; Pass address of the buffer
+    mov rdx,rbp         ; Pass the # of bytes of data in the buffer
+    syscall             ; Make kernel call
+    jmp read            ; Loop back and load another buffer full
+
+; Display the "I'm done" message via stderr:
+done:	
+    mov rax,1           ; Specify sys_write call
+    mov rdi,2           ; Specify File Descriptor 2: Standard error
+    mov rsi,DoneMsg     ; Pass address of the message
+    mov rdx,DoneLen     ; Pass the length of the message
+    syscall             ; Make kernel call
+
+; All done! Let's end this party:
+    ret                 ; Return to the glibc shutdown code
+```
+
+### Tabelle al posto di calcoli
+
+<p align=justify>
+La standardizzazione tra i sistemi informatici ha reso la traduzione dei caratteri molto meno comune di quanto fosse in passato, ma le tabelle di traduzione possono essere estremamente utili in altre aree. Una di queste consiste nell'eseguire operazioni matematiche più velocemente. Considera la seguente tabella:
+</p>
+
+```asm
+ Squares: db 0,1,4,9,16,25,36,49,64,81,100,121,144,169,196,225
+```
+
+<p align=justify>
+Nessun mistero qui: Squares è una tabella dei quadrati dei numeri da 0 a 15. Se avessi bisogno del quadrato di 14 in un calcolo, potresti usare MUL, che è più lenta della maggior parte delle istruzioni e richiede due registri GP. Oppure potresti semplicemente ottenere il risultato dalla tabella Squares:
+</p>
+
+```asm
+ mov rcx,14
+ mov al,byte [Squares+rcx]
+```
+
+<p align=justify>
+Ecco! RAX ora contiene il quadrato di 14. Puoi usare lo stesso trucco con XLAT, anche se richiede l'uso di registri specifici. Ricorda anche che XLAT è limitato a quantità di 8 bit. La tabella dei quadrati mostrata qui è la tabella dei valori quadrati più grande che XLAT può utilizzare, poiché il valore quadrato successivo (quello di 16) è 256, che non può essere espresso in 8 bit; quindi una tabella di ricerca che lo contenga non può essere utilizzata da XLAT. Rendere le voci di una tabella di ricerca dei valori quadrati grandi 16 bit ti permetterà di includere i quadrati di tutti gli interi fino a 255. E se assegni a ciascuna voce della tabella 32 bit, puoi includere i quadrati degli interi fino a 65.535, ma sarebbe una tabella molto sostanziosa! Non ho spazio in questo libro per approfondire la matematica in virgola mobile, ma una volta si faceva molto spesso uso di tabelle per cercare valori come le radici quadrate. Le CPU moderne con sistemi matematici come AVX rendono tali tecniche molto meno allettanti. Tuttavia, quando ti trovi di fronte a una sfida di calcolo matematico, dovresti sempre tenere a mente la possibilità di utilizzare tabelle di ricerca.
+</p>
+
+### Procedure
+
+<p align=justify>
+Tutti i linguaggi di programmazione comunemente usati oggi implementano procedure in una forma o nell'altra, e il linguaggio assembly non fa eccezione. Il tuo programma in linguaggio assembly può avere numerose procedure. In effetti, non c'è limite al numero di procedure che puoi includere in un programma, purché il numero totale di byte di codice contenuti in tutte le procedure insieme, più i dati che utilizzano, possa essere contenuto nella memoria che Linux gli assegna. Al giorno d'oggi, con memoria economica disponibile in blocchi multi-gigabyte, scrivere codice che non rientra nell'allocazione di Linux è sempre meno probabile. Qualsiasi complessità tu possa generare in linguaggio assembly può essere gestita con le procedure. Cominciamo subito con un esempio di procedure in azione. Leggi attentamente il codice di seguito e vediamo cosa lo fa funzionare e, per essere più precisi, cosa aiuta a mantenerlo comprensibile.
+</p>
+
+```asm
+;  Executable name : hexdump2gcc
+;  Version         : 2.0
+;  Created date    : 5/9/2022
+;  Last update     : 5/17/2023
+;  Author          : Jeff Duntemann
+;  Description     : A simple hexdump utility demonstrating the use of
+;                  : assembly language procedures
+;
+;  Build using SASM's 64-bit build feature, which uses gcc & requires "main"
+;  To run, type or paste some text into SASM's Input window and click Run.
+;  The hex dump of the input text will appear in SASM's Output window.
+
+SECTION .bss       ; Section containing uninitialized data
+
+    BUFFLEN        EQU 10h
+    Buff:          resb BUFFLEN
+
+SECTION .data      ; Section containing initialised data
+
+; Here we have two parts of a single useful data structure, implementing
+; the text line of a hex dump utility. The first part displays 16 bytes in
+; hex separated by spaces. Immediately following is a 16-character line 
+; delimited by vertical bar characters. Because they are adjacent, the two
+; parts can be referenced separately or as a single contiguous unit.
+; Remember that if DumpLin is to be used separately, you must append an
+; EOL before sending it to the Linux console.
+
+DumpLine:       db " 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 "
+DUMPLEN         EQU $-DumpLine
+ASCLine:        db "|................|",10
+ASCLEN          EQU $-ASCLine
+FULLLEN         EQU $-DumpLine
+
+; The HexDigits table is used to convert numeric values to their hex
+; equivalents. Index by nybble without a scale: [HexDigits+eax]
+HexDigits:      db "0123456789ABCDEF"
+
+; This table is used for ASCII character translation, into the ASCII
+; portion of the hex dump line, via XLAT or ordinary memory lookup. 
+; All printable characters "play through" as themselves. The high 128 
+; characters are translated to ASCII period (2Eh). The non-printable
+; characters in the low 128 are also translated to ASCII period, as is
+; char 127.
+DotXlat: 
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 20h,21h,22h,23h,24h,25h,26h,27h,28h,29h,2Ah,2Bh,2Ch,2Dh,2Eh,2Fh
+    db 30h,31h,32h,33h,34h,35h,36h,37h,38h,39h,3Ah,3Bh,3Ch,3Dh,3Eh,3Fh
+    db 40h,41h,42h,43h,44h,45h,46h,47h,48h,49h,4Ah,4Bh,4Ch,4Dh,4Eh,4Fh
+    db 50h,51h,52h,53h,54h,55h,56h,57h,58h,59h,5Ah,5Bh,5Ch,5Dh,5Eh,5Fh
+    db 60h,61h,62h,63h,64h,65h,66h,67h,68h,69h,6Ah,6Bh,6Ch,6Dh,6Eh,6Fh
+    db 70h,71h,72h,73h,74h,75h,76h,77h,78h,79h,7Ah,7Bh,7Ch,7Dh,7Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+			
+	
+SECTION .text      ; Section containing code
+
+;-------------------------------------------------------------------------
+; ClearLine:   Clear a hex dump line string to 16 0 values
+; UPDATED:     5/9/2022
+; IN:          Nothing
+; RETURNS:     Nothing
+; MODIFIES:    Nothing
+; CALLS:       DumpChar
+; DESCRIPTION: The hex dump line string is cleared to binary 0 by
+;              calling DumpChar 16 times, passing it 0 each time.
+
+ClearLine:
+    push rax       ; Save all caller's r*x GP registers
+    push rbx
+    push rcx
+    push rdx
+    
+    mov  rdx,15    ; We're going to go 16 pokes, counting from 0
+.poke:	
+    mov rax,0      ; Tell DumpChar to poke a '0'
+    call DumpChar  ; Insert the '0' into the hex dump string
+    sub rdx,1      ; DEC doesn't affect CF!
+    jae .poke       ; Loop back if RDX >= 0
+    
+    pop rdx        ; Restore caller's r*x GP registers
+    pop rcx
+    pop rbx
+    pop rax
+    ret            ; Go home
+
+;-------------------------------------------------------------------------
+; DumpChar:    "Poke" a value into the hex dump line string.
+; UPDATED:     5/9/2022
+; IN:          Pass the 8-bit value to be poked in RAX.
+;              Pass the value's position in the line (0-15) in RDX 
+; RETURNS:     Nothing
+; MODIFIES:    RAX, ASCLin, DumpLin
+; CALLS:       Nothing
+; DESCRIPTION: The value passed in RAX will be put in both the hex dump
+;              portion and in the ASCII portion, at the position passed 
+;              in RDX, represented by a space where it is not a
+;              printable character.
+
+DumpChar:
+    push rbx    ; Save caller's RBX
+    push rdi    ; Save caller's RDI
+
+; First we insert the input char into the ASCII portion of the dump line
+    mov bl,[DotXlat+rax]      ; Translate nonprintables to '.'
+    mov [ASCLine+rdx+1],bl    ; Write to ASCII portion
+
+; Next we insert the hex equivalent of the input char in the hex portion
+; of the hex dump line:
+    mov rbx,rax               ; Save a second copy of the input char
+    lea rdi,[rdx*2+rdx]       ; Calc offset into line string (RDX X 3)
+
+; Look up low nybble character and insert it into the string:
+    and rax,000000000000000Fh      ; Mask out all but the low nybble
+    mov al,[HexDigits+rax]    ; Look up the char equiv. of nybble
+    mov [DumpLine+rdi+2],al   ; Write the char equiv. to line string
+
+; Look up high nybble character and insert it into the string:
+    and rbx,00000000000000F0h      ; Mask out all the but second-lowest nybble
+    shr rbx,4                      ; Shift high 4 bits of byte into low 4 bits
+    mov bl,[HexDigits+rbx]    ; Look up char equiv. of nybble
+    mov [DumpLine+rdi+1],bl   ; Write the char equiv. to line string
+
+; Done! Let's return:
+    pop rdi     ; Restore caller's RDI
+    pop rbx	    ; Restore caller's RBX
+    ret         ; Return to caller
+
+;-------------------------------------------------------------------------
+; PrintLine:    Displays DumpLin to stdout
+; UPDATED: 	    5/8/2023
+; IN:           DumpLin, FULLEN
+; RETURNS:      Nothing
+; MODIFIES:     Nothing
+; CALLS:        Kernel sys_write
+; DESCRIPTION:  The hex dump line string DumpLin is displayed to stdout 
+;          using syscall function sys_write. Registers used are preserved.
+
+PrintLine:
+        
+    push rax          ; Alas, we don't have pushad anymore.
+    push rbx
+    push rcx
+    push rdx
+    push rsi
+    push rdi
+        
+    mov rax,1         ; Specify sys_write call
+    mov rdi,1         ; Specify File Descriptor 1: Standard output
+    mov rsi,DumpLine  ; Pass address of line string
+    mov rdx,FULLLEN   ; Pass size of the line string
+    syscall           ; Make kernel call to display line string
+
+    pop rdi           ; Nor popad.
+    pop rsi
+    pop rdx
+    pop rcx
+    pop rbx
+    pop rax
+    ret               ; Return to caller
+
+
+;-------------------------------------------------------------------------
+; LoadBuff:    Fills a buffer with data from stdin via syscall sys_read
+; UPDATED:     5/8/2023
+; IN:          Nothing
+; RETURNS:     # of bytes read in R15
+; MODIFIES:    RCX, R15, Buff
+; CALLS:       syscall sys_read
+; DESCRIPTION: Loads a buffer full of data (BUFFLEN bytes) from stdin 
+;              using syscall sys_read and places it in Buff. Buffer
+;              offset counter RCX is zeroed, because we're starting in
+;              on a new buffer full of data. Caller must test value in
+;              R15: If R15 contains 0 on return, we've hit EOF on stdin.
+;              Less than 0 in R15 on return indicates some kind of error.
+
+LoadBuff:
+    push rax      ; Save caller's RAX
+    push rdx      ; Save caller's RDX
+    push rsi      ; Save caller's RSI
+    push rdi      ; Save caller's RDI
+
+    mov rax,0     ; Specify sys_read call
+    mov rdi,0     ; Specify File Descriptor 0: Standard Input
+    mov rsi,Buff      ; Pass offset of the buffer to read to
+    mov rdx,BUFFLEN   ; Pass number of bytes to read at one pass
+    syscall       ; Call syscall's sys_read to fill the buffer
+    mov r15,rax   ; Save # of bytes read from file for later
+    xor rcx,rcx   ; Clear buffer pointer RCX to 0
+
+    pop rdi       ; Restore caller's RDI
+    pop rsi       ; Restore caller's RSI
+    pop rdx       ; Restore caller's RDX
+    pop rax       ; Restore caller's RAX
+    ret           ; And return to caller
+
+GLOBAL main ; You need to declare "main" here because SASM uses gcc
+            ; to do builds.
+
+; ------------------------------------------------------------------------
+; MAIN PROGRAM BEGINS HERE
+;-------------------------------------------------------------------------
+
+main:
+    mov rbp,rsp; for correct debugging
+
+; Whatever initialization needs doing before loop scan starts is here:
+    xor r15,r15     ; Zero out r15,rsi, and rcx
+    xor rsi,rsi		
+    xor rcx,rcx
+    call LoadBuff   ; Read first buffer of data from stdin
+    cmp r15,0       ; If r15=0, sys_read reached EOF on stdin
+    jbe Exit
+
+; Go through the buffer and convert binary byte values to hex digits:
+Scan:
+    xor rax,rax                ; Clear RAX to 0
+    mov al,byte[Buff+rcx]      ; Get a byte from the buffer into AL
+    mov rdx,rsi	               ; Copy total counter into RDX
+    and rdx,000000000000000Fh  ; Mask out lowest 4 bits of char counter
+    call DumpChar              ; Call the char poke procedure
+
+; Bump the buffer pointer to the next character and see if buffer's done:
+    inc rsi           ; Increment total chars processed counter
+    inc rcx           ; Increment buffer pointer
+    cmp rcx,r15       ; Compare with # of chars in buffer
+    jb .modTest       ; If we've processed all chars in buffer...
+    call LoadBuff     ; ...go fill the buffer again
+    cmp r15,0         ; If r15=0, sys_read reached EOF on stdin
+    jbe Done          ; If we get EOF, we're done
+
+; See if we're at the end of a block of 16 and need to display a line:
+.modTest:
+    test rsi,000000000000000Fh ; Test 4 lowest bits in counter for 0
+    jnz Scan                   ; If counter is *not* modulo 16, loop back
+    call PrintLine             ; ...otherwise print the line
+    call ClearLine             ; Clear hex dump line to 0's
+    jmp Scan                   ; Continue scanning the buffer
+
+; All done! Let's end this party:
+Done:
+    call PrintLine   ; Print the final "leftovers" line
+
+Exit:	
+    mov rsp,rbp
+    ret
+```
+
+<p align=justify>
+Ammetto che sembra un po' spaventoso. Sono più di 200 righe di codice e rappresenta di gran lunga il programma più grande di questo libro finora. Tuttavia, quello che fa è abbastanza semplice. è un'estensione diretta del programma hexdump1gcc dell'elenco 9.1. Se ricordi, un programma di hexdump prende un file di qualsiasi tipo (testo, eseguibile, dati binari, qualunque cosa) e lo visualizza sullo schermo (qui, sulla console Linux) in modo che ogni byte del file sia mostrato in esadecimale. L'elenco 9.1 faceva questa operazione. Ciò che hexdump2gcc aggiunge è una seconda colonna di visualizzazione, in cui vengono mostrati i caratteri ASCII stampabili (lettere, numeri, simboli) nella loro forma "overa", con i caratteri non stampabili rappresentati da un carattere di riempimento. Questo carattere di riempimento è tipicamente un punto ASCII, ma è solo una convenzione e può essere qualsiasi cosa. Se salvi il file eseguibile su disco da SASM, puoi visualizzare un hexdump di qualsiasi file Linux utilizzando hexdump2gcc e invocandolo in questo modo:
+</p>
+
+```
+$./hexdump2gcc < filename
+```
+
+<p align=justify>
+L'operatore di reindirizzamento I/O < prende i dati esistenti nel file che nomini a destra e passa quei dati all'input standard. Il programma hexdump2gcc prende dati dall'input standard e li stampa in formato dump esadecimale, 16 byte per riga, per tutte le righe necessarie a mostrare l'intero file.
+Data la complessità di hexdump2gcc, potrebbe essere utile mostrarti come funziona il programma attraverso lo pseudocodice prima di addentrarci troppo nei meccanismi interni di una procedura. Ecco come funziona il programma, visto dall'alto:
+</p>
+	
+```
+ As long as there is data available from stdin, do the
+ following:
+ 	Read data from stdin
+ 	Convert data bytes to a suitable hexadecimal/ASCII display form
+    	Insert formatted data bytes into a 16-byte hex dump line
+    	Every 16 bytes, display the hex dump line
+```
+
+<p align=justify>
+Questo è un buon esempio di una prima iterazione di pseudocodice, quando sai approssimativamente cosa vuoi che il programma faccia ma sei ancora un po' incerto su come farlo esattamente. Dovrebbe darti un vantaggio nella comprensione dello pseudocodice molto più dettagliato (e orientato al "ocome") mostrato qui:
+</p>
+
+```
+Zero out the byte count total (RSI) and offset counter (RCX)
+Call LoadBuff to fill a buffer with first batch of data from stdin
+    Test number of bytes fetched into the buffer from stdin
+        If the number of bytes was 0, the file was empty;
+jump to Exit
+Scan:
+    Get a byte from the buffer and put it in AL
+    Derive the byte's position in the hex dump line string
+    Call DumpChar to poke the byte into the line string
+    Increment the total counter and the buffer offset counter
+    Test and see if we've processed the last byte in the
+buffer:
+        If so, call LoadBuff to fill the buffer with data from stdin
+        Test number of bytes fetched into the buffer from stdin
+            If the number of bytes was 0, we hit EOF; jump to Exit
+    Test and see if we've poked 16 bytes into the hex dump line
+        If so, call PrintLine to display the hex dump line
+ Loop back to Scan
+ Exit:
+    Shut down the program gracefully per Linux requirements
+```
+
+<p align=justify>
+Ci sono riferimenti espliciti a procedure qui. Penso che possano essere quasi autoesplicativi dal contesto, il che è il segno di una buona procedura. Per esempio, CALL LoadBuff significa "eseguire una procedura che carica il buffer". Questo è ciò che fa LoadBuff, e questo è tutto ciò che fa LoadBuff. Non devi affrontare tutti i dettagli di come LoadBuff svolge il suo lavoro. Questo rende più facile afferrare il flusso logico più ampio espresso dal programma nel suo insieme. Dai un'occhiata al codice precedente e cerca di capire come lo pseudocodice appena mostrato si relaziona alle istruzioni macchina effettive. Una volta compreso questo, possiamo iniziare a parlare delle procedure in modo più approfondito.
+</p>
+
+### Chiamare e Ritornare
+
+<p align=justify>
+Proprio all'inizio del blocco principale del programma hexdump2gcc c'è un'istruzione macchina che non ho mai usato prima in questo libro.
+</p>
+
+```asm
+ call LoadBuff
+```
+
+<p align=justify>
+L'etichetta LoadBuff si riferisce a una procedura. Come potresti aver capito (soprattutto se hai programmato in un linguaggio più antico come BASIC o FORTRAN), CALL LoadBuff dice semplicemente alla CPU di andare a eseguire una procedura chiamata LoadBuff e poi tornare quando LoadBuff ha finito. LoadBuff è definita in precedenza nel codice, ma per chiarezza nella seguente discussione la riprodurrò qui. LoadBuff è un buon primo esempio di procedura, perché è abbastanza lineare in termini di logica e utilizza istruzioni e concetti di cui abbiamo già discusso. Come i programmi in linguaggio assembly in generale, una procedura come LoadBuff inizia a essere eseguita dall'inizio, esegue in modo sequenziale le istruzioni nel suo corpo e a un certo punto termina. La fine non deve necessariamente trovarsi proprio in fondo alla sequenza di istruzioni, ma la "ofine" di una procedura è sempre il punto in cui la procedura torna alla parte del programma che l'ha chiamata. Questo punto è ovunque tu veda l'alter ego di CALL, RET (per return).
+</p>
+
+```asm
+LoadBuff:
+    push rax       ; Save caller's RAX
+    push rdx       ; Save caller's RDX
+    push rsi       ; Save caller's RSI
+    push rdi       ; Save caller's RDI
+    mov rax,0      ; Specify sys_read call
+    mov rdi,0      ; Specify File Descriptor 0: Standard Input
+    mov rsi,Buff   ; Pass offset of the buffer to read to
+    mov rdx,BUFFLEN   ; Pass number of bytes to read at one pass
+    syscall        ; Call syscall's sys_read function fill the buffer
+    mov r15,rax    ; Save # of bytes read from file for later
+    xor rcx,rcx     ; Clear buffer pointer RCX to 0
+    pop rdi        ; Restore caller's RDI
+    pop rsi         ; Restore caller's RSI
+    pop rdx         ; Restore caller's RDX
+    pop rax         ; Restore caller's RAX
+    ret             ; And return to caller
+```
+
+<p align=justify>
+In un esempio molto semplice come LoadBuff, RET si trova alla fine della sequenza di istruzioni nella procedura. Tuttavia, RET può trovarsi ovunque nella procedura, e ci sono situazioni in cui può essere più semplice avere più di un'istruzione RET in una procedura. Quale delle diverse istruzioni RET riporta effettivamente l'esecuzione al chiamante dipende da ciò che fa la procedura e dalle circostanze che incontra, ma questo è irrilevante. Ogni RET è un "punto di uscita" che riporta al codice che ha chiamato la procedura e, cosa più importante, tutte le istruzioni RET all'interno di una procedura riportano l'esecuzione allo stesso identico punto: l'istruzione immediatamente successiva all'istruzione CALL che ha invocato la procedura.
+</p>
+
+<p align=justify>
+I punti importanti della struttura della procedura sono i seguenti:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+			Una procedura deve iniziare con un'etichetta, che è (come dovresti ricordare) un identificatore seguito da due punti.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			Da qualche parte all'interno della procedura, deve esserci almeno un'istruzione RET.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			Può esserci più di un'istruzione RET. L'esecuzione deve tornare da una procedura attraverso un'istruzione RET, ma una procedura può avere più di una porta d'uscita. Quale uscita viene presa dipende dal flusso di esecuzione della procedura, ma con istruzioni di salto condizionale si possono avere uscite ovunque soddisfino i requisiti della logica della procedura. Tutte quelle uscite portano allo stesso posto: l'istruzione dopo l'istruzione CALL che ha chiamato la procedura.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			Una procedura può utilizzare CALL per chiamare un'altra procedura. (Ne parleremo meglio a breve.)
+		</p>
+	</li>
+</ul>
+
+<p align=justify>
+Il meccanismo con cui operano CALL e RET può sembrarti familiare: CALL inserisce prima nello stack l'indirizzo dell'istruzione successiva. Poi CALL trasferisce l'esecuzione all'indirizzo rappresentato dall'etichetta che nomina la procedura, in questo caso LoadBuff. Le istruzioni contenute nella procedura vengono eseguite. Infine, la procedura termina con l'istruzione RET. L'istruzione RET estrae l'indirizzo di ritorno dalla cima dello stack e trasferisce l'esecuzione a quell'indirizzo. Poiché l'indirizzo inserito era l'indirizzo della prima istruzione dopo l'istruzione CALL, l'esecuzione continua come se CALL non avesse affatto cambiato il flusso di esecuzione delle istruzioni. Vedi la figura di seguito.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/calling_procedure_and_returning.png">
+</div>
+
+### Chiamate all'interno di chiamate
+
+<p align=justify>
+All'interno di una procedura puoi fare qualsiasi cosa tu possa fare all'interno del programma principale. Questo include chiamare altre procedure da una procedura e fare chiamate SYSCALL ai servizi del kernel Linux. C'è un semplice esempio in hexdump2gcc: la procedura ClearLine chiama la procedura DumpChar per "cancellare" la variabile della riga di dump esadecimale.
+</p>
+
+```asm
+ ClearLine:
+    push rax       ; Save all caller's r*x GP registers
+    push rbx
+    push rcx
+    push rdx
+    mov rdx,15     ; We're going to go 16 pokes, counting from 0
+ .poke:
+    mov rax,0      ; Tell DumpChar to poke a '0'
+    call DumpChar  ; Insert the '0' into the hex dump string
+    sub rdx,1      ; DEC doesn't affect CF!
+    jae .poke      ; Loop back if RDX>= 0
+    pop rdx        ; Restore all caller's r*x registers
+    pop rcx
+    pop rbx
+    pop rax
+    ret            ; Go home
+```
+
+<p align=justify>
+Fondamentalmente, ciò che fa ClearLine consiste in un uso speciale della procedura DumpChar, che spiegherò in dettaglio a breve. Quando è piena di dati e visualizzata sulla console, la variabile DumpLine si presenta così:
+</p>
+
+```
+ 75 6D 70 32 2E 61 73 6D 0A 09 6E 61 73 6D 20 2D |ump2.asm..nasm -|
+```
+
+<p align=justify>
+Ogni valore esadecimale a due caratteri e ogni carattere ASCII nella colonna ASCII a destra sono stati inseriti tramite una singola chiamata a DumpChar. Sono necessarie 16 chiamate a DumpChar per "riempire" la variabile DumpLine. A quel punto può essere visualizzata. Dopo che DumpLine è stata visualizzata nella console, hexdump2gcc continua il suo ciclo e inizia a riempire di nuovo DumpLine. Ogni 16 chiamate a DumpChar, hexdump2gcc mostra DumpLine sulla console... tranne l'ultima volta. Un file scaricato sulla console potrebbe non essere (e di solito non è) un multiplo esatto di 16 byte. Quindi la visualizzazione finale di DumpLine potrebbe riguardare una riga parziale di due, tre, nove, undici o comunque meno di sedici caratteri, che chiamo "avanzi". Quando viene visualizzata una riga parziale, gli ultimi byte nella riga scaricata potrebbero essere dati "vecchi", inviati alla console nella visualizzazione precedente di DumpLine. Per evitare ciò, DumpLine viene azzerata subito dopo ogni visualizzazione nel terminale. Questo è ciò che fa ClearLine. Dopo una chiamata a ClearLine, DumpLine appare in questo modo:
+</p>
+
+```
+ 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 |................|
+```
+
+<p align=justify>
+ClearLine fa la cosa semplice e ovvia: chiama DumpChar 16 volte, passando ogni volta a DumpChar il valore 0 in RAX. DumpChar "inietta" l'equivalente ASCII sia del valore esadecimale 00 sia di un punto ASCII, per rappresentare il valore 0 in tutte le posizioni della colonna ASCII. 00 non è un carattere ASCII visualizzabile e, come tutti i caratteri non visualizzabili, è rappresentato da un punto nell'output dell'hexdump.
+</p>
+
+### Il pericolo della ricorsione accidentale
+
+<p align=justify>
+Chiamare procedure dall'interno di procedure richiede di prestare almeno un po' di attenzione a una cosa: lo spazio dello stack. Ricorda che ogni chiamata a procedura inserisce nello stack un indirizzo di ritorno a 64 bit. Questo indirizzo di ritorno non viene rimosso dallo stack fino a quando non viene eseguita l'istruzione RET per quella procedura. Se esegui un'altra istruzione CALL prima di tornare da una procedura, la seconda istruzione CALL inserisce un altro indirizzo di ritorno nello stack. Se continui a chiamare procedure dall'interno di procedure, nello stack si accumulerà un indirizzo di ritorno per ogni CALL, fino a quando non inizierai a tornare da tutte quelle procedure annidate. Questo era un vero problema sotto DOS, quando la memoria era scarsa e i programmi potevano allocare allo stack solo poche centinaia di byte di memoria, a volte anche meno. Ogni indirizzo inserito nello stack fa crescere lo stack in direzione delle sezioni .data e .text del programma. Chiamare in modo "profondo" poteva far collidere lo stack con i dati o il codice, causando un crash del programma che spesso trascinava giù anche DOS. Sotto x64 Linux hai a disposizione molta più memoria, più un gestore della memoria virtuale nel sistema operativo, e dovresti annidare procedure letteralmente milioni di volte per avere problemi: sarebbe davvero un programma ambizioso. Tuttavia... puoi comunque incorrere in un problema simile abusando di una tecnica di programmazione avanzata chiamata ricorsione. Nella ricorsione, una procedura chiama se stessa per completare il proprio lavoro. Questo spesso sembra peculiare ai principianti, ma è un modo rispettato e legittimo di esprimere un certo tipo di logica di programma. Il trucco con la ricorsione, naturalmente, è sapere quando fermarsi. Per ogni CALL a se stessa, una procedura ricorsiva deve alla fine eseguire un'istruzione RET. Anche se la procedura ricorsiva chiama se stessa dozzine o centinaia di volte, finché le istruzioni CALL bilanciano le istruzioni RET, non succederà nulla di male.
+I problemi iniziano quando scrivi una procedura ricorsiva in modo errato e la logica che determina quando utilizzare quella fondamentale istruzione RET è codificata male. Il momento del ritorno è generalmente regolato da un'istruzione di salto condizionale. Se sbagli il senso o l'etichetta del flag di quell'istruzione, la procedura non ritorna mai, ma continua a chiamarsi ripetutamente. Su un PC moderno, una procedura in linguaggio assembly può chiamarsi un milione di volte in un secondo o meno. A un certo punto, lo stack raggiunge il limite estremo della sua crescita (impostato dal sistema operativo), dove esaurisce lo spazio di memoria. Quando ciò accade, Linux ti restituisce un errore di segmentazione. Come ho detto, la ricorsione è un argomento avanzato e non spiegherò come usarla correttamente in questo libro. La menziono qui solo perché è possibile usare la ricorsione accidentalmente. Seguendo il nostro esempio attuale, supponi di stare programmando ClearLine a tarda notte e, nel punto in cui ClearLine chiama DumpChar, di scrivere per confusione CALL ClearLine dove intendevi scrivere CALL DumpChar. Non scuotere la testa; programmo dal 1970 e l'ho fatto più di una volta. Prima o poi lo farai anche tu. ClearLine non è progettata per essere ricorsiva, quindi entrerà in un ciclo non proprio infinito, chiamandosi fino a esaurire la memoria dello stack e generare un errore di segmentazione. Aggiungi "ricorsione accidentale" alla lista dei bug che cerchi quando Linux ti restituisce un errore di segmentazione. Appartiene alla categoria di bug che chiamo "rari ma inevitabili".
+</p>
+
+### Un errore di etichetta del flag a cui fare attenzione
+
+<p align=justify>
+E mentre parliamo di bug, la procedura ClearLine è piuttosto semplice e svolge un lavoro semplice. Offre anche un utile momento didattico su un bug relativo ai flag che mette regolarmente in difficoltà i principianti. Dai un'occhiata al seguente modo alternativo di codificare ClearLine:
+</p>
+
+```asm
+ClearLine:
+    push rax       ; Save all caller's r*x GP registers
+    push rbx
+    push rcx
+    push rdx
+    
+    mov  rdx,15    ; We're going to go 16 pokes, counting from 0
+ 
+.poke:
+    mov rax,0      ; Tell DumpChar to poke a '0'
+    call DumpChar  ; Insert the '0' into the hex dump string
+    sub rdx,1      ; DEC doesn't affect CF!
+    jae .poke       ; Loop back if RDX>= 0
+    
+    pop rdx        ; Restore caller's r*x GP registers
+    pop rcx
+    pop rbx
+    pop rax
+    ret            ; Go home
+```
+
+<p align=justify>
+Funzionerebbe? Se lo pensi, ripensaci. Sì, stiamo contando da 15 a 0, facendo 16 passaggi attraverso un semplice ciclo. Sì, l'istruzione DEC è usata molto nei cicli, quando contiamo fino a zero. Ma questo ciclo è un po' diverso, poiché dobbiamo fare del lavoro quando il valore del contatore in RDX è 0 e poi decrementarlo un'altra volta. Il salto condizionale mostrato è JAE, Jump Above or Equal. Deve saltare di nuovo a Poke quando il valore in RDX scende sotto zero. DEC conterà un contatore fino a zero e poi sotto zero senza problemi... quindi perché JAE non salta dopo DEC? Il senso è giusto. Tuttavia, l'etichetta del flag è sbagliata. Se controlli il riferimento all'istruzione nell'Appendice B per JAE, vedrai che salta quando CF=0. La CPU non capisce il "osenso" in JAE. Non è una mente; è solo una piccola pila di sabbia molto pulita. Tutto ciò che capisce è che l'istruzione JAE salta quando CF=0. Ora, se guardi l'istruzione DEC nell'Appendice B ed esamini l'elenco dei flag, vedrai che DEC non influenza affatto CF, e CF è ciò che JAE esamina prima di decidere se saltare o meno. Questo è il motivo per cui usiamo l'istruzione SUB per decrementare il registro del contatore in questo caso, perché SUB influisce su CF e consente all'istruzione JAE di funzionare correttamente. Non ci sono problemi di velocità; SUB è veloce quanto DEC. La lezione qui è che devi capire i modi in cui le istruzioni di salto condizionale interpretano i vari flag. Il senso di un salto può essere ingannevole. è l'etichetta del flag che conta.
+</p>
+
+### Le procedure e i dati di cui hanno bisogno
+
+<p align=justify>
+I programmi svolgono il loro lavoro agendo sui dati: dati nei buffer, dati in variabili denominate e dati nei registri. Le procedure sono spesso create per eseguire un singolo tipo di manipolazione su un particolare tipo di dati. I programmi che chiamano tali procedure le trattano come tritacarne di dati: un certo tipo di dati entra, e un dato trasformato di un altro tipo esce. Inoltre, i dati vengono spesso forniti a una procedura per controllare o dirigere il lavoro che essa svolge. Una procedura potrebbe aver bisogno di un valore di conteggio per sapere quante volte eseguire un'operazione, ad esempio, o potrebbe aver bisogno di una maschera di bit da applicare a valori di dati per qualche motivo, e quella maschera di bit potrebbe non essere precisamente la stessa ogni volta. Quando scrivi procedure, devi decidere di quali dati la procedura necessiti per svolgere il suo lavoro e come quei dati saranno resi disponibili alla procedura. Ci sono due classi generali di dati nella programmazione assembly (e nella maggior parte della programmazione in linguaggi non esotici) in base al metodo di accesso: globale e locale. I dati globali sono molto comuni nel lavoro in puro assembly, specialmente per programmi di dimensioni contenute come quelli che presento in questo libro. I dati globali sono accessibili da qualsiasi codice in qualsiasi punto del programma. Un elemento di dati globale è definito nelle sezioni .data o .bss del programma. Anche i registri della CPU sono contenitori per dati globali, poiché fanno parte della CPU e sono accessibili da qualsiasi punto di un programma.
+La nozione di dati globali diventa più complessa quando si separa un programma in un programma principale e in più gruppi di procedure chiamati librerie, come spiegherò tra poco in questo capitolo. Ma per programmi semplici, il modo più ovvio per passare dati a una procedura è spesso il migliore: mettere i dati in uno o più registri e poi chiamare la procedura. Abbiamo già visto questo meccanismo in azione quando abbiamo fatto chiamate ai servizi del kernel Linux tramite l'istruzione SYSCALL. Per l'input della console, si mette il numero del servizio in RAX, il descrittore del file in RDI, l'indirizzo di una stringa in RSI e la lunghezza della stringa in RDX. Poi si effettua la chiamata con SYSCALL. Non è diverso per le procedure ordinarie. Si scrive una procedura presupponendo che, quando la procedura inizia a essere eseguita, i valori di cui ha bisogno siano in registri particolari. Devi assicurarti che il codice che chiama la procedura metta i valori giusti nei registri giusti prima di chiamare la procedura, ma in realtà non è più complesso di così. Tabelle, buffer e altri elementi di dati denominati vengono accessi dalle procedure proprio come da qualsiasi altra parte del programma, tramite espressioni di indirizzamento della memoria "tra parentesi".
+</p>
+
+### Salvare i registri del chiamante
+
+<p align=justify>
+Quando inizi a scrivere programmi significativi in assembly, ti rendi conto che non puoi mai avere abbastanza registri e (a differenza dei linguaggi di alto livello come C e Pascal) non puoi semplicemente crearne di più quando ne hai bisogno. I registri devono essere usati con attenzione, e scoprirai che, all'interno di qualsiasi programma di complessità significativa, tutti i registri sono generalmente in uso per tutto il tempo. Entrare in una procedura dall'interno del tuo programma principale (o da un'altra procedura) comporta un problema specifico e sottile. Puoi chiamare una procedura da qualsiasi punto: questo significa che non saprai sempre quali registri sono già in uso quando viene chiamata la procedura. O forse sì? Esiste una convenzione su quali registri debbano essere preservati all'interno di una procedura e quali no. Questa convenzione fa parte dell'interfaccia binaria per applicazioni System V ABI x86-64. Alcuni registri sono considerati 'volatili', il che significa che possono essere modificati da una procedura, mentre altri sono 'non volatili', il che significa che devono essere preservati. Un momento: ci arriviamo. Se una procedura esamina solo un valore di registro (ma non lo modifica), non è necessario preservare il registro. Ad esempio, una procedura può assumere che un certo registro contenga un valore di contatore di cui ha bisogno per indicizzare una tabella, e può utilizzare liberamente quel registro finché non ne modifica il valore. Tuttavia, ogni volta che un registro viene modificato da una procedura (a meno che il chiamante non si aspetti esplicitamente un valore di ritorno in un registro), deve essere salvato e ripristinato prima che la procedura esegua RET per tornare al chiamante.
+</p>	
+
+<p align=justify>
+Il salvataggio dei valori dei registri avviene con PUSH:
+</p>
+
+```asm
+ push rbx
+ push rsi
+ push rdi
+```
+
+<p align=justify>
+Ogni istruzione PUSH inserisce un valore di registro a 64 bit nello stack. Questi valori rimangono al sicuro nello stack fino a quando non vengono estratti nuovamente negli stessi registri, poco prima di tornare al chiamante:
+</p>
+
+```asm
+ pop rdi
+ pop rsi
+ pop rbx
+ ret
+```
+
+<p align=justify>
+C'è un dettaglio assolutamente cruciale qui, che causa una moltitudine di bug molto particolari nei programmi: i valori del chiamante devono essere estratti dallo stack nell'ordine inverso rispetto a quello in cui sono stati inseriti. In altre parole, se inserisci RBX, seguito da RSI, seguito da RDI, devi estrarli dallo stack in questo ordine: RDI, seguito da RSI, seguito da RBX. La CPU estrarrà semplicemente i valori memorizzati nello stack in qualsiasi registro, nell'ordine che scrivi. Ma se sbagli l'ordine, in sostanza stai cambiando i registri del chiamante invece di salvarli. Ciò che era in RBX potrebbe ora trovarsi in RDI, e la logica del programma del chiamante potrebbe semplicemente andare in crisi. Ho mostrato come questo accade quando ho spiegato inizialmente lo stack, ma all'epoca potrebbe non essere stato chiaro. Dai un veloce sguardo alla figura dello stack e vedi cosa succede nella colonna più a destra. Il valore di CX era stato inserito nello stack, ma l'istruzione successiva era POP DX. Ciò che era in CX ora si trovava in DX. Se è quello che vuoi, va bene; a volte potrebbe essere il modo migliore per risolvere un problema particolare. Ma se stai inserendo i valori dei registri per preservarli, l'ordine degli inserimenti e delle estrazioni è assolutamente critico. Il modo migliore per affrontare la preservazione dei registri consiste nell'inserire ed estrarre, all'interno della procedura stessa, qualsiasi registro modificato dalla procedura. Questo esclude i registri usati per passare valori alla procedura: erano stati cambiati deliberatamente dal chiamante subito prima della chiamata della procedura. Considera che una procedura è definita una volta, ma viene chiamata molte volte da molti altri punti del tuo codice. Se cerchi di salvare prima di chiamare la procedura i registri che la procedura modifica, avrai molti più inserimenti ed estrazioni rispetto a quando preservi all'interno della procedura i registri che la procedura utilizza. Inoltre, se una procedura restituisce un valore al chiamante in un registro, il chiamante presume che il valore del registro cambierà e utilizzerà il nuovo valore in quel registro. C'è anche un altro problema: le tue procedure non sono le uniche che utilizzano e modificano i registri. Anche Linux ha una parte in questo.
+</p>
+
+### Preservare i registri attraverso le chiamate di sistema Linux
+
+<p align=justify>
+Anche Linux utilizza i registri. Lo fa in modo piuttosto trasparente per il tuo codice. L'unico problema serio è sapere quali registri vengono modificati durante le chiamate di sistema tramite l'istruzione SYSCALL e quali rimangono intatti. Purtroppo, non c'è una risposta semplice: dipende completamente dalla chiamata di sistema che effettui. Prima di tutto, però, l'istruzione SYSCALL stessa utilizza due registri:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+			SYSCALL memorizza l'indirizzo di ritorno nel registro RCX
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+			SYSCALL memorizza RFLAGS nel registro R11
+		</p>
+	</li>
+</ul>
+
+<p align=justify>
+Questo è l'equivalente funzionale di un'istruzione SYSCALL che inserisce RCX e R11 nello stack. Tuttavia, salvare valori nei registri è molto più veloce che inserirli nello stack. Anche rimuovere valori dallo stack è lento, quindi SYSCALL non ripristina nulla. Ogni volta che esegui SYSCALL, RCX e R11 vengono sovrascritti. E non sono le sole sovrascritture coinvolte nell'esecuzione di una chiamata di sistema. L'uso dei registri durante una chiamata di sistema rientra in tre categorie:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+		Devi passare i parametri al codice della chiamata di sistema nei registri.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Il codice della chiamata di sistema utilizza alcuni registri aggiuntivi.
+		</p>
+	</li>
+	 <li>
+		<p align=justify>
+		La chiamata di sistema può restituire nei registri valori di cui il tuo codice potrebbe aver bisogno.
+		</p>
+	</li>
+</ul>
+
+<p align=justify>
+La definizione delle chiamate di sistema SYSCALL include le specifiche. Questa definizione fa parte dell'ABI System V x86-64. Se il corpo più ampio del tuo codice utilizza un registro che viene sovrascritto durante una chiamata di sistema, devi scegliere un altro registro da utilizzare nel corpo del programma o salvarlo nello stack con un'istruzione PUSH prima di impostare i parametri ed eseguire SYSCALL. Dopo la chiamata di sistema, devi ripristinarlo tramite un'istruzione POP. Usare lo stack in questo modo può causare problemi con l'allineamento dello stack, a meno che tu non comprenda cosa rende lo stack allineato e come mantenerlo tale. C'è anche la questione dei registri volatili rispetto a quelli non volatili. Il processo per effettuare una chiamata di sistema tramite SYSCALL non è complesso. Tuttavia, l'ultima volta che ho controllato, ce n'erano 335. Ogni chiamata di sistema richiede che certe informazioni vengano passate in registri specifici. è molto da ricordare. Per lo più dovrai cercare i dettagli su come effettuare chiamate di sistema in un riferimento stampato o online. Alcuni riferimenti sono elencati sotto.
+</p>
+
+<p align="justify">
+<a href="https://hackeradam.com/x86-64-linux-syscalls/">x86-64-linux-syscalls</a>
+</p>
+
+<p align="justify">
+<a href="https://blog.rchapman.org/posts/Linux_System_Call_Table_for_x86_64/">Linux_System_Call_Table_for_x86_64</a>
+</p>
+
+<p align=justify>
+Entrambe sono tabelle molto grandi che assomigliano a fogli di calcolo, con colonne per l'uso dei registri e i valori richiesti per ogni numero di chiamata di sistema. Ora, le pagine web vanno e vengono e, se stai utilizzando questo libro alcuni anni dopo la sua pubblicazione nel 2023, le pagine web citate potrebbero semplicemente non esistere più. Fai una ricerca sul web su "tabella delle chiamate di sistema x64" e ne troverai diverse. Assicurati che la tabella che usi sia per le chiamate di sistema e non per le chiamate nello spazio utente. Le chiamate nello spazio utente sono chiamate alla libreria di codice glibc utilizzata nella programmazione C, che è una questione completamente diversa. Chiamare glibc dall'assembly è possibile e spesso molto utile. Un'avvertenza seria se hai già fatto del lavoro in assembly Linux in modalità protetta a 32 bit: i parametri delle chiamate di sistema x64 non sono gli stessi di quelli in x86 a 32 bit. Nella maggior parte dei casi, non sono nemmeno simili. In Linux x64 c'è un sistema per l'uso dei registri: il numero della chiamata di sistema (in altre parole, quale chiamata di sistema stai chiamando) è sempre in RAX. Una chiamata di sistema accetta fino a sei parametri. I registri usati per passare i parametri sono in questo ordine: RDI, RSI, RDX, R10, R8 e R9. In altre parole, il primo parametro viene passato in RDI, il secondo in RSI, e così via. Nessuna chiamata di sistema richiede che i parametri le vengano passati tramite lo stack. Nota: anche se un registro (come R9, per esempio) viene usato per passare un parametro a una chiamata di sistema, quel registro non viene preservato. Solo sette registri sono preservati da Linux durante una chiamata di sistema: R12, R13, R14, R15, RBX, RSP e RBP. Dopo una SYSCALL, RAX conterrà un valore restituito. Se RAX è negativo, indica che si è verificato un errore durante la chiamata. Per la maggior parte delle chiamate di sistema, un valore di 0 indica successo.
+</p>
+
+### PUSHAD e POPAD sono spariti
+
+<p align=justify>
+Ci sono casi in cui una procedura utilizza la maggior parte o tutti i registri a uso generale. Prima di x64, c'era una coppia di istruzioni che poteva inserire ed estrarre tutti i registri GP da 32 bit in una sola volta: PUSHAD e POPAD. (Un'altra coppia di istruzioni, PUSHA e POPA, poteva inserire ed estrarre tutti i registri GP da 16 bit. Anche queste istruzioni non ci sono più.) Ora che x64 ha 15 registri GP, con ogni registro che richiede otto byte nello stack, non è uno spreco di spazio nello stack? Non necessariamente. Sì, ci vuole tempo per inserire un registro nello stack, ma ricorda: ogni volta che valuti se un'istruzione richiede più tempo per essere eseguita rispetto a un'altra, devi considerare quante volte quell'istruzione viene eseguita. Se un'istruzione si trova all'interno di un ciclo stretto che viene eseguito decine di migliaia o milioni di volte, la sua velocità è importante. D'altra parte, se un'istruzione viene eseguita solo poche volte durante l'esecuzione di un programma, la sua velocità è al massimo una considerazione minore e di solito può essere ignorata. Sì, PUSHAD e POPAD erano scorciatoie comode. Non ci sono più. Ora devi pensare con attenzione a quali registri modifica una procedura e quindi inserire quei registri singolarmente nello stack ed estrarli uno per uno quando la procedura ritorna. Per un buon esempio, vediamo la procedura LoadBuff mostrata in precedenza in questo capitolo in hexdump2gcc. LoadBuff preserva quattro registri del chiamante: RAX, RDX, RSI e RDI. Tuttavia, apporta modifiche ad altri due registri, RCX e R15, senza preservarli.
+</p>
+
+<p align=justify>
+Perché? Il registro RCX contiene un valore "globale": la posizione del prossimo carattere da elaborare nella variabile del buffer file Buff. LoadBuff viene chiamata quando un buffer pieno di dati è stato completamente elaborato e un nuovo blocco di dati deve essere letto da stdin. Quando il buffer viene riempito nuovamente, il contatore del buffer deve essere azzerato, in modo che l'elaborazione possa ricominciare dai nuovi dati fin dall'inizio. LoadBuff fa questo, e l'RCX azzerato viene restituito a chi l'ha chiamata. Anche R15 ha una missione: riporta il numero di byte caricati in Buff dalla chiamata SYSCALL a sys_read. La chiamata a sys_read richiede il numero di byte specificato dall'equazione BUFFLEN vicino all'inizio del programma. Tuttavia, poiché pochi file saranno esattamente multipli di BUFFLEN, il numero di byte nell'ultima serie di dati letti da stdin sarà inferiore a BUFFLEN. Questo valore è considerato anch'esso globale e viene utilizzato dal programma principale per determinare quando il buffer corrente è stato completamente elaborato. LoadBuff preserva i registri nello stack e li ripristina prima di tornare al codice che l'ha chiamata. Ora, non c'è motivo per cui push e pop usati per preservare i registri debbano sempre essere eseguiti all'interno della procedura. Il codice chiamante può preservare i propri registri, e questo viene fatto occasionalmente. Ad esempio, considera questa sequenza di istruzioni (fittizia):
+</p>
+
+```asm
+ push rbx
+ push rdx
+ call CalcSpace
+ pop  rdx
+ pop  rbx
+```
+
+<p align=justify>
+C'è solo una differenza tra preservare i registri all'esterno della procedura invece che al suo interno: il codice che chiama la procedura può scegliere quali dei suoi registri sono in uso e quindi necessitano di preservazione. Salvare tutti i registri sarebbe uno spreco se non tutti sono in uso nel codice del chiamante. Ora, potrebbero esserci più chiamate a CalcSpace all'interno del programma. Ciascuna di queste chiamate richiede questa sequenza di cinque istruzioni invece di una sola. Se la preservazione dei registri avviene all'interno della procedura, richiede solo quattro istruzioni, a prescindere da quante volte il codice chiami la procedura. Con i moderni PC x64, la differenza in termini di dimensioni del codice e velocità non sarà significativa. Il vantaggio di inserire la preservazione dei registri all'interno della procedura è che il codice principale del programma sarà meno ingombro. Non ci sono regole rigide su quali registri preservare, anche se ci sono forti raccomandazioni nell'ABI System V x86-64. Alcuni registri sono volatili e non è necessario preservarli. Alcuni sono non volatili e dovrebbero essere preservati. Ancora una volta, tornerò su questo nei prossimi due capitoli, che trattano anche questioni importanti come l'allineamento dello stack. Devi sapere come i registri vengono utilizzati in un dato momento nel programma e programmare di conseguenza. (Prendere buone note sull'uso dei registri mentre progetti il programma è importante.) L'unico consiglio che offrirei è conservativo e tende a evitare bug: preserva qualsiasi registro che sai non essere usato globalmente né per restituire valori al chiamante. Il tempo impiegato per preservare i registri è minimo rispetto al fastidio dei bug causati da conflitti tra registri.
+</p>
+
+### Dati locali
+
+<p align=justify>
+I dati locali, in contrapposizione ai dati globali, sono dati accessibili (diciamo "visibili") solo a una particolare procedura o, in alcuni casi, a una libreria. (Di nuovo, posticipiamo per il momento la discussione sulle librerie.) Quando le procedure hanno dati locali, si tratta quasi sempre di dati che vengono posizionati nello stack quando viene chiamata una procedura. Le istruzioni PUSH posizionano i dati nello stack. Quando una parte del tuo codice chiama una procedura con l'istruzione CALL, può passare dati a quella procedura usando PUSH una o più volte prima dell'istruzione CALL. La procedura può quindi accedere a questi elementi di dati inseriti nello stack con PUSH. Tuttavia, c'è un avvertimento: la procedura non può semplicemente estrarre quegli elementi di dati dallo stack nei registri, perché l'indirizzo di ritorno è in mezzo. Ricorda che la prima cosa che fa CALL è inserire nello stack l'indirizzo dell'istruzione macchina successiva. Quando la tua procedura ottiene il controllo, quell'indirizzo di ritorno è in cima allo stack (TOS, come diciamo), pronto per l'inevitabile istruzione RET da utilizzare per tornare al chiamante. Qualsiasi cosa inserita nello stack dal chiamante prima dell'istruzione CALL si trova sopra l'indirizzo di ritorno. Questi elementi possono comunque essere accessibili usando il normale indirizzamento della memoria e il puntatore dello stack RSP. Non puoi, tuttavia, usare POP per accedervi senza estrarre e poi reinserire l'indirizzo di ritorno. Questo funziona, e l'ho fatto un paio di volte, ma è lento e anche superfluo, una volta che comprendi la natura di un "frame dello stack" e come indirizzare la memoria al suo interno. Di nuovo, affronterò la nozione di frame dello stack più avanti in questo libro, poiché è assolutamente cruciale una volta che inizi a chiamare procedure di libreria scritte in C o in altri linguaggi di alto livello. Per ora, semplicemente comprendi che i dati globali sono quasi sempre definiti nelle sezioni .data e .bss del tuo programma, mentre i dati locali vengono posizionati nello stack per l'uso "locale" di una particolare chiamata a una particolare procedura. I dati locali richiedono un po' di attenzione e disciplina per essere utilizzati in modo sicuro, per motivi che spiegherò in seguito.
+</p>
+
+### Inserire dati costanti nelle definizioni delle procedure
+
+<p align=justify>
+Ormai sei abituato a pensare al codice come qualcosa che vive nella sezione .text e ai dati come qualcosa che vive nelle sezioni .data o .bss. In quasi tutti i casi, questo è un buon modo per organizzare le cose, ma non c'è un obbligo assoluto di separare codice e dati in questo modo. è possibile definire dati all'interno di una procedura utilizzando le pseudoistruzioni di NASM, che includono DB, DW, DD e DQ. Ho creato una procedura utile che mostra come farlo e che è un buon esempio di quando conviene farlo. La procedura newlines ti consente di emettere su stdout un certo numero di caratteri di nuova riga, specificato da un valore passato alla subroutine in RDX.
+</p>
+
+```asm
+ ;--------------------------------------------------------------------
+ ; Newlines: Sends between 1-15 newlines to the Linux console
+ ; VERSION:  2.0
+ ; UPDATED:  8/27/2022
+ ; IN: EDX:  # of newlines to send, from 1 to 15
+ ; RETURNS:  Nothing
+ ; MODIFIES: RAX, RDI
+ ; CALLS:    Kernel sys_write
+ ; DESCRIPTION: The number of newline characters (0Ah) specified
+ ; in RDX is sent to stdout using SYSCALL sys_write.
+ ; The procedure demonstrates placing constant data in the
+ ; procedure definition itself, rather than in the .data or
+ ; .bss sections.
+ newlines:
+  cmp rdx,15       ; Make sure caller didn't ask for more than 15
+  ja .exit         ; If so, exit without doing anything
+  mov rsi,EOLs     ; Put address of EOLs table into ECX
+  mov rax,1        ; Specify sys_write
+  mov rdi,1        ; Specify stdout
+  syscall          ; Make the kernel call
+.exit:
+  ret              ; Go home!
+
+EOLs db 10,10,10,10,10,10,10,10,10,10,10,10,10,10,10
+```
+
+<p align=justify>
+La tabella EOLs contiene 15 caratteri EOL. Se ricordi, quando il carattere EOL viene inviato a stdout, la console lo interpreta come un a capo: la posizione del cursore della console viene spostata verso il basso di una riga. Il chiamante passa il numero desiderato di a capo in RDX. La procedura newlines verifica prima che il chiamante non abbia richiesto più a capo di quanti caratteri EOL ci siano nella tabella e poi passa l'indirizzo della tabella EOLs e il numero richiesto in una chiamata convenzionale a sys_write utilizzando SYSCALL. In sostanza, sys_write visualizza sulla console i primi RDX caratteri della tabella EOLs, che interpreta quei dati come RDX a capo. Avere i dati direttamente nella procedura significa che è facile copiare e incollare la definizione della procedura da un programma all'altro senza lasciare indietro la tabella essenziale dei caratteri EOL. Poiché l'unico codice che usa la tabella EOLs è la procedura newlines stessa, non c'è vantaggio a posizionare la tabella EOLs nella sezione .data, più visibile e centrale. E anche se la tabella EOLs non è locale nel senso tecnico dell'informatica (non è posizionata nello stack da un chiamante a newlines), "sembra" locale e mantiene più ordinate le sezioni .data e .bss, evitando di sovraccaricarle con dati che vengono referenziati solo all'interno di una singola procedura. C'è un file sorgente di programma completo chiamato newlinestest.asm pronto per essere assemblato nell'archivio dei listati di questo libro. (Costruiscilo con SASM.) Contiene la procedura newlines, che ti permetterà di sperimentare con essa.
+</p>
+
+### Alcuni trucchi per le tabelle
+
+<p align=justify>
+Il programma hexdump2gcc funziona in modo molto simile al programma hexdump1gcc dell'elenco 9.1, ma ha qualche trucco in più. Uno degno di nota risiede nella definizione della variabile di riga del dump esadecimale DumpLine:
+</p>
+
+```asm
+ DumpLine:    db " 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 "
+ DUMPLEN      EQU $-DumpLine
+ ASCLine:     db "|................|",10
+ ASCLEN       EQU $-ASCLine
+ FULLLEN       EQU $-DumpLine
+```
+
+<p align=justify>
+Quello che abbiamo qui è una variabile dichiarata in due parti. Ogni parte può essere utilizzata separatamente, oppure (come di solito si fa) le due parti possono essere utilizzate insieme. La prima sezione di DumpLine è la stringa contenente 16 cifre esadecimali. La sua lunghezza è definita dall'equazione DUMPLEN. (Nota che la mia convenzione personale è scrivere i nomi delle equazioni in maiuscolo. Le equazioni non sono la stessa cosa delle variabili, e trovo utile rendere i programmi più leggibili impostando le equazioni in modo che possano essere distinte dalle variabili a colpo d'occhio. Questo non è un requisito NASM; puoi nominare le equazioni in minuscolo o in maiuscolo misto come preferisci.) La seconda sezione di DumpLine è la colonna ASCII, e ha la propria etichetta, ASCLine. Un programma che avesse bisogno solo della colonna ASCII potrebbe utilizzare la variabile ASCLine da sola, insieme alla sua lunghezza associata, ASCLEN. Ora, poiché le due sezioni di DumpLine sono adiacenti in memoria, fare riferimento a DumpLine ti consente di fare riferimento a entrambe le sezioni come a un'unità, ad esempio quando desideri inviare una riga a stdout tramite SYSCALL. In questo caso, l'equazione che calcola la lunghezza dell'intera riga è FULLLEN. è utile avere un nome separato per le due sezioni della riga, perché i dati non vengono scritti né letti nelle due sezioni allo stesso modo. Dai un'occhiata alla procedura DumpChar da hexdump2gcc:
+</p>
+
+```asm
+DumpChar:
+ push rbx     ; Save caller's RBX
+ push rdi     ; Save caller's RDI
+
+ ; First we insert the input char into the ASCII portion of the dump line
+ mov bl,[DotXlat+rax]       ; Translate nonprintables to '.'
+ mov [ASCLine+rdx+1],bl     ; Write to ASCII portion
+
+ ; Next we insert the hex equivalent of the input char in the hex portion
+ ; of the hex dump line:
+ mov rbx,rax                ; Save a second copy of the input char
+ lea rdi,[rdx*2+rdx]        ; Calc offset into line string (RDX X 3)
+ 
+; Look up low nybble character and insert it into the string:
+    and rax,000000000000000Fh ; Mask out all but the low nybble
+    mov al,[HexDigits+rax]    ; Look up the char equiv. of nybble
+    mov [DumpLine+rdi+2],al   ; Write the char equiv. to line string
+ 
+; Look up high nybble character and insert it into the string:
+    and rbx,00000000000000F0h ; Mask out all but the 2nd lowest nybble
+    shr rbx,4                 ; Shift high 4 bits of byte into low 4 bits
+    mov bl,[HexDigits+rbx]    ; Look up char equiv. of nybble
+    mov [DumpLine+rdi+1],bl   ; Write the char equiv. to line string
+ 
+; Done! Let's return:
+    pop rdi     ; Restore caller's RDI
+    pop rbx     ; Restore caller's RBX
+    ret         ; Return to caller
+```
+
+<p align=justify>
+Scrivere nella colonna ASCII è molto semplice, perché ogni carattere nella colonna ASCII è un singolo byte in memoria, e l'indirizzo effettivo di una qualsiasi posizione in ASCLine è facile da calcolare:
+</p>
+
+```asm
+ mov [ASCLine+rdx+1],bl   ; Write to ASCII portion
+```
+
+<p align=justify>
+Tuttavia, ogni posizione nella parte del dump esadecimale della riga consiste di tre caratteri: uno spazio seguito da due cifre esadecimali. Considerata come una tabella, indirizzare una voce specifica in DumpLine richiede una scala di 3 nel calcolo dell'indirizzo effettivo:
+</p>
+
+```asm
+lea rdi,[rdx*2+rdx]   ; Calc offset into line string (RDX  -  3)
+```
+
+<p align=justify>
+Nota qui che RDX*2+RDX è equivalente a RDX  -  3, come indicato nel commento della riga. Le due parti della riga di dump esadecimale sono trattate in modo molto diverso dal punto di vista della manipolazione dei dati, e agiscono insieme solo quando vengono inviate a stdout. è quindi utile dare a ciascuna delle due sezioni la propria etichetta. Le strutture in C e i record in Pascal sono gestiti in modo molto simile "sotto il cofano". La tabella DotXlat di hexdump2gcc è un altro esempio di traduzione dei caratteri e, come per tutte le tabelle di traduzione, esprime le regole necessarie per visualizzare in modo coerente tutti i 256 diversi valori ASCII in una riga di testo.
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+		Tutti i caratteri stampabili si traducono come se stessi
+  		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Tutti i caratteri non stampabili (che includono tutti i caratteri di controllo e tutti i caratteri dal 127 in su) vengono tradotti come punti ASCII.
+  		</p>
+	</li>
+</ul>
+
+### Etichette locali e lunghezze dei salti
+
+<p align=justify>
+Prima o poi, man mano che i tuoi programmi diventano più lunghi e complessi, finirai per riutilizzare accidentalmente un'etichetta. Non presenterò alcun programma particolarmente lungo o complesso in questo libro, quindi non ci saranno problemi pratici con etichette di codice in conflitto tra loro. Ma quando inizi a scrivere programmi più seri, alla fine scriverai centinaia o addirittura (con un po' di pratica e perseveranza) migliaia di righe di codice assembly in un singolo file sorgente. Come farai a ricordare sempre di aver già utilizzato l'etichetta Scan alla riga 187 di un programma di 2.732 righe? Non lo farai. E prima o poi (soprattutto se stai elaborando spesso buffer e tabelle), proverai a utilizzare nuovamente l'etichetta Scan. NASM te lo segnalerà con un errore. Questo è un problema abbastanza comune (soprattutto con etichette ovviamente utili come Scan), tanto che gli autori di NASM hanno creato una funzione per affrontarlo: le etichette locali. Le etichette locali si basano sul fatto che quasi tutte le etichette in assembly funzionano (escludendo i nomi delle subroutine e delle sezioni principali) in modo "locale", nel senso che vengono referenziate solo da istruzioni di salto molto vicine, forse solo due o tre istruzioni più in alto. Tali etichette sono solitamente parti di cicli stretti, non sono referenziate da lontano nel codice e spesso sono referenziate da un solo punto. Ecco un esempio, dal corpo principale di hexdump2gcc.
+</p>
+
+```asm
+; Go through the buffer and convert binary byte values to hex digits:
+ Scan:
+    xor rax,rax                ; Clear RAX to 0
+    mov al,[Buff+rcx]          ; Get a byte from the buffer into AL
+    mov rdx,rsi                ; Copy total counter into RDX
+    and rdx,000000000000000Fh  ; Mask out lowest 4 bits of char counter
+    call DumpChar              ; Call the char poke procedure
+ 
+; Bump the buffer pointer to the next char and see if
+; buffer's done:
+    inc rsi           ; Increment total chars processed counter
+    inc rcx           ; Increment buffer pointer
+    cmp rcx,r15       ; Compare with # of chars in buffer
+    jb .modTest       ; If we've processed all chars in buffer...
+    call LoadBuff     ; ...go fill the buffer again
+    cmp r15,0         ; If r15=0, sys_read reached EOF on stdin
+    jbe Done          ; If we get EOF, we're done
+ 
+; See if we're at the end of a block of 16 and need to display a line:
+ .modTest:
+    test rsi,000000000000000Fh ; Test 4 lowest bits in counter for 0
+    jnz Scan          ; If counter is *not* modulo 16, loop back
+    call PrintLine    ; ...otherwise print the line
+    call ClearLine    ; Clear hex dump line to 0's
+    jmp Scan          ; Continue scanning the buffer
+```
+
+<p align=justify>
+Nota che l'etichetta .modTest ha un punto davanti. Questo punto la segna come un'etichetta locale. Un'etichetta locale è locale rispetto all'etichetta non locale (cioè la prima etichetta non preceduta da un punto; chiamiamo queste etichette globali) che la precede nel codice. In questo caso particolare, l'etichetta globale a cui appartiene .modTest è Scan. Il blocco precedente è la parte del corpo principale del programma che scansiona il buffer del file di input, formatta i dati di input in righe di 16 byte e visualizza quelle righe sulla console. In che modo un'etichetta globale "possiede" un'etichetta locale? è una questione di visibilità all'interno del codice sorgente: un'etichetta locale non può essere referenziata in un punto precedente del file sorgente rispetto all'etichetta globale che la possiede, che, di nuovo, è la prima etichetta globale sopra di essa nel file. In questo caso, l'etichetta locale .modTest non può essere referenziata sopra l'etichetta globale Scan. Questo significa che potrebbe esistere un'altra etichetta .modTest nel programma, sul "lato opposto" di Scan. Finché esiste un'etichetta globale tra due etichette locali con lo stesso nome, NASM non ha problemi a distinguerle. Le etichette locali possono anche esistere all'interno delle procedure. In un altro esempio da hexdump2gcc, c'è un'etichetta locale .poke nella procedura ClearLine. Appartiene all'etichetta ClearLine e pertanto non può essere referenziata da nessun'altra procedura altrove nel programma o nella libreria. (Non dimenticare che i nomi delle procedure sono etichette globali.) Questo isolamento all'interno di una singola procedura non è immediatamente ovvio, ma è vero e deriva dal fatto che "sotto" una procedura in un programma o in una libreria c'è sempre un'altra procedura, oppure l'etichetta _start o main che segna l'inizio del programma principale. Diventa ovvio una volta che lo si vede disegnato, come ho fatto nella figura di seguito.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/local_labels_and_the_globals_that_own_them.png">
+</div>
+
+<p align=justify>
+Ecco alcune note sulle etichette locali:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+		Le etichette locali all'interno delle procedure sono almeno locali rispetto alle procedure in cui sono definite. (Questo è il punto principale della figura qui sopra.) Puoi, ovviamente, avere etichette globali all'interno delle procedure. Tieni presente che questo limiterà ulteriormente la visibilità delle etichette locali.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Può sembrare particolare, ma è perfettamente legale e spesso utile definire etichette globali che non vengono mai referenziate, semplicemente per fornire un proprietario alle etichette locali. Se stai scrivendo un semplice programma di utilità che viene eseguito in modo lineare, senza molti salti o ritorni a lungo raggio, potresti andare avanti a lungo senza la necessità di inserire un'etichetta globale. Mi piace usare etichette globali per separare le principali parti funzionali di un programma, indipendentemente dal fatto che queste etichette vengano mai chiamate o meno. Questo mi consente di utilizzare liberamente le etichette locali all'interno di quei principali moduli funzionali.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Se stai scrivendo codice complesso con molte etichette globali e locali mescolate, fai attenzione a non cercare di eseguire un JMP verso un'etichetta locale dall'altra parte di un'etichetta globale. Questa è una delle ragioni per cui è meglio non avere 15 etichette locali chiamate .scan o .loopback all'interno di una parte di un programma: puoi facilmente confonderle e, cercando di saltare a quella cinque istruzioni più sopra, potresti inconsapevolmente saltare a quella sette istruzioni più sotto. NASM non ti avviserà se c'è un'etichetta locale con lo stesso nome dalla tua parte di un'etichetta globale e provi a saltare a un'etichetta locale dall'altra parte dell'etichetta globale. Bug come questo possono essere incredibilmente difficili da trovare. Come qualsiasi strumento, le etichette locali devono essere utilizzate con attenzione per dare il massimo beneficio.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Ecco una regola empirica che uso: le etichette locali e tutti i salti verso di esse dovrebbero stare all'interno di un'unica schermata di codice. In altre parole, dovresti essere in grado di vedere sia un'etichetta locale sia tutto ciò che si riferisce ad essa senza dover scorrere l'editor del tuo programma. Questa è solo una guida approssimativa per aiutarti a mantenere ordine nei tuoi programmi, ma l'ho trovata molto utile nel mio lavoro.
+		</p>
+	</li>
+</ul>
+
+### Accesso forzato all'etichetta locale
+
+<p align=justify>
+Ogni tanto (non molto spesso), potresti sentire la necessità di accedere a un'etichetta locale dall'altra parte dell'etichetta globale che la possiede. NASM offre un modo per farlo, anche se ammetto di non averne mai avuto la necessità. La chiave per forzare l'accesso a un'etichetta locale al di fuori del suo ambito (l'area del tuo programma da cui è normalmente visibile) è comprendere come NASM tratta le etichette locali "sotto il cofano". Un'etichetta locale ha una definizione implicita che include l'etichetta globale a cui appartiene. L'etichetta locale .modTest di cui ho parlato prima in questa sezione appartiene all'etichetta globale Scan. Internamente, NASM conosce .modtest come Scan.modTest. Se ci fosse un'altra etichetta locale .modtest altrove nel programma (appartenente, diciamo, a un'etichetta globale Calc), potresti forzare un salto verso di essa includendo il nome del suo proprietario nell'istruzione di salto:
+</p>
+
+```asm
+ jne Calc.modTest
+```
+
+<p align=justify>
+In un certo senso, dietro le quinte, un'etichetta locale è semplicemente la "coda" di un'etichetta globale. Se ne hai bisogno, puoi accedere a un'etichetta locale anteponendo l'etichetta globale del suo proprietario e trattandola così come un'etichetta globale. Ancora una volta, non ho mai dovuto farlo e non lo considero una buona pratica, ma è bene sapere che l'opzione esiste, nel caso si presentasse mai la necessità.
+</p>
+
+### Salti Corti, Vicini e Lontani
+
+<p align=justify>
+Uno degli errori di assemblaggio più strani che potresti incontrare può apparire in un programma completamente corretto, e se lavori con NASM abbastanza a lungo e crei programmi abbastanza grandi, lo incontrerai. Eccolo:
+</p>
+
+```asm
+error: short jump is out of range
+```
+
+<p align=justify>
+Questo errore si verifica quando un'istruzione di salto condizionale è troppo lontana dall'etichetta a cui fa riferimento, dove "troppo lontano" significa troppe posizioni in memoria. Questo si applica solo ai salti condizionali; l'istruzione di salto incondizionato JMP non è soggetta a questo errore. Il problema sorge a causa dei diversi modi in cui NASM può generare un opcode binario per una particolare istruzione di salto condizionale. Ci sono due diversi tipi di salti condizionali, a seconda di quanto lontano si trova l'etichetta di salto. Un'etichetta di salto che si trova entro 127 byte dall'istruzione di salto condizionale è chiamata salto breve. Un'etichetta di salto che è più lontana di 127 byte ma comunque all'interno del segmento di codice corrente è chiamata salto vicino. C'è un terzo tipo di salto, chiamato salto lontano, che implica l'uscita totale dal segmento di codice corrente per qualsiasi motivo. Nel vecchio mondo del DOS in modalità reale, questo significava specificare sia un indirizzo di segmento che un indirizzo di offset per l'etichetta di salto. I salti lontani non venivano utilizzati molto spesso, anche se li ho usati un paio di volte nell'era del DOS. Non dimenticare che i segmenti ora appartengono al sistema operativo per il proprio utilizzo. In modalità protetta a 32 bit e in modalità estesa a 64 bit, i salti lontani sono estremamente rari e comportano tutte le complicazioni del sistema operativo che non posso trattare in questo libro. Per la programmazione nello spazio utente sono completamente non necessari. Il problema risiede davvero nella differenza tra salti brevi e salti vicini. Un'istruzione di salto condizionale breve genera un opcode binario breve, e quindi compatto. Gli opcode di salto brevi sono sempre di due byte, non di più. Gli opcode di salto vicino sono di quattro o sei byte, a seconda di vari fattori. Codice compatto significa codice veloce, ed eseguire un salto breve è (leggermente) più veloce nella maggior parte dei casi rispetto a un salto vicino. Inoltre, se utilizzi salti brevi per la maggior parte del tempo, i tuoi file eseguibili saranno un pochino più piccoli. Dato che il 90 percento o più delle istruzioni di salto condizionali che scriverai mirano a posizioni del programma a sole poche istruzioni di distanza, ha senso che NASM generi opcode per salti brevi per impostazione predefinita. Infatti, NASM genera opcode per salti brevi a meno che non gli dici esplicitamente di usare salti vicini. Un salto vicino è specificato utilizzando il qualificatore NEAR:
+</p>
+
+```asm
+ jne Scan      ; Jump within 127 bytes in either direction
+ jne near Scan ; Jump anywhere in the current code segment
+```
+
+<p align=justify>
+I principianti tendono a imbattersi in questo modo nell'errore "salto breve fuori portata": inizi un programma e metti un'etichetta come Exit: alla fine, aspettandoti di saltare all'etichetta Exit: da diverse parti del programma. Quando il programma è nuovo e ancora abbastanza piccolo, potrebbe funzionare bene. Tuttavia, alla fine, il codice aggiunto nel mezzo del programma costringe i salti condizionali vicino all'inizio del programma a trovarsi a più di 127 byte dall'etichetta Exit: alla fine. Bang! NASM ti restituisce l'errore "salto breve fuori portata". La soluzione è semplice: per ogni salto che NASM chiama "fuori portata", inserisci il qualificatore NEAR tra il mnemonico dell'istruzione di salto condizionale e l'etichetta di destinazione. Lascia invariati gli altri.
+</p>
+
+### Costruzione di librerie di procedure esterne
+
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "File, Makefile, debugging e progetto" del percorso Intermedio per Terzo anno. Serve a lavorare su organizzazione del codice in moduli riusabili e collegamento con il linker. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Costruzione di librerie di procedure esterne" lo studente dovrebbe aver seguito il lavoro precedente su "Linking alla libreria standard del C", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Costruzione di librerie di procedure esterne", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Linking alla libreria standard del C" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Collegare le librerie nei tuoi programmi". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Costruzione di librerie di procedure esterne", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Collegare le librerie nei tuoi programmi" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: ASM_PROGRAMMING.md sezione "Costruzione di librerie di procedure esterne" (#costruzione-di-librerie-di-procedure-esterne). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+
+<p align=justify>
+Noterai che il programma hexdump2gcc fornito ha la maggior parte del suo codice separato in procedure. Questo è proprio come dovrebbe essere, per mantenere il programma comprensibile e manutenibile. Tuttavia, le procedure dichiarate all'interno del file hexdump2gcc.asm sono utilizzabili solo dal programma hexdump2gcc stesso. Se dovessi scrivere un programma più potente che, per qualche motivo, avesse bisogno di visualizzare un dump esadecimale/ASCII di alcuni dati, quelle procedure potrebbero essere riutilizzate, ma non finché sono all'interno del file hexdump2gcc.asm. La risposta è spostare le procedure di hexdump2gcc completamente fuori da hexdump2gcc.asm e collocarle in un file di codice sorgente separato, chiamato libreria. Potrebbe essere pieno di procedure, ma non ha alcuna porzione di programma principale e quindi nessun'etichetta _start: o main: per indicare dove inizia l'esecuzione. Contiene solo procedure (e forse alcune definizioni di dati), quindi non può essere tradotto dal linker in un programma eseguibile autonomo. Una volta creati i file di libreria contenenti procedure, ci sono due modi per usarli:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+		Un file di libreria può essere assemblato separatamente in un file .o, che a sua volta può essere collegato dal linker Linux ad altri programmi che potresti scrivere in futuro.
+  		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Un file di libreria può essere incluso nel file di codice sorgente del programma principale, utilizzando una direttiva chiamata %INCLUDE. (Ti dirò molto presto come utilizzare %INCLUDE.) Questo è ciò che devi fare per utilizzare le librerie nei programmi scritti in SASM.
+  		</p>
+	</li>
+</ul>
+
+### Quando i tool raggiungono i loro limiti
+
+<p align=justify>
+Per quanto sia facile per i principianti del linguaggio macchina imparare e utilizzare SASM (per questo SASM è stato creato), l'IDE di SASM ha le sue limitazioni e stiamo per imbatterci in una significativa: SASM non può collegare insieme più file di codice oggetto assembly in un singolo file eseguibile. Fondamentalmente, tranne in casi molto rari, non può eseguire assembly separato. Un singolo programma potrebbe essere composto da tre o quattro file di codice sorgente .asm separati, ognuno dei quali viene assemblato separatamente in un file .o separato. Per produrre il file eseguibile finale, il linker Linux ld collega tutti i file .o insieme, risolvendo tutti i riferimenti tra un file e l'altro e creando infine il file eseguibile. L'assembly separato non è pienamente supportato da SASM. Descriverò in dettaglio l'assembly separato dei file di libreria più avanti in questo capitolo. Gli esempi dovranno essere costruiti senza SASM, utilizzando makefile. Senza SASM, anche il debug sarà una sfida, e ne parleremo. Nel frattempo, SASM offre un trucco che ti permetterà di creare librerie separate di procedure.
+</p>
+
+### Utilizzare gli include file in SASM
+
+<p align=justify>
+NASM include una direttiva che consente di "includere" un file in un altro file durante un'operazione di assemblaggio. La direttiva %INCLUDE è seguita dal nome di un file di testo, tra virgolette doppie:
+</p>
+
+```asm
+%INCLUDE "%textlibgcc.asm"
+```
+
+<p align=justify>
+(Non dimenticare le virgolette!) Qui possono essere utilizzati solo file di testo contenenti codice sorgente. Non puoi includere alcun file binario di nessun tipo. Ciò che accade è che quando NASM assembla un file di codice sorgente e incontra una direttiva %INCLUDE, apre il file indicato dalla direttiva %INCLUDE e inizia a prelevare testo dal file incluso, riga per riga. Nota che il file incluso non viene inserito nel tuo file sorgente principale del linguaggio assembly. Fondamentalmente, quando NASM incontra %INCLUDE, smette di assemblare il tuo file sorgente principale e inizia ad assemblare il file incluso. Una volta elaborate tutte le righe del file incluso, riprende esattamente da dove si era fermato dopo la direttiva %INCLUDE e continua ad assemblare il tuo file sorgente principale. Molti file inclusi non sono un problema; puoi avere tutte le direttive %INCLUDE che vuoi in un file sorgente di programma. Puoi anche avere direttive %INCLUDE in un file di libreria che è esso stesso un file incluso, anche se, se lo fai abbastanza spesso, il tuo codice sorgente diventerà molto disordinato, e non lo consiglio a meno che tu non abbia una ragione molto valida per farlo. Non sono necessarie dichiarazioni speciali in un file incluso, perché in senso pratico è parte del file sorgente che contiene la direttiva %INCLUDE. Per un esempio di file di inclusione, vedi il codice seguente, che è una libreria di file di inclusione di procedure utilizzate in hexdump3gcc.asm per scrivere testo sulla console di Linux.
+</p>
+
+```asm
+;  Library name    : textlibgcc
+;  Version         : 2.0
+;  Created date    : 5/9/2022
+;  Last update     : 5/9/2023
+;  Author          : Jeff Duntemann
+;  Description     : A simple include library demonstrating the use of
+;                  : the %INCLUDE directive within SASM
+;
+;  Note that this file cannot be assembled by itself, as SASM does not
+;  support separate assembly. It can only be used as the target of an
+;  %INCLUDE directive.
+;
+
+SECTION .bss        ; Section containing uninitialized data
+
+    BUFFLEN  EQU 10h
+    Buff     resb BUFFLEN
+
+SECTION .data       ; Section containing initialised data
+
+; Here we have two parts of a single useful data structure, implementing
+; the text line of a hex dump utility. The first part displays 16 bytes in
+; hex separated by spaces. Immediately following is a 16-character line 
+; delimited by vertical bar characters. Because they are adjacent, the two
+; parts can be referenced separately or as a single contiguous unit.
+; Remember that if DumpLin is to be used separately, you must append an
+; EOL before sending it to the Linux console.
+
+DumpLine:  db " 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 "
+DUMPLEN    EQU $-DumpLine
+ASCLine:    db "|................|",10
+ASCLEN     EQU $-ASCLine
+FULLLEN    EQU $-DumpLine
+
+; The HexDigits table is used to convert numeric values to their hex
+; equivalents. Index by nybble without a scale: [HexDigits+eax]
+HexDigits: db "0123456789ABCDEF"
+
+; This table is used for ASCII character translation, into the ASCII
+; portion of the hex dump line, via XLAT or ordinary memory lookup. 
+; All printable characters "play through" as themselves. The high 128 
+; characters are translated to ASCII period (2Eh). The non-printable
+; characters in the low 128 are also translated to ASCII period, as is
+; char 127.
+DotXlat: 
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 20h,21h,22h,23h,24h,25h,26h,27h,28h,29h,2Ah,2Bh,2Ch,2Dh,2Eh,2Fh
+    db 30h,31h,32h,33h,34h,35h,36h,37h,38h,39h,3Ah,3Bh,3Ch,3Dh,3Eh,3Fh
+    db 40h,41h,42h,43h,44h,45h,46h,47h,48h,49h,4Ah,4Bh,4Ch,4Dh,4Eh,4Fh
+    db 50h,51h,52h,53h,54h,55h,56h,57h,58h,59h,5Ah,5Bh,5Ch,5Dh,5Eh,5Fh
+    db 60h,61h,62h,63h,64h,65h,66h,67h,68h,69h,6Ah,6Bh,6Ch,6Dh,6Eh,6Fh
+    db 70h,71h,72h,73h,74h,75h,76h,77h,78h,79h,7Ah,7Bh,7Ch,7Dh,7Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+			
+	
+SECTION .text       ; Section containing code
+
+;-------------------------------------------------------------------------
+; ClearLine:    Clear a hex dump line string to 16 0 values
+; UPDATED:      5/9/2023
+; IN:           Nothing
+; RETURNS:      Nothing
+; MODIFIES:     Nothing
+; CALLS:        DumpChar
+; DESCRIPTION:  The hex dump line string is cleared to binary 0 by
+;               calling DumpChar 16 times, passing it 0 each time.
+
+ClearLine:
+    push rax       ; Save all caller's r*x GP registers
+    push rbx
+    push rcx
+    push rdx
+
+    mov rdx,15     ; We're going to go 16 pokes, counting from 0
+.poke:	
+    mov rax,0      ; Tell DumpChar to poke a '0'
+    call DumpChar  ; Insert the '0' into the hex dump string
+    sub rdx,1      ; DEC doesn't affect CF!
+    jae .poke      ; Loop back if RDX >= 0
+
+    pop rdx        ; Restore all caller's GP registers
+    pop rcx
+    pop rbx
+    pop rax
+    ret	           ; Go home
+
+;-------------------------------------------------------------------------
+; DumpChar:     "Poke" a value into the hex dump line string.
+; UPDATED:      5/9/2023
+; IN:           Pass the 8-bit value to be poked in RAX.
+;               Pass the value's position in the line (0-15) in RDX 
+; RETURNS:      Nothing
+; MODIFIES:     RAX, ASCLin, DumpLin
+; CALLS:        Nothing
+; DESCRIPTION:  The value passed in RAX will be put in both the hex dump
+;               portion and in the ASCII portion, at the position passed 
+;               in RDX, represented by a space where it is not a
+;               printable character.
+
+DumpChar:
+    push rbx    ; Save caller's RBX
+    push rdi    ; Save caller's RDI
+
+; First we insert the input char into the ASCII portion of the dump line
+    mov bl,byte [DotXlat+rax]    ; Translate nonprintables to '.'
+    mov byte [ASCLine+rdx+1],bl   ; Write to ASCII portion
+
+; Next we insert the hex equivalent of the input char in the hex portion
+; of the hex dump line:
+    mov rbx,rax           ; Save a second copy of the input char
+    lea rdi,[rdx*2+rdx]   ; Calc offset into line string (RDX X 3)
+
+; Look up low nybble character and insert it into the string:
+    and rax,000000000000000Fh    ; Mask out all but the low nybble
+    mov al,byte [HexDigits+rax]  ; Look up the char equiv. of nybble
+    mov byte [DumpLine+rdi+2],al  ; Write the char equiv. to line string
+
+; Look up high nybble character and insert it into the string:
+    and rbx,00000000000000F0h    ; Mask out all the but second-lowest nybble
+    shr rbx,4                    ; Shift high 4 bits of byte into low 4 bits
+    mov bl,byte [HexDigits+rbx]  ; Look up char equiv. of nybble
+    mov byte [DumpLine+rdi+1],bl  ; Write the char equiv. to line string
+
+;Done! Let's go home:
+    pop rdi    ; Restore caller's RDI
+    pop rbx    ; Restore caller's RBX
+    ret        ; Return to caller
+
+;-------------------------------------------------------------------------
+; PrintLine:   Displays DumpLin to stdout
+; UPDATED:     5/9/2022
+; IN:          DumpLine, FULLEN
+; RETURNS:     Nothing
+; MODIFIES:    Nothing
+; CALLS:       Kernel sys_write
+; DESCRIPTION: The hex dump line string DumpLin is displayed to stdout 
+;              using syscall function sys_write. Registers used 
+;              are preserved, along with RCX & R11.
+
+PrintLine:
+    ; Alas, we don't have pushad anymore.
+    push rax
+    push rbx
+    push rcx         ; syscall clobbers
+    push rdx
+    push rsi
+    push rdi
+    push r11         ; syscall clobbers
+
+    mov rax,1        ; Specify sys_write call
+    mov rdi,1        ; Specify File Descriptor 1: Standard output
+    mov rsi,DumpLine ; Pass address of line string
+    mov rdx,FULLLEN  ; Pass size of the line string
+    syscall          ; Make kernel call to display line string
+
+    pop r11          ; syscall clobbers
+    pop rdi
+    pop rsi
+    pop rdx
+    pop rcx          ; syscall clobbers
+    pop rbx
+    pop rax
+    ret              ; Return to caller
+
+
+;-------------------------------------------------------------------------
+; LoadBuff:    Fills a buffer with data from stdin via syscall sys_read
+; UPDATED:     5/9/2023
+; IN:          Nothing
+; RETURNS:     # of bytes read in R15
+; MODIFIES:    RCX, R15, Buff
+; CALLS:       syscall sys_read
+; DESCRIPTION: Loads a buffer full of data (BUFFLEN bytes) from stdin 
+;              using syscall sys_read and places it in Buff. Buffer
+;              offset counter RCX is zeroed, because we're starting in
+;              on a new buffer full of data. Caller must test value in
+;              R15: If R15 contains 0 on return, we've hit EOF on stdin.
+;              Less than 0 in R15 on return indicates some kind of error.
+
+LoadBuff:
+    push rax         ; Save caller's RAX
+    push rdx         ; Save caller's RDX
+    push rsi         ; Save caller's RSI
+    push rdi         ; Save caller's RDI
+
+    mov rax,0        ; Specify sys_read call
+    mov rdi,0        ; Specify File Descriptor 0: Standard Input
+    mov rsi,Buff     ; Pass offset of the buffer to read to
+    mov rdx,BUFFLEN  ; Pass number of bytes to read at one pass
+    syscall          ; Call syscall's sys_read to fill the buffer
+    mov r15,rax      ; Save # of bytes read from file for later
+    xor rcx,rcx      ; Clear buffer pointer RCX to 0
+
+    pop rdi          ; Restore caller's RDI
+    pop rsi          ; Restore caller's RSI
+    pop rdx          ; Restore caller's RDX
+    pop rax          ; Restore caller's RAX
+    ret              ; And return to calle
+```
+
+<p align=justify>
+Un programma che utilizza una libreria di procedure sarà molto più piccolo di uno che contiene tutta la logica nel suo singolo file di codice sorgente. Il codice seguente è fondamentalmente hexdump2gcc.asm con le sue procedure rimosse e raccolte nel file di inclusione che ho presentato nel codice precedente.
+</p>
+
+```asm
+;  Executable name  : hexdump3gcc
+;  Version          : 2.0
+;  Created date     : 9/5/2022
+;  Last update      : 5/9/2023
+;  Author           : Jeff Duntemann
+;  Description      : A simple hex dump utility demonstrating the use of
+;                   : code libraries by inclusion via %INCLUDE
+;
+;  Build using SASM's standard x64 build setup
+;
+;  Type or paste some text into Input window and click Build & Run.
+;
+
+SECTION .bss        ; Section containing uninitialized data
+
+SECTION .data       ; Section containing initialised data		
+	
+SECTION .text       ; Containing code
+   
+%INCLUDE "textlibgcc.asm"
+
+GLOBAL main   ; You need to declare "main" here because SASM uses gcc
+              ; to do builds.
+
+;-------------------------------------------------------------------------
+; MAIN PROGRAM BEGINS HERE
+;-------------------------------------------------------------------------
+
+main:
+    mov rbp, rsp; for correct debugging
+
+; Whatever initialization needs doing before loop scan starts is here:
+    xor r15,r15     ; Zero out r15,rsi, and rcx
+    xor rsi,rsi		
+    xor rcx,rcx
+    call LoadBuff   ; Read first buffer of data from stdin
+    cmp r15,0       ; If r15=0, sys_read reached EOF on stdin
+    jbe Exit
+
+; Go through the buffer and convert binary byte values to hex digits:
+Scan:
+    xor rax,rax                ; Clear RAX to 0
+    mov al,byte[Buff+rcx]      ; Get a byte from the buffer into AL
+    mov rdx,rsi	               ; Copy total counter into RDX
+    and rdx,000000000000000Fh  ; Mask out lowest 4 bits of char counter
+    call DumpChar              ; Call the char poke procedure
+
+; Bump the buffer pointer to the next character and see if buffer's done:
+    inc rsi           ; Increment total chars processed counter
+    inc rcx           ; Increment buffer pointer
+    cmp rcx,r15       ; Compare with # of chars in buffer
+    jb .modTest        ; If we've processed all chars in buffer...
+    call LoadBuff     ; ...go fill the buffer again
+    cmp r15,0         ; If r15=0, sys_read reached EOF on stdin
+    jbe Done          ; If we get EOF, we're done
+
+; See if we're at the end of a block of 16 and need to display a line:
+.modTest:
+    test rsi,000000000000000Fh ; Test 4 lowest bits in counter for 0
+    jnz Scan                   ; If counter is *not* modulo 16, loop back
+    call PrintLine             ; ...otherwise print the line
+    call ClearLine             ; Clear hex dump line to 0's
+    jmp Scan                   ; Continue scanning the buffer
+
+; All done! Let's end this party:
+Done:
+    call PrintLine   ; Print the final "leftovers" line
+
+Exit:	
+    ret              ; Return to glibc's shutdown code
+```
+
+### Dove devono essere memorizzati i file di inclusione di SASM
+
+<p align=justify>
+Uno dei problemi in qualsiasi linguaggio di programmazione che supporta i file di inclusione riguarda dove l'assemblatore o il compilatore cercherà quei file di inclusione. Con SASM hai due opzioni:
+</p>
+
+<ol>
+  <li>
+    <p align="justify">
+    Puoi creare e utilizzare librerie di file di inclusione nella directory di lavoro attuale, cioè la directory in cui si trova il tuo file sorgente principale. Questo è ciò che dovresti fare quando stai sviluppando la libreria che sarà utilizzata successivamente come file di inclusione.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Puoi utilizzare librerie di file di inclusione che si trovano in una directory creata da SASM a tale scopo quando SASM è installato.
+    </p>
+  </li>
+</ol>
+
+<p align=justify>  
+Ecco la directory:
+</p>
+
+```
+/usr/share/sasm/include
+```
+
+<p align=justify>
+Non sembra un grande problema, vero? Bene, c'è una complicazione: devi essere connesso come root per inserire un file di inclusione nella directory di inclusione di SASM. è al di fuori dello scopo di questo libro spiegare in dettaglio i comandi di Linux, quindi se hai dubbi su come ottenere i permessi di root, fai una ricerca su Internet. L'account root viene creato automaticamente quando installi Linux; devi "orivendicarlo" dandogli una password. Ancora una volta, ci sono troppi dettagli per queste pagine, ma ci sono tutorial online, ed è un'abilità di cui avrai bisogno se intendi fare qualsiasi tipo di programmazione seria su Linux. Allora perché preoccuparsi di quella directory di inclusione difficile da raggiungere? Semplice: se mantieni le tue librerie nelle directory di lavoro di diversi progetti, una modifica apportata alla copia di una libreria di un progetto non si rifletterà in tutte le altre copie della stessa libreria negli altri progetti. Se non fai attenzione a questo, le copie di una data libreria si differenzieranno gradualmente l'una dall'altra, e le procedure in quella libreria inizieranno a comportarsi in modo diverso o a causare bug. La tentazione di applicare correzioni "oveloci e sporche" a piccoli problemi in un file di codice sorgente è forte. Non farlo, soprattutto per le librerie di file di inclusione. Crea e perfeziona una libreria di file di inclusione come progetto o parte di un progetto, e poi, con i permessi di root, inseriscila nella directory di inclusione di SASM. In questo modo, tutti i tuoi progetti utilizzeranno la stessa copia della libreria di inclusione.
+</p>
+
+### Il modo migliore per creare una libreria di file di inclusione
+
+<p align=justify>
+Se hai intenzione di sviluppare una libreria di procedure in stile include con SASM da zero, ecco un processo collaudato da utilizzare.
+</p>
+
+<ol>
+  <li>
+    <p align="justify">
+    Progetta le tue procedure. Crea un documento di testo e scrivi le descrizioni di ciò che le procedure della libreria devono fare, migliorandole gradualmente finché non sono definitive.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Apri il programma sandbox che ho descritto in precedenza e inserisci il codice sorgente delle tue procedure. Se le hai già scritte in altre parti di altri programmi, copia/incolla il relativo codice sorgente nel nuovo file.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Crea un semplice codice "esercizio" nel corpo del programma sandbox che chiama le tue procedure e le mette alla prova. Esegui il debug come sempre con il debugger SASM. Verranno evidenziati anche errori relativamente semplici, come spingere i registri nell'ordine sbagliato, sovrascrivere i registri del chiamante e così via.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Una volta terminato il debug semplice, inserisci il codice sorgente della libreria in un programma "reale" per testare più approfonditamente le procedure della libreria.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Quando sei soddisfatto che tutte le procedure funzionino come previsto, raccoglilo in un file senza il framework sandbox e rilascialo nella directory include files di SASM.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Conserva una copia della nuova libreria in un'altra posizione, da cui esegui regolarmente backup.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Se in qualsiasi momento apporti modifiche al codice sorgente della libreria, testa accuratamente le modifiche e quindi rilascia il file modificato nella directory di inclusione di SASM, sostituendo la versione precedente già presente.
+    </p>
+  </li>
+</ol>
+
+<p align=justify>
+A questo punto metteremo da parte SASM per un po' e parleremo dell'utilizzo dell'assemblaggio separato per collegare i file di codice oggetto .o preassemblati in un singolo file eseguibile. è facile diventare "viziati" usando SASM, perché inserisce così tanti strumenti utili all'interno di un IDE, un IDE creato appositamente per i primi passi di uno studente nella programmazione in linguaggio assembly. Continuerò a presentare il codice di esempio per l'uso all'interno di SASM in questo libro, che è un'introduzione ai concetti di informatica e al linguaggio assembly. Ma avrai bisogno di sapere come funziona l'assemblaggio separato, una volta che sarai "passato" da SASM a IDE più complessi e tecniche di programmazione sofisticate.
+</p>
+
+### Assemblaggio e moduli separati
+
+<p align=justify>
+Dal punto di vista del processo di assemblaggio, ogni singolo file .asm è considerato un modulo, che contiene o meno un'etichetta _start: o main:, e quindi può essere un programma completo o contenere solo procedure. Ogni modulo contiene codice e possibilmente alcune definizioni di dati. Quando tutte le dichiarazioni sono fatte correttamente, tutti i moduli possono liberamente "parlare" tra loro tramite chiamate di procedura, e qualsiasi procedura può fare riferimento a qualsiasi definizione di dati presente in uno qualsiasi dei file che il linker combina. (Le etichette locali sono ancora visibili solo alle etichette globali che le possiedono.) Ogni file eseguibile può contenere solo un'etichetta _start: o main:, quindi tra i diversi moduli collegati in un file eseguibile, solo uno può contenere un'etichetta _start: o main: e quindi essere il programma vero e proprio. Questo sembra più difficile di quanto non sia. Il trucco è semplicemente ottenere tutte le dichiarazioni corrette.
+</p>
+
+### Dichiarazioni Globali ed Esterne
+
+<p align=justify>
+Ed è molto meno complicato di quanto non fosse in passato. Ai vecchi tempi del DOS, era necessario definire segmenti di codice e segmenti di dati per l'uso delle librerie assemblate separatamente e assicurarsi che tali segmenti fossero contrassegnati come PUBLIC, e così via. Per i programmi in modalità protetta a 32 bit e in modalità lunga x64 in spazio utente sotto Linux, c'è solo un segmento, contenente codice, dati e stack, letteralmente tutto ciò che un programma ha. La maggior parte della "connessione" manuale che prima dovevamo fare viene ora eseguita automaticamente da NASM, dal linker e dal caricatore Linux. Creare librerie è ora un gioco da ragazzi, non più complesso della creazione di programmi e per certi versi anche più facile. Il cuore della programmazione nei moduli è "rimandare" la risoluzione degli indirizzi fino al momento del collegamento. è possibile che si sia già riscontrato il problema della risoluzione degli indirizzi se si è iniziato a scrivere i propri programmi in assembly. Può succedere per caso: se avete intenzione di scrivere una procedura in un programma ma nel vostro entusiasmo maniacale scrivete prima il codice che fa riferimento all'etichetta di quella procedura (non ancora scritta), NASM vi darà allegramente un messaggio di errore:
+</p>
+
+```asm
+ error: symbol 'MyProc' undefined
+```
+
+<p align=justify>
+Nella programmazione modulare, è frequente dichiarare procedure che non esistono da nessuna parte nel file di codice sorgente su cui stai effettivamente lavorando. Come superare i controlli dell'assemblatore? La risposta è dichiarare una procedura esterna. Funziona quasi come suona: all'assemblatore viene detto che un'etichetta dovrà essere trovata altrove nel programma, in un altro modulo, in seguito. Una volta comunicato questo, NASM ti permette di continuare con questa etichetta non definita. Hai promesso a NASM che la fornirai in seguito, e NASM accetta la tua promessa. (Il linker ti costringerà a rispettare quella promessa durante il passaggio di collegamento.) NASM segnalerà il riferimento come esterno e continuerà senza contestare l'etichetta non definita. La promessa che fai a NASM appare così.
+</p>
+
+```asm
+EXTERN MyProc
+```
+
+<p align=justify>
+Qui hai detto all'assemblatore che l'etichetta MyProc rappresenta una procedura e che sarà trovata da qualche parte esterna al modulo attuale. Questo è tutto ciò che l'assemblatore deve sapere per passare oltre. La parte dell'assemblatore in questa fase è finita. Lascia nel tuo programma un segnaposto vuoto dove l'indirizzo della procedura esterna può essere inserito in seguito. A volte lo penso come un occhiello dove la procedura esterna si aggancerà. Nell'altro modulo dove la procedura MyProc è effettivamente definita, non basta definirla. L'occhiello ha bisogno di un gancio. Devi avvisare l'assemblatore che MyProc sarà referenziato da fuori dal modulo. L'assemblatore avrà quindi bisogno di un gancio che si aggancerà all'occhiello. Crea il gancio dichiarando la procedura globale, il che significa che altri moduli in qualsiasi parte del programma possono liberamente fare riferimento alla procedura. Dichiarare una procedura globale non è più complesso che dichiararla esterna:
+</p>
+
+```asm
+ GLOBAL MyProc
+```
+
+<p align=justify>
+Una procedura dichiarata come GLOBAL dove è definita può essere referenziata da qualsiasi parte in cui la sua etichetta è dichiarata come EXTERN. Con entrambi i riferimenti in posizione, chi li collega realmente? Il linker fa questo durante l'operazione di collegamento. Al momento del collegamento, il linker prende i due file .o generati dall'assemblatore, uno dal tuo programma e l'altro dal modulo contenente MyProc, e li combina in un unico file binario eseguibile. Il numero di file .o non è limitato a due; puoi avere quasi qualsiasi numero di moduli esterni assemblati separatamente in un unico programma. (Ancora una volta, solo uno di essi"il programma vero e proprio"può avere un'etichetta _start: o main:). Quando il file eseguibile creato dal linker viene caricato ed eseguito, il programma può chiamare MyProc in modo pulito e veloce come se entrambi fossero stati dichiarati nello stesso file di codice sorgente. Questo processo è riassunto graficamente nella figura di seguito.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/connecting_globals_and_externals.png">
+</div>
+
+<p align=justify>
+Ciò che funziona per le procedure funziona anche per i dati, e può funzionare in entrambe le direzioni. Il tuo programma può dichiarare qualsiasi variabile nominata come GLOBALE, e quella variabile può quindi essere utilizzata da qualsiasi modulo in cui lo stesso nome di variabile è dichiarato come esterno con la direttiva EXTERN. Infine, le librerie di procedure possono condividere dati e procedure tra loro in qualsiasi combinazione, a patto che tutte le dichiarazioni globali ed esterne siano gestite correttamente. Un programma o un modulo contenente procedure o variabili dichiarate come globali esporta quegli elementi. Inoltre, diciamo che un programma o un modulo che utilizza procedure o variabili che gli sono estranee importa quegli elementi.
+</p>
+
+# Il meccanismo dei Globals e Externals
+
+<p align=justify>
+Il programma hexdump2gcc contiene diverse procedure. Estraiamo quelle procedure dal modulo principale del programma e creiamo un modulo di libreria assemblato separatamente in modo da poter vedere come funziona tutto. Ho descritto in dettaglio nei capitoli precedenti i requisiti del codice sorgente dei programmi in linguaggio assembly. I moduli di libreria assemblati separatamente sono simili ai programmi e possono avere tutte e tre le sezioni (.text, .data e .bss) che i moduli di programma possono avere. Ci sono però due differenze principali riguardanti le cose di cui i moduli di libreria sono privi.
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+		I moduli esterni non contengono un programma principale e quindi non hanno un indirizzo di avvio. Cioè, non esiste un'etichetta _start: o main: in una libreria per indicare al linker che questo è il punto da cui deve iniziare l'esecuzione del codice. I moduli di libreria non sono progettati per essere eseguiti autonomamente, quindi un'etichetta _start: o main: in un modulo di libreria è sia superflua sia causa di un errore fatale del linker se _start: esiste già nel modulo del programma principale.	
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		I moduli esterni non ritornano a Linux. Se solo il modulo del programma principale contiene un'etichetta _start: o main:, allora solo il modulo del programma principale dovrebbe contenere la necessaria SYSCALL sys_exit che arresta il programma e restituisce il controllo a Linux. Come regola generale, non chiamare mai sys_exit all'interno di una procedura, sia essa situata nello stesso modulo del programma principale o in un modulo di libreria esterna. Il programma principale ottiene il permesso di eseguire dal sistema operativo, e il programma principale dovrebbe restituirlo.
+		</p>
+	</li>
+</ul>
+
+<p align=justify>
+Innanzitutto, dai un'occhiata al codice seguente. è fondamentalmente lo stesso programma di hexdump2gcc, ma con le sue procedure raccolte in un file di libreria assemblato separatamente chiamato textlib.asm. Fa esattamente le stesse cose di hexdump2gcc. è più piccolo di hexdump2gcc dal punto di vista del codice sorgente, perché la maggior parte della sua meccanica è stata esternalizzata. Esternalizzata dove? Non lo sai ancora " e non devi saperlo. NASM ritarderà la risoluzione degli indirizzi delle procedure mancanti finché non elenchi tutte le procedure mancanti utilizzando la direttiva EXTERN.
+</p>
+
+```asm
+;  Executable name : hexdump3
+;  Version         : 2.0
+;  Created date    : 9/14/2022
+;  Last update     : 7/18/2023
+;  Author          : Jeff Duntemann
+;  Description     : A simple hex dump utility demonstrating the use of
+;                  : separately assembled code libraries via EXTERN & GLOBAL
+;
+;  Build using these commands:
+;    nasm -f elf64 -g -F dwarf hexdump3.asm
+;    ld -o hexdump3 hexdump3.o <path>/textlib.o
+;
+SECTION .bss         ; Section containing uninitialized data
+
+SECTION .data        ; Section containing initialised data
+		
+SECTION .text        ; Section containing code
+
+EXTERN ClearLine, DumpChar, LoadBuff, PrintLine
+EXTERN Buff, BuffLength
+
+GLOBAL _start:
+
+_start:
+    push rbp
+    mov rbp,rsp      ; For the benefit of gdb
+;    nop              ; Ditto
+
+; Whatever initialization needs doing before the loop scan starts is here:
+    xor r15,r15
+    xor rsi,rsi		
+    xor rcx,rcx
+    call LoadBuff    ; Read first buffer of data from stdin
+    cmp r15,0        ; If r15=0, sys_read reached EOF on stdin
+    jbe Exit
+
+; Go through the buffer and convert binary values to hex digits:
+Scan:
+    xor rax,rax                ; Clear RAX to 0
+    mov al,byte[Buff+rcx]      ; Get a char from the buffer into AL
+    mov rdx,rsi                ; Copy total counter into RDX
+    and rdx,000000000000000Fh  ; Mask out lowest 4 bits of char counter
+    call DumpChar              ; Call the char poke procedure
+
+; Bump the buffer pointer to the next character and see if buffer's done:
+    inc rsi                    ; Increment buffer pointer
+    inc rcx                    ; Increment total chars processed counter
+    cmp rcx,r15                ; Compare with # of chars in buffer
+    jb modTest                 ; If we've processed all chars in buffer...
+    call LoadBuff              ; ...go fill the buffer again
+    cmp r15,0                  ; If r15=0, sys_read reached EOF on stdin
+    jbe Done                   ; If we get EOF, we're done
+
+; See if we're at the end of a block of 16 and need to display a line:
+modTest:
+    test rsi,000000000000000Fh ; Test 4 lowest bits in counter for 0
+    jnz Scan                   ; If counter is *not* modulo 16, loop back
+    call PrintLine             ; ...otherwise print the line
+    call ClearLine             ; Clear hex dump line to 0's
+    jmp Scan                   ; Continue scanning the buffer
+
+; All done! Let's end this party:
+Done:
+    call PrintLine             ; Print the "leftovers" line
+
+Exit:	
+    mov rax,60                 ; Code for Exit system call
+    mov rdi,0                  ; Return a code of zero	
+    syscall                    ; Make system call
+```
+
+<p align=justify>
+Le dichiarazioni esterne di più elementi possono essere messe su una sola riga, separate da virgole, come in hexdump3:
+</p>
+
+```asm
+ EXTERN ClearLine, DumpChar, PrintLine
+```
+
+<p align=justify>
+Non deve esserci una sola direttiva EXTERN. Possono esisterne diverse in un modulo; ogni identificatore esterno, infatti, può avere la propria direttiva EXTERN. Sta a te decidere. Tuttavia, quando hai un elenco piuttosto lungo di identificatori esterni, non commettere questo errore, che è un errore:
+</p>
+
+```asm
+EXTERN InitBlock, ReadBlock, ValidateBlock, WriteBlock,
+CleanUp, ShowStats, PrintSummary            ; ERROR!
+```
+
+<p align=justify>
+Le dichiarazioni EXTERN non possono estendersi oltre i confini di riga. (In effetti, quasi nulla nel linguaggio assembly può estendersi oltre i confini di riga, specialmente con NASM. I programmatori Pascal e C si imbattono in questa peculiarità abbastanza spesso quando sono alle prime armi con il linguaggio assembly.) Se hai troppe dichiarazioni esterne per adattarle a una singola riga con un singolo EXTERN, posiziona ulteriori direttive EXTERN sulle righe seguenti. Per collegare hexdump3 in un programma eseguibile funzionante, dobbiamo creare un modulo di libreria esterna per ciascuna delle sue procedure. Tutto ciò di cui abbiamo bisogno sono le procedure e i loro dati nelle sezioni corrette e le necessarie dichiarazioni GLOBAL. Questo è ciò che si trova nel codice seguente:
+</p>
+
+```asm
+;  Module name      : textlib.asm
+;  Version          : 2.0
+;  Created date     : 9/14/2022
+;  Last update      : 7/18/2023
+;  Author           : Jeff Duntemann
+;  Description      : A simple procedure library demonstrating the use of
+;                   : separately assembled code libraries via EXTERN
+;
+;  Build using this command:
+;    nasm -f elf64 -g -F dwarf textlib.asm
+;
+;
+		
+SECTION .bss               ; For containing uninitialized data
+	
+    BUFFLEN  EQU 10h       ; We read the input file 16 bytes at a time
+	Buff:    resb BUFFLEN  ; Reserve memory for the input file read buffer
+
+SECTION .data              ; For containing initialised data
+
+; Here we have two parts of a single useful data structure, implementing the
+; text line of a hex dump utility. The first part displays 16 bytes in hex
+; separated by spaces. Immediately following is a 16-character line delimited
+; by vertical bar characters. Because they are adjacent, they can be
+; referenced separately or as a single contiguous unit. Remember that if
+; DumpLin is to be used separately, you must append an EOL before sending it
+; to the Linux console.
+
+DumpLine:   db " 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 "
+DUMPLEN     EQU $-DumpLine
+ASCLine:    db "|................|",10
+ASCLEN      EQU $-ASCLine
+FULLLEN     EQU $-DumpLine
+
+; The equates shown above must be applied to variables to be exported:
+DumpLength: dq DUMPLEN
+ASCLength:  dq ASCLEN
+FullLength: dq FULLLEN
+BuffLength: dq BUFFLEN
+
+; The HexDigits table is used to convert numeric values to their hex
+; equivalents. Index by nybble without a scale, e.g.: [HexDigits+rax]
+HexDigits:  db "0123456789ABCDEF"
+
+; This table allows us to generate text equivalents for binary numbers. 
+; Index into the table by the nybble using a scale of 4: 
+; [BinDigits + rcx*4]
+BinDigits:  db "0000","0001","0010","0011"
+            db "0100","0101","0110","0111"
+            db "1000","1001","1010","1011"
+            db "1100","1101","1110","1111"
+
+; Exported data items and procedures:            
+GLOBAL  Buff, DumpLine, ASCLine, HexDigits, BinDigits
+GLOBAL  ClearLine, DumpChar, NewLines, PrintLine, LoadBuff
+            
+; This table is used for ASCII character translation, into the ASCII
+; portion of the hex dump line, via XLAT or ordinary memory lookup. 
+; All printable characters "play through" as themselves. The high 128 
+; characters are translated to ASCII period (2Eh). The non-printable
+; characters in the low 128 are also translated to ASCII period, as is
+; char 127.
+    DotXlat: 
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 20h,21h,22h,23h,24h,25h,26h,27h,28h,29h,2Ah,2Bh,2Ch,2Dh,2Eh,2Fh
+    db 30h,31h,32h,33h,34h,35h,36h,37h,38h,39h,3Ah,3Bh,3Ch,3Dh,3Eh,3Fh
+    db 40h,41h,42h,43h,44h,45h,46h,47h,48h,49h,4Ah,4Bh,4Ch,4Dh,4Eh,4Fh
+    db 50h,51h,52h,53h,54h,55h,56h,57h,58h,59h,5Ah,5Bh,5Ch,5Dh,5Eh,5Fh
+    db 60h,61h,62h,63h,64h,65h,66h,67h,68h,69h,6Ah,6Bh,6Ch,6Dh,6Eh,6Fh
+    db 70h,71h,72h,73h,74h,75h,76h,77h,78h,79h,7Ah,7Bh,7Ch,7Dh,7Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+    db 2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh,2Eh
+		
+SECTION .text              ; For code
+
+;-------------------------------------------------------------------------
+; ClearLine:   Clear a Full-Length hex dump line to 16 0 values
+; UPDATED:     9/21/2022
+; IN:          Nothing
+; RETURNS:     Nothing
+; MODIFIES:    Nothing
+; CALLS:       DumpChar
+; DESCRIPTION: The hex dump line string is cleared to binary 0. 
+
+ClearLine:
+    push rax        ; Save all caller's r*x GP registers
+    push rbx
+    push rcx
+    push rdx
+
+    mov rdx,15      ; We're going to go 16 pokes, counting from 0
+.poke:	
+    mov rax,0       ; Tell DumpChar to poke a '0'
+    call DumpChar   ; Insert the '0' into the hex dump string
+    sub rdx,1       ; DEC doesn't affect CF!
+    jae .poke       ; Loop back if RDX >= 0
+	
+    pop rdx         ; Restore caller's r*x GP registers
+    pop rcx
+    pop rbx
+    pop rax
+    ret             ; Go home
+
+;-------------------------------------------------------------------------
+; DumpChar:     "Poke" a value into the hex dump line string DumpLine.
+; UPDATED:      9/21/2022
+; IN:           Pass the 8-bit value to be poked in RAX.
+;               Pass the value's position in the line (0-15) in RDX 
+; RETURNS:      Nothing
+; MODIFIES:     RAX
+; CALLS:        Nothing
+; DESCRIPTION:  The value passed in RAX will be placed in both the hex dump
+;               portion and in the ASCII portion, at the position passed 
+;               in RCX, represented by a space where it is not a printable 
+;               character.
+
+DumpChar:
+	push rbx    ; Save caller's RBX
+	push rdi    ; Save caller's RDI
+
+; First we insert the input char into the ASCII portion of the dump line
+    mov bl,byte [DotXlat+rax]      ; Translate nonprintables to '.'
+    mov byte [ASCLine+rdx+1],bl    ; Write to ASCII portion
+
+; Next we insert the hex equivalent of the input char in the hex portion
+; of the hex dump line:
+    mov rbx,rax                    ; Save a second copy of the input char
+    lea rdi,[rdx*2+rdx]            ; Calc offset into line string (RDX X 3)
+
+; Look up low nybble character and insert it into the string:
+    and rax,000000000000000Fh      ; Mask out all but the low nybble
+    mov al,byte [HexDigits+rax]    ; Look up the char equivalent of nybble
+    mov byte [DumpLine+rdi+2],al   ; Write the char equivalent to line string
+
+; Look up high nybble character and insert it into the string:
+    and rbx,00000000000000F0h      ; Mask out all the but second-lowest nybble
+    shr rbx,4                      ; Shift high 4 bits of char into low 4 bits
+    mov bl,byte [HexDigits+rbx]    ; Look up char equivalent of nybble
+    mov byte [DumpLine+rdi+1],bl   ; Write the char equiv. to line string
+
+;Done! Let's go home:
+    pop rdi     ; Restore caller's EDI register value
+    pop rbx     ; Restore caller's EBX register value
+    ret         ; Return to caller
+
+;-------------------------------------------------------------------------
+; Newlines:     Sends between 1-15 newlines to the Linux console
+; UPDATED:      5/9/2023
+; IN:           # of newlines to send, from 1 to 15
+; RETURNS:      Nothing
+; MODIFIES:     Nothing
+; CALLS:        Kernel sys_write
+; DESCRIPTION:  The number of newline chareacters (0Ah) specified in RDX
+;               is sent to stdout using using SYSCALL sys_write. This
+;               procedure demonstrates placing constant data in the 
+;               procedure definition itself, rather than in .data or .bss
+
+Newlines:
+    push rax       ; Push caller's registers
+    push rsi
+    push rdi
+    push rcx       ; Used by syscall
+    push rdx
+    push r11       ; Used by syscall
+        
+    cmp rdx,15     ; Make sure caller didn't ask for more than 15
+    ja .exit       ; If so, exit without doing anything
+    mov rcx,EOLs   ; Put address of EOLs table into ECX
+    mov rax,1      ; Specify sys_write call
+    mov rdi,1      ; Specify File Descriptor 1: Standard output
+    syscall        ; Make the system call
+
+.exit:   
+    pop r11        ; Restore all caller's registers
+    pop rdx
+    pop rcx
+    pop rdi
+    pop rsi
+    pop rax
+    ret            ; Go home!
+
+EOLs db 10,10,10,10,10,10,10,10,10,10,10,10,10,10,10
+
+;-------------------------------------------------------------------------
+; PrintLine:    Displays the hex dump line string via SYSCALL sys_write
+; UPDATED:      5/9/2023
+; IN:           Nothing
+; RETURNS:      Nothing
+; MODIFIES:     RAX RCX RDX RDI RSI
+; CALLS:        SYSCALL sys_write
+; DESCRIPTION:  The hex dump line string DumpLine is displayed to stdout 
+;               using SYSCALL sys_write.
+
+
+PrintLine:
+    ; Alas, we don't have pushad anymore.
+    push rax            ; Push caller's registers
+    push rbx
+    push rcx            ; Used by syscall
+    push rdx
+    push rsi
+    push rdi
+    push r11            ; Used by syscall
+        
+    mov rax,1           ; Specify sys_write call
+    mov rdi,1           ; Specify File Descriptor 1: Standard output
+    mov rsi,DumpLine    ; Pass offset of line string
+    mov rdx,FULLLEN     ; Pass size of the line string
+    syscall             ; Make system call to display line string
+        
+    pop r11             ; Restore callers registers
+    pop rdi             
+    pop rsi
+    pop rdx
+    pop rcx
+    pop rbx
+    pop rax
+    ret                 ; Go home!
+
+;-------------------------------------------------------------------------
+; LoadBuff:     Fills a buffer with data from stdin via syscall sys_read
+; UPDATED:      5/9/2023
+; IN:           Nothing
+; RETURNS:      # of bytes read in R15
+; MODIFIES:     RAX, RDX, RSI, RDI, RCX, R15, Buff
+; CALLS:        syscall sys_read
+; DESCRIPTION:  Loads a buffer full of data (BUFFLEN bytes) from stdin 
+;               using syscall sys_read and places it in Buff. Buffer
+;               offset counter RCX is zeroed, because we're starting in
+;               on a new buffer full of data. Caller must test value in
+;               R15: If R15 contains 0 on return, we've hit EOF on stdin.
+;               Less than 0 in R15 on return indicates some kind of error.
+
+LoadBuff:
+	push rax        ; Save caller's RAX
+	push rdx        ; Save caller's RDX
+	push rsi        ; Save caller's RSI
+	push rdi        ; Save caller's RDI
+
+	mov rax,0       ; Specify sys_read call
+	mov rdi,0       ; Specify File Descriptor 0: Standard Input
+	mov rsi,Buff    ; Pass offset of the buffer to read to
+	mov rdx,BUFFLEN	; Pass number of bytes to read at one pass
+	syscall         ; Call syscall's sys_read to fill the buffer
+	mov r15,rax     ; Save # of bytes read from file for later
+	xor rcx,rcx     ; Clear buffer pointer RCX to 0
+
+	pop rdi         ; Restore caller's RDI
+	pop rsi         ; Restore caller's RSI
+	pop rdx         ; Restore caller's RDX
+	pop rax         ; Restore caller's RAX
+	ret             ; And return to caller
+```
+
+<p align=justify>
+Ci sono due righe di dichiarazioni di identificatori globali, ciascuna con la propria direttiva GLOBAL. Come convenzione nel mio lavoro, separo le dichiarazioni di procedure e di elementi di dati nominati e assegno a ciascuna la propria riga. (Naturalmente, poiché le dichiarazioni GLOBAL non possono attraversare una riga di testo, potresti aver bisogno di più di due righe se hai molti globali da esportare.)
+</p>
+
+```asm
+ GLOBAL  Buff, DumpLine, ASCLine, HexDigits, BinDigits
+ GLOBAL  ClearLine, DumpChar, NewLines, PrintLine, LoadBuff
+```
+
+<p align=justify>
+Qualsiasi procedura o elemento di dati che deve essere esportato (cioè reso disponibile al di fuori del modulo) deve essere dichiarato su una riga dopo una direttiva GLOBAL. Non è necessario dichiarare tutto in un modulo come globale. Infatti, un modo per gestire la complessità e prevenire certi tipi di bug è riflettere con attenzione e limitare rigorosamente ciò che altri moduli possono "vedere" all'interno dei loro moduli. Un modulo può avere procedure "private" e elementi di dati nominati che possono essere referenziati solo all'interno del modulo. Rendere questi elementi privati è infatti l'impostazione predefinita: basta non dichiararli globali. Nota bene che tutti gli elementi dichiarati globali devono essere dichiarati globali prima di essere definiti nel codice sorgente. In pratica, questo significa che è necessario dichiarare le procedure globali nella parte superiore della sezione .text, prima che qualsiasi procedura sia effettivamente definita. Allo stesso modo, tutti gli elementi di dati nominati globali devono essere dichiarati nella sezione .data prima che gli elementi di dati siano definiti. Gli equates possono essere esportati dai moduli, sebbene questa sia un'innovazione dell'assemblatore NASM e non necessariamente vera per tutti gli assemblatori. Penso che sia rischioso e invece di esportare equates, definisco variabili nominate per contenere valori definiti da equates:
+</p>
+
+```asm
+ DumpLength:     
+ ASCLength:      
+ FullLength:     
+ BuffLength:     
+ dq DUMPLEN
+ dq ASCLEN
+ dq FULLLEN
+ dq BUFFLEN 
+```
+
+<p align=justify>
+Se vuoi che vengano esportate, dichiara le variabili GLOBAL. Nota che gli esempi mostrati non sono esportati da textlib.asm e servono solo a illustrare la tecnica.
+</p>
+
+### Collegare le librerie nei tuoi programmi
+
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "File, Makefile, debugging e progetto" del percorso Intermedio per Terzo anno. Serve a lavorare su organizzazione del codice in moduli riusabili e collegamento con il linker. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Collegare le librerie nei tuoi programmi" lo studente dovrebbe aver seguito il lavoro precedente su "Costruzione di librerie di procedure esterne", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Collegare le librerie nei tuoi programmi", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Costruzione di librerie di procedure esterne" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Note sulla raccolta delle procedure in librerie". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Collegare le librerie nei tuoi programmi", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Note sulla raccolta delle procedure in librerie" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: ASM_PROGRAMMING.md sezione "Collegare le librerie nei tuoi programmi" (#collegare-le-librerie-nei-tuoi-programmi). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+
+<p align=justify>
+Per tutti i precedenti programmi di esempio presentati in questo libro, i makefile sono abbastanza semplici. Qui, ad esempio, c'è il makefile per il programma hexdump2:
+</p>
+
+```make
+ hexdump2: hexdump2.o
+	 ld -o hexdump2 hexdump2.o
+ hexdump2.o: hexdump2.asm
+ 	nasm -f elf64 -g -F dwarf hexdump2.asm
+```
+
+<p align=justify>
+L'invocazione del linker converte HEXDUMP2.O nel file eseguibile hexdump2, e questo è tutto ciò che deve fare. Aggiungere un file di libreria complica leggermente le cose. Il linker ora deve fare un vero e proprio collegamento di più file. File di libreria aggiuntivi nel formato .o vengono aggiunti all'invocazione del linker dopo il nome del file collegabile del programma principale. Può esserci un numero (ragionevole) di file .o in un passaggio di collegamento. Per costruire hexdump3, ne servono solo due. Ecco il makefile per hexdump3:
+</p>
+
+```make
+ hexdump3: hexdump3.o
+ 	ld -o hexdump3 hexdump3.o ../textlib/textlib.o
+ hexdump3.o: hexdump3.asm
+ 	nasm -f elf64 -g -F dwarf hexdump3.asm
+```
+
+<p align=justify>
+Il file textlib.o è semplicemente posizionato sulla riga di invocazione del linker dopo il file .o per il programma stesso. C'è una sottigliezza nel makefile precedente: il file della libreria si trova su un percorso relativo alla directory contenente il progetto hexdump3. Posizionare ../textlib/ davanti al nome del file textlib.o consente al linker di raggiungere "su, attraverso e giù" attraverso il file system Linux nella directory del progetto per la libreria. Altrimenti, dovresti posizionare textlib.o nella stessa directory di hexdump3.o, o copiarlo in una directory sotto usr/lib, che si trova nel percorso di ricerca predefinito. Una directory sotto usr/lib sarebbe effettivamente un ottimo posto per esso, una volta che è finito e ben testato"per grandi valori di "oben testato." Mentre stai ancora lavorando attivamente a una libreria, è meglio tenerla in una directory di progetto a sé stante all'interno della stessa struttura di directory di tutte le tue altre directory di progetto, così puoi correggere bug e aggiungere funzionalità che non ti vengono in mente fino a quando non l'hai usata per un po' a costruire altri programmi.
+</p>
+
+### I pericoli di troppe procedure e troppe librerie
+
+<p align=justify>
+Nella programmazione assembly, come nella vita, si può avere troppo di una cosa buona. Ho visto librerie di codice costituite da centinaia di file, ciascun file contenente una singola procedura. Queste non sono neanche procedure autonome. Si chiamano l'una con l'altra a destra e a manca, in una fitta rete di esecuzione che è molto difficile da tracciare a livello di codice sorgente, specialmente se hai ereditato una tale libreria da qualcun altro e devi afferrare (spesso molto rapidamente) come funzionano effettivamente i meccanismi implementati dalla libreria. In assenza di una documentazione testuale molto dettagliata, non c'è una "ovista dall'alto" che ti aiuti a capire cosa chiama cosa e da dove. Se la libreria proviene da un'altra parte ed è usata come una "oscatola nera", ciò potrebbe non essere una catastrofe, anche se mi piace comunque sapere come funzionano le librerie che utilizzo. C'è, ahimè, una ragione valida per creare librerie con singole procedure come questa: quando colleghi una libreria a un programma, l'intera libreria viene aggiunta al file eseguibile, comprese quelle procedure e definizioni di dati che non vengono mai referenziate dal programma principale. Se ogni procedura viene assemblata separatamente in un suo comodo file .o, il linker aggiungerà solo quelle procedure al tuo programma che verranno effettivamente chiamate da (e quindi eseguite da) esso. Molto dipende da dove finisce il tuo codice. Se il tuo obiettivo è il file eseguibile più piccolo possibile, questo è significativo, e ci sono alcuni contesti nel mondo del linguaggio assembly (soprattutto quelli relativi ai sistemi embedded) dove ogni byte conta e il "ocodice morto" che non viene mai eseguito aggiunge costi inutili all'hardware di fascia bassa su cui il codice deve girare. La dimensione del codice in linguaggio assembly non sarà un problema su normali PC Linux con 16 gigabyte di memoria e un terabyte di disco. Se è lì che il tuo codice girerà, potresti trovare più vantaggioso avere meno librerie e più codice sorgente comprensibile, anche se finisci con qualche migliaio di byte di codice nei tuoi file eseguibili che in realtà non incontrano mai la CPU faccia a faccia.
+</p>
+
+### L'arte di creare procedure
+
+<p align=justify>
+Creare delle procedure richiede un po' più di semplicemente ritagliare una sezione di codice da uno dei tuoi programmi e farne un panino CALL e RET. Lo scopo principale dell'intera idea di procedure è quello di rendere il tuo codice più manutenibile, raggruppando istruzioni che servono a uno scopo comune in entità nominate. Non dimenticare i marziani e come hanno rapito il mio sfortunato formattatore di testo APL nel 1977. La manutenibilità è probabilmente il più difficile problema da risolvere nel design software, e la manutenibilità dipende completamente dalla comprensibilità. L'intera idea nella creazione di librerie di procedure è quella di rendere il tuo codice comprensibile" principalmente per te, ma molto probabilmente anche per altre persone che potrebbero ereditare o tentare di utilizzare il tuo codice. Quindi, in questa sezione, parlerò un po' di come pensare alle procedure e al processo della loro creazione, tenendo a mente la manutenibilità del codice.
+</p>
+
+### Manutenibilità e Riutilizzo
+
+<p align=justify>
+Lo scopo più importante delle procedure è gestire la complessità nei tuoi programmi sostituendo una sequenza di istruzioni di macchina con un nome descrittivo. Il secondo scopo più importante è il riutilizzo del codice. Non ha senso riscrivere gli stessi meccanismi comuni da zero ogni volta che inizi un nuovo progetto. Scrivili una volta, scrivili bene e usali per sempre. I due scopi interagiscono. Il riutilizzo del codice aiuta la manutenibilità del codice in vari modi:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+		Il riutilizzo significa che c'è meno codice in totale da mantenere in tutti i tuoi progetti.
+ 		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Il riutilizzo mantiene il tuo tempo e sforzo investiti nella debug.
+ 		</p>
+	</li>
+  	<li>
+		<p align=justify>
+		Il riutilizzo ti costringe a mantenere determinate convenzioni di codifica nei tuoi progetti nel tempo (perché le tue librerie lo richiedono), il che conferisce ai tuoi progetti una "somiglianza di famiglia" che li rende più facili da comprendere dopo che sei stato lontano da essi per un po'.
+ 		</p>
+	</li>
+  	<li>
+		<p align=justify>
+		Il riuso significa che avrai meno sequenze di codice che fanno praticamente la stessa cosa, ma in modi leggermente diversi.
+ 		</p>
+	</li>
+ 
+</ul>
+
+<p align=justify>
+Questo ultimo punto è sottile ma importante. Quando stai facendo debugging, ciò a cui ti riferisci costantemente nella parte posteriore della tua mente è la comprensione di come funziona ogni sezione del tuo programma. Ti piacerebbe che questa comprensione fosse unica per ogni programma che scrivi, ma non funziona in questo modo. La memoria è imprecisa e i ricordi di cose separate ma molto simili tendono a confondersi dopo un certo periodo di tempo. (Velocemente: è una Toyota 4Runner del 2001 o una Toyota 4Runner del 2003?) Nella programmazione, i dettagli sono cruciali e nella programmazione in linguaggio assembly ci sono molti dettagli. Se hai scritto a mano una procedura RefreshText tre volte per tre programmi diversi che differiscono solo in modi minori, potresti fare affidamento su una comprensione di un'implementazione di RefreshText mentre stai guardando un'altra. Più indietro nel tempo vanno queste procedure simili ma non identiche, più è probabile che tu le confonda e perda tempo a chiarire le piccole peculiarità di come ciascuna di esse funziona. Tuttavia, se c'è solo una procedura RefreshText, c'è solo una comprensione di RefreshText da avere. Tutti i punti di vantaggio della riutilizzazione menzionati si riducono a questo: gestire la complessità semplicemente riducendo la quantità di complessità che deve essere gestita.
+</p>
+
+### Decidere cosa dovrebbe essere una procedura
+
+<p align="justify">
+Quindi, quando dovrebbe essere estratto un blocco di istruzioni e trasformato in una procedura? Non ci sono regole rigide, ma ci sono alcune euristiche utili che vale la pena discutere:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+		Cerca azioni che accadono frequentemente all'interno di un programma
+ 		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Cerca azioni che potrebbero non accadere molto frequentemente all'interno di un singolo programma, ma che tendono a verificarsi in modi simili in molti o nella maggior parte dei programmi.
+ 		</p>
+	</li>
+  	<li>
+		<p align=justify>
+		Quando i programmi diventano grandi (e con "grandi" intendo oltre alla classe dimostrativa del libro di tutorial; diciamo circa 1.000 righe), cerca dei blocchi funzionali che possono essere trasformati in procedure in modo che il flusso complessivo di esecuzione nel programma principale diventi più breve, semplice e quindi più facile da comprendere. (Di più su questo tra un momento.)
+ 		</p>
+	</li>
+  	<li>
+		<p align=justify>
+		Cerca azioni all'interno di un programma che possono cambiare nel tempo in risposta a forze fuori dal tuo controllo (specifiche dei dati, librerie di terze parti, cose del genere) e isola quelle azioni in procedure.
+ 		</p>
+	</li>
+ 
+</ul>
+
+<p align=justify>
+In breve: Pensa in grande e pensa a lungo termine. Non rimarrai un principianti per sempre. Cerca di anticipare i tuoi sforzi di programmazione "nel lungo periodo" e crea procedure di utilità generale. "Generale" qui significa non solo utile all'interno del singolo programma su cui stai lavorando attualmente, ma anche utile nei programmi che scriverai in futuro. Non c'è una "dimensione minima" per le procedure se vengono chiamate abbastanza frequentemente. Procedure estremamente semplici, anche quelle con sole quattro o cinque istruzioni, non nascondono di per sé una grande complessità. Forniscono nomi descrittivi per determinate azioni frequentemente utilizzate, il che è prezioso di per sé. Possono anche fornire mattoni di base standard per la creazione di procedure più grandi e potenti. Detto ciò, una breve sequenza di codice (5-10 istruzioni) che viene chiamata solo una volta o forse due volte all'interno di un programma di media grandezza di diverse centinaia di istruzioni macchina è un cattivo candidato per essere una procedura, a meno che non sia un candidato per il riutilizzo in programmi futuri. Allora appartiene a una libreria di codice, e il codice non può essere in una libreria a meno che non sia in una procedura. Non c'è neanche una "dimensione massima" per le procedure, e ci sono circostanze in cui procedure molto grandi hanno senso, se servono a uno scopo ben definito. Ricorda che le procedure non devono sempre essere in librerie. Potresti trovare utile definire procedure grandi che vengono chiamate solo una volta quando il tuo programma diventa sufficientemente grande da richiedere di essere suddiviso in parti funzionali per la comprensibilità. Un programma in linguaggio assembly di mille righe potrebbe essere suddiviso bene in una sequenza di sette o otto procedure grandi. Ogni procedura è destinata ad essere chiamata solo una volta dal programma principale, ma questo consente al tuo programma principale di essere breve, facilmente comprensibile e molto indicativo di ciò che il programma sta facendo:
+</p>
+
+```asm
+ Start: call Initialize    ; Open spec files, create buffers
+        call OpenFile      ; Open the target data file
+ Input: call GetRec        ; Fetch a record from the open file
+        cmp rax,0          ; Test for EOF on file read
+	je Done            ; If we've hit EOF, time to shut'er down
+        call ProcessRec    ; Crunch the rec     
+        call VerifyRec     ; Validate the modified data against the spec
+        call WriteRec      ; Write the modified record out to the file
+        jmp Input          ; Go back and do it all again
+ Done:  call CloseFile     ; Close the opened file
+        call CleanUp       ; Delete the temp files
+        mov rax,60         ; Code for Exit system call
+        mov rdi,0          ; Return a code of zero
+        syscall            ; Make system call
+```
+
+<p align=justify>
+Questo corpo di programma (immaginario) è pulito e leggibile e fornisce una necessaria visione dall'alto quando inizi ad avvicinarti a un programma in linguaggio assembly di mille righe. Ricorda che i marziani si nascondono sempre da qualche parte nelle vicinanze, ansiosi di trasformare i tuoi programmi in geroglifici illeggibili. Non c'è arma contro di loro con metà della potenza delle procedure.
+</p>
+
+### Usare i commenti!
+
+<p align=justify>
+Col passare del tempo, ti renderai conto di creare dozzine o addirittura centinaia di procedure per gestire la complessità. Le librerie di procedure "opronte" che la maggior parte dei fornitori di linguaggi di alto livello fornisce con i propri compilatori non esistono affatto con NASM. Per lo più, quando hai bisogno di una funzione o di un'altra, dovrai scriverla tu stesso. Mantenere un elenco di routine ordinato non è un compito facile quando le hai scritte tutte tu. Devi documentare i fatti essenziali su ciascuna procedura individuale o le dimenticherai, oppure le ricorderai in modo errato e agirai su informazioni sbagliate. (I bug risultanti sono spesso diavolosamente difficili da trovare perché sei sicuro di ricordare tutto ciò che c'è da sapere su quella procedura! Dopotutto, l'hai scritta tu!) Raccomando vivamente di aggiungere un'intestazione di commento a ogni procedura che scrivi, non importa quanto semplice. Tale intestazione dovrebbe contenere almeno le seguenti informazioni:
+</p>
+
+<ul>
+  <li>
+    <p align="justify">
+    Il nome della procedura
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    La data dell'ultima modifica
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Il nome di ciascun punto di entrata, se la procedura ha più punti di entrata
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Cosa fa la procedura
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Quali elementi di dati il chiamante deve passarle per farla funzionare correttamente
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Quali dati (se presenti) vengono restituiti dalla procedura e dove vengono restituiti (ad esempio, nel registro RCX)
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Quali registri o elementi di dati la procedura modifica
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Quali altre procedure, se presenti, vengono chiamate dalla procedura
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Eventuali "gotchas" che devono essere tenuti a mente mentre si scrive codice che utilizza la procedura
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Oltre a ciò, altre informazioni possono essere utili nei commenti di intestazione:
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    La versione della procedura, se si utilizza il versioning
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    La data di creazione
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Il nome della persona che ha scritto la procedura, se si sta trattando di codice condiviso all'interno di un team
+    </p>
+  </li>
+</ul>
+
+ ```asm
+--------
+; LoadBuff:     Fills a buffer with data from stdin via syscall sys_read
+; UPDATED:      10/9/2022
+; IN:	        Nothing          
+; RETURNS:      # of bytes read in RAX
+; MODIFIES:     RCX, R15, Buff
+; CALLS:        syscall sys_read
+; DESCRIPTION:  Loads a buffer full of data (BUFFLEN bytes) from stdin     
+; 		using syscall sys_read and places it in Buff.
+: 		offset counter RCX is zeroed, because we're
+; 		on a new buffer full of data. Caller must test
+; 		RAX: If RAX contains 0 on return, we hit EOF on stdin
+; 		< 0 in RAX on return indicates some kind of
+```
+
+<p align=justify>
+Un'intestazione di commento non ti solleva dalla responsabilità di commentare le singole righe di codice all'interno della procedura! Come ho detto molte volte, è una buona idea mettere un breve commento a destra di ogni riga che contiene un mnemonico di istruzione della macchina, e anche (nelle procedure più lunghe) un blocco di commento che descriva ogni blocco funzionale principale all'interno della procedura.
+</p>
+
+### Controllo semplice del cursore nella console di Linux
+
+<p align=justify>
+Come passaggio dalle procedure del linguaggio assembly ai macro del linguaggio assembly, vorrei dedicare un po' di tempo ai dettagli del controllo della visualizzazione della console di Linux all'interno dei vostri programmi. Torniamo al nostro piccolo display pubblicitario per il diner di Joe. Andiamo a migliorarlo un po', prima cancellando la console di Linux e poi centrando il testo dell'annuncio sulla visualizzazione cancellata. Presenterò lo stesso programma due volte, prima con diverse parti espresse come procedure e in seguito con le stesse parti espresse come macro. Procediamo con le procedure per prime, come mostrato nel codice seguente.
+</p>
+
+```asm
+;  Executable name : eattermgcc
+;  Version         : 2.0
+;  Created date    : 6/18/2022
+;  Last update     : 5/17/2023
+;  Author          : Jeff Duntemann
+;  Description     : A simple program in assembly for Linux, using 
+;                  : NASM 2.15, demonstrating the use of escape 
+;                  : sequences to do simple "full-screen" text output
+;                  : to a terminal like Konsole.
+;
+;  Build using SASM's x64 build configuration.
+;
+;  Run by executing the executable binary file.
+;
+
+section .data      ; Section containing initialised data
+
+    SCRWIDTH       equ 80             ; Default is 80 chars wide
+    PosTerm:       db 27,"[01;01H"    ; <ESC>[<Y>;<X>H
+    POSLEN         equ $-PosTerm      ; Length of term position string
+    ClearTerm:     db 27,"[2J"        ; <ESC>[2J
+    CLEARLEN       equ $-ClearTerm    ; Length of term clear string
+    AdMsg:         db "Eat At Joe's!" ; Ad message
+    ADLEN          equ $-AdMsg        ; Length of ad message
+    Prompt:        db "Press Enter: " ; User prompt
+    PROMPTLEN      equ $-Prompt       ; Length of user prompt
+
+; This table gives us pairs of ASCII digits from 0-80. Rather than 
+; calculate ASCII digits to insert in the terminal control string, 
+; we look them up in the table and read back two digits at once to 
+; a 16-bit register like DX, which we then poke into the terminal 
+; control string PosTerm at the appropriate place. See GotoXY.
+; If you intend to work on a larger console than 80 X 80, you must
+; add additional ASCII digit encoding to the end of Digits. Keep in
+; mind that the code shown here will only work up to 99 X 99.
+    Digits: db "0001020304050607080910111213141516171819"
+            db "2021222324252627282930313233343536373839"
+            db "4041424344454647484950515253545556575859"
+            db "606162636465666768697071727374757677787980"
+
+SECTION .bss       ; Section containing uninitialized data
+
+SECTION .text      ; Section containing code
+
+;-------------------------------------------------------------------------
+; ClrScr:       Clear the Linux console
+; UPDATED:      9/13/2022
+; IN:           Nothing
+; RETURNS:      Nothing
+; MODIFIES:     Nothing
+; CALLS:        SYSCALL sys_write
+; DESCRIPTION:  Sends the predefined control Estring <ESC>[2J to the
+;               console, which clears the full display
+
+ClrScr:
+    push rax          ; Save pertinent registers
+    push rbx
+    push rcx
+    push rdx
+    push rsi
+    push rdi
+
+    mov rsi,ClearTerm ; Pass offset of terminal control string
+    mov rdx,CLEARLEN  ; Pass the length of terminal control string
+    call WriteStr     ; Send control string to console
+
+    pop rdi           ; Restore pertinent registers
+    pop rsi
+    pop rdx
+    pop rcx
+    pop rbx
+    pop rax
+    ret               ; Go home
+
+
+;-------------------------------------------------------------------------
+; GotoXY:       Position the Linux Console cursor to an X,Y position
+; UPDATED:      9/13/2022
+; IN:           X in AH, Y     nop            ; This no-op keeps gdb happy...in AL
+; RETURNS:      Nothing
+; MODIFIES:     PosTerm terminal control sequence string
+; CALLS:        Kernel sys_write
+; DESCRIPTION:  Prepares a terminal control string for the X,Y coordinates
+;               passed in AL and AH and calls sys_write to position the
+;               console cursor to that X,Y position. Writing text to the
+;               console after calling GotoXY will begin display of text
+;               at that X,Y position.
+
+GotoXY:
+    push rax                ; Save caller's registers
+    push rbx
+    push rcx
+    push rdx
+    push rsi
+
+    xor rbx,rbx             ; Zero RBX
+    xor rcx,rcx             ; Ditto RCX
+
+; Poke the Y digits:
+    mov bl,al                   ; Put Y value into scale term RBX
+    mov cx,[Digits+rbx*2]  ; Fetch decimal digits to CX
+    mov [PosTerm+2],cx ; Poke digits into control string
+
+; Poke the X digits:
+    mov bl,ah              ; Put X value into scale term EBX
+    mov cx,[Digits+rbx*2]  ; Fetch decimal digits to CX
+    mov [PosTerm+5],cx     ; Poke digits into control string
+
+; Send control sequence to stdout:
+    mov rsi,PosTerm         ; Pass address of the control string
+    mov rdx,POSLEN          ; Pass the length of the control string
+    call WriteStr           ; Send control string to the console
+
+; Wrap up and go home:
+    pop rsi                 ; Restore caller's registers
+    pop rdx
+    pop rcx			   
+    pop rbx
+    pop rax
+    ret                     ; Go home
+
+;-------------------------------------------------------------------------
+; WriteCtr:     Send a string centered to an 80-char wide Linux console
+; UPDATED:      5/10/2023
+; IN:           Y value in AL, String address in RSI, string length in RDX
+; RETURNS:      Nothing
+; MODIFIES:     PosTerm terminal control sequence string
+; CALLS:        GotoXY, WriteStr
+; DESCRIPTION:  Displays a string to the Linux console centered in an
+;               80-column display. Calculates the X for the passed-in 
+;               string length, then calls GotoXY and WriteStr to send 
+;               the string to the console
+
+WriteCtr:
+    push rbx           ; Save caller's RBX
+    xor rbx,rbx        ; Zero RBX
+    mov bl,SCRWIDTH    ; Load the screen width value to BL
+    sub bl,dl          ; Take diff. of screen width and string length
+    shr bl,1           ; Divide difference by two for X value
+    mov ah,bl          ; GotoXY requires X value in AH
+    call GotoXY        ; Position the cursor for display
+    call WriteStr      ; Write the string to the console
+    pop rbx            ; Restore caller's RBX
+    ret                ; Go home
+
+
+;-------------------------------------------------------------------------
+; WriteStr:     Send a string to the Linux console
+; UPDATED:      5/10/2023
+; IN:           String address in RSI, string length in RDX
+; RETURNS:      Nothing
+; MODIFIES:     Nothing
+; CALLS:        Kernel sys_write
+; DESCRIPTION:  Displays a string to the Linux console through a 
+;               sys_write kernel call
+
+WriteStr:
+    push rax    ; Save pertinent registers
+    push rdi
+    mov rax,1   ; Specify sys_write call
+    mov rdi,1   ; Specify File Descriptor 1: Stdout
+    syscall     ; Make the kernel call
+    pop rdi     ; Restore pertinent registers
+    pop rax
+    ret         ; Go home
+
+global  main
+
+main:
+    push rbp       ; Prolog
+    mov rbp, rsp   ; for correct debugging
+
+; First we clear the terminal display...
+    call ClrScr
+
+; Then we post the ad message centered on the 80-wide console:
+    xor rax,rax    ; Zero out RAX.
+    mov al,12
+    mov rsi,AdMsg
+    mov rdx,ADLEN
+    call WriteCtr
+
+; Position the cursor for the "Press Enter" prompt:
+    mov rax,0117h  ; X,Y = 1,23 as a single hex value in AX
+    call GotoXY    ; Position the cursor
+
+; Display the "Press Enter" prompt:
+    mov rsi,Prompt      ; Pass offset of the prompt
+    mov rdx,PROMPTLEN   ; Pass the length of the prompt
+    call WriteStr       ; Send the prompt to the console
+
+; Wait for the user to press Enter:
+    mov rax,0      ; Code for sys_read
+    mov rdi,0      ; Specify File Descriptor 0: Stdin	
+    syscall        ; Make kernel call
+
+; And we're done!
+Exit:
+    pop rbp
+    ret
+   
+```
+
+<p align=justify>
+C'è un nuovo macchinario qui. Tutti i programmi che ho presentato finora in questo libro inviano semplicemente righe di testo in sequenza all'output standard, e la console le visualizza sequenzialmente, ogni riga nella riga successiva, scorrendo verso l'alto dal fondo. Questo può essere molto utile, ma non è il meglio che possiamo fare. Nel Capitolo 6, descrivo brevemente il modo in cui la console di Linux può essere controllata inviando "osequenze di escape" incorporati nel flusso di testo che viaggia dal tuo programma a stdout. Sarebbe utile rileggere quella sezione "oControllo del terminale con sequenze di escape" se è passato del tempo, poiché non ricapitolerei a fondo qui. L'esempio più semplice di una sequenza di escape per controllare la console cancella l'intero display della console a spazi vuoti. (Fondamentalmente, caratteri di spazio.) Nel programma eattermgcc, questa sequenza è una variabile di stringa chiamata ClearTerm:
+</p>
+
+```
+ ClearTerm:      db 27,"[2J"  ; <ESC>[2J
+```
+
+<p align=justify>
+La sequenza di escape è long quattro caratteri. Inizia con ESC, un carattere non stampabile che di solito descriviamo con il suo valore decimale nella tabella ASCII, 27. (Oppure esadecimale, che è 1Bh.) Immediatamente dopo il carattere ESC ci sono i tre caratteri stampabili: [2J. Sono stampabili, ma non vengono stampati perché seguono ESC. La console controlla i caratteri ESC e interpreta qualsiasi carattere che segue ESC in un modo speciale, secondo uno schema ampio e molto complicato. Sequenze particolari rappresentano comandi particolari per la console, come questa, che svuota il display. Non c'è un marcatore alla fine di una sequenza di escape per indicare che la sequenza è finita. La console conosce ogni singola sequenza di escape a menadito, comprese le lunghezze di ciascuna e non ci sono ambiguità. Nel caso della sequenza ClearTerm, la console sa che quando vede il carattere "oJ", la sequenza è completa. Poi svuota il suo display e riprende a visualizzare i caratteri che il tuo programma invia a stdout. Non è necessario fare nulla di speciale per inviare una sequenza di escape alla console. La sequenza di escape va a stdout tramite SYSCALL, proprio come tutto il testo. Puoi incorporare sequenze di escape nel mezzo di testo stampabile tramite un'attenta disposizione delle direttive DB nelle sezioni .text dei tuoi programmi. Questo è importante: anche se le sequenze di escape non vengono mostrate sul display della console, devono comunque essere contate quando passi la lunghezza di una sequenza di testo a sys_write tramite SYSCALL. La sequenza di escape per svuotare il display è facile da capire, perché è sempre la stessa e fa sempre la stessa cosa. La sequenza che posiziona il cursore è molto più complicata, perché richiede parametri che specificano la posizione X,Y a cui il cursore deve essere spostato. Ognuno di questi parametri è un numero decimale testuale a due cifre in ASCII che deve essere incorporato nella sequenza dal tuo programma prima che la sequenza venga inviata a stdout. Tutta la difficoltà nel muovere il cursore nella console Linux coinvolge l'incorporamento di quei parametri X e Y nella sequenza di escape. La sequenza predefinita come definita in eattermgcc si chiama PosTerm:
+</p>
+
+```asm
+PosTerm:      db 27,"[01;01H"      ; <ESC>[<Y>;<X>H
+```
+
+<p align=justify>
+Come con ClearTerm, inizia con un carattere ESC. Tra il carattere [ e il carattere H ci sono i due parametri. Il valore Y viene per primo ed è separato dal valore X da un punto e virgola. Nota bene che questi non sono numeri binari, ma due caratteri ASCII che rappresentano cifre numeriche decimali, in questo caso, ASCII 48 (0) e ASCII 49 (1). Non puoi semplicemente inserire il valore binario 1 nella sequenza di escape. La console non comprende il valore binario 1 come ASCII 49. I valori binari per le posizioni X e Y devono essere convertiti nei loro equivalenti ASCII e poi inseriti nella sequenza di escape. Questo è ciò che fa la procedura GotoXY. I valori binari vengono convertiti nei loro equivalenti ASCII consultando i caratteri ASCII in una tabella. La tabella Digits presenta rappresentazioni ASCII a due cifre di valori numerici da 0 a 80. I valori inferiori a 10 hanno zeri iniziali, come in 01, 02, 03, e così via. Ecco dove avviene la magia all'interno di GotoXY:
+</p>
+
+```asm
+ ; Poke the Y digits:
+ mov bl,al                ; Put Y value into scale term    
+ mov cx,[Digits+rbx*2]    ; Fetch decimal digits to CX
+ mov [PosTerm+2],cx       ; Poke digits into control string
+ ; Poke the X digits:
+ mov bl,ah   		  ; Put X value into scale term
+ mov cx,[Digits+rbx*2]   ; Fetch decimal digits to CX
+ mov [PosTerm+5],cx       ; Poke digits into control string
+```
+
+<p align=justify>
+è posizionato in un RBX liberato che diventa un termine in un indirizzo efficace a partire da Digits. Poiché ogni elemento della tabella Digits è grande due caratteri, dobbiamo scalare l'offset per due. Il trucco (se ce n'è uno) consiste nel portare giù entrambi i numeri ASCII con un'unica referenza di memoria e collocarli nel registro a 16 bit CX. Con i due numeri ASCII in CX, poi li inseriamo simultaneamente nella loro corretta posizione nella stringa della sequenza di escape. Il valore Y inizia all'offset 2 nella stringa, e il valore X inizia all'offset 5. Una volta che la stringa PosTerm è stata modificata per una particolare coppia di coordinate X,Y, la stringa viene inviata a stdout e interpretata dalla console come una sequenza di escape che controlla la posizione del cursore. Il prossimo carattere inviato alla console apparirà nella nuova posizione del cursore, e i caratteri successivi seguiranno nelle posizioni successive finché non viene inviata un'altra sequenza di controllo del cursore alla console. Assicurati quando esegui programmi che emettono codici di controllo del cursore che la finestra della tua console sia più grande dei massimi valori X e Y che il tuo cursore assumerà, altrimenti le righe si piegheranno e nulla apparirà esattamente dove intendi. Il programma eattermgcc ha una tabella Digits valida fino a 80  -  80. Se desideri lavorare su un display più grande, dovrai espandere la tabella Digits con gli equivalenti ASCII dei valori a due cifre fino a 99. A causa del modo in cui la tabella è configurata e referenziata, puoi recuperare solo valori a due cifre, e quindi con il codice mostrato qui sei limitato a una console da 99  -  99 caratteri. Questo non è un problema serio, poiché gli schermi in modalità testo in Linux generalmente rispettano il vecchio standard dei terminali di testo di 80  -  24.
+</p>
+
+### Avvertenze per il controllo della console
+
+<p align=justify>
+Tutto ciò sembra fantastico, ma non è proprio così fantastico come sembra. Le sequenze di controllo fondamentali come cancellare il display e spostare il cursore sono probabilmente universali e funzioneranno in modo identico su qualsiasi console Linux tu possa trovare. Certamente funzionano su GNOME Terminal e Konsole, le due utility per terminale console più popolari per le distro Linux basate su Debian. Sfortunatamente, la storia dei terminal Unix e del controllo del terminale è una storia molto macchiata e, per le funzioni di controllo della console più avanzate, le sequenze potrebbero non essere supportate o potrebbero essere diverse da un'implementazione della console all'altra. Per garantire che tutto funzioni, i tuoi programmi dovrebbero sondare la console per scoprire quale specifica del terminale supporta e poi emettere le sequenze di escape di conseguenza. è un peccato. In Konsole, la seguente sequenza di escape rende lo sfondo della console verde:
+</p>
+
+```asm
+ GreenBack:    db 27,"[42m"
+```
+
+<p align=justify>
+Almeno lo fa in Konsole. Quanto sia universale questa sequenza e altre simili, non lo so. Stessa cosa per la moltitudine di altri comandi di controllo della console, tramite i quali puoi accendere e spegnere i LED della tastiera del PC, modificare i colori del primo piano, visualizzare con sottolineature, e così via. Maggiori informazioni su questo (nello stile conciso di Unix) possono essere trovate nelle pagine man di Linux sotto la parola chiave "console_codes". Ti invito a sperimentare, tenendo presente che diverse console (soprattutto quelle su implementazioni Unix non Linux) possono reagire in modi diversi a sequenze diverse. Tuttavia, controllare l'output della console non è la cosa peggiore. Il sacro graal della programmazione in console è creare applicazioni testuali a schermo intero che "disegnano" un modulo sulla console, completo di campi per l'inserimento dati, e poi consentire all'utente di passare da un campo all'altro, inserendo dati in ogni campo. Questo diventa diabolico in Linux a causa della necessità di accedere a singole pressioni di tasti sulla tastiera della console, attraverso qualcosa chiamato modalità raw. Anche solo spiegare come funziona la modalità raw richiederebbe la maggior parte di un capitolo e coinvolgerebbe molti argomenti Linux piuttosto avanzati, per i quali non ho spazio in questo libro. Il modo standard di Unix per trattare la console è una libreria C chiamata ncurses, e anche se ncurses può essere chiamata dall'assembly, è veramente una cosa pesante e brutta. Una scelta migliore per i programmatori in assembly è una libreria molto più recente scritta specificamente per l'assembly NASM, chiamata LinuxAsmTools. è stata originariamente scritta da Jeff Owens e fa quasi tutto ciò che fa ncurses senza le convenzioni di chiamata forzate di C e altri pesanti cruft di C. LinuxAsmTools è gratuita e open-source. Purtroppo, dovrai cercarla. Fai una ricerca su Google per "Linux ASM Tools" e dovresti trovare un link, molto probabilmente a GitHub. La libreria è stata spostata diverse volte da quando l'ho scoperta per la prima volta a metà degli anni 2000, e sospetto che si sposterà di nuovo.
+</p>
+
+### Creare ed Usare Macro
+
+<p align=justify>
+Ci sono più di un modo per suddividere un programma in linguaggio assembly in segmenti più gestibili. Le procedure sono il modo più ovvio e certamente il più facile da comprendere. Il meccanismo per chiamare e tornare dalle procedure è integrato direttamente nella CPU ed è indipendente da qualsiasi prodotto assembler specifico. I principali assemblatori odierni forniscono un altro strumento di gestione della complessità: le macro. Le macro sono tutta un'altra cosa. Mentre le procedure sono implementate tramite le istruzioni CALL e RET integrate nel set di istruzioni, le macro sono un'astuzia dell'assembler e non dipendono da nessuna istruzione particolare o gruppo di istruzioni. In termini semplici, una macro è un'etichetta che rappresenta una sequenza di righe di testo. Questa sequenza di righe di testo può essere (ma non è necessariamente) una sequenza di istruzioni. Quando l'assembler incontra l'etichetta della macro in un file di codice sorgente, sostituisce l'etichetta della macro con le righe di testo che rappresenta. Questo è chiamato macro, perché il nome della macro (che occupa una riga di testo) viene sostituito da più righe di testo, che vengono quindi assemblate come se fossero apparse nel file di codice sorgente fin dall'inizio. (Naturalmente, una macro non deve per forza consistere in più righe di testo. Può essere solo una - ma in tal caso ci sono molti meno vantaggi nell'usarle!) Le macro somigliano a file di inclusione, come quelli che ho spiegato in precedenza in questo capitolo. Potresti pensare a una macro come a un file di inclusione integrato nel file di codice sorgente. è una sequenza di righe di testo che viene definita una volta, data un nome descrittivo e poi inserita nel codice sorgente continuamente secondo necessità semplicemente utilizzando il nome della macro. Questo processo è mostrato nella figura seguente. Il codice sorgente memorizzato su disco ha una definizione della macro, racchiusa tra le direttive %MACRO e %ENDMACRO. Più avanti nel file, il nome della macro appare più volte. Quando l'assembler elabora questo file, copia la definizione della macro in un buffer da qualche parte nella memoria. Mentre assembla il testo letto dal disco, l'assembler inserisce le istruzioni contenute nella macro nel testo ovunque compaia il nome della macro. Il file sul disco non viene influenzato; l'espansione delle macro avviene solo in memoria.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/how_macros_work.png">
+</div>
+
+### Il Meccanismo della definizione di Macro
+
+<p align=justify>
+Una definizione di macro assomiglia un po' a una definizione di procedura, racchiusa tra una coppia di direttive speciali NASM: %MACRO e %ENDMACRO. Si noti che la direttiva %ENDMACRO si trova sulla riga dopo l'ultima riga della macro. Non commettere l'errore di trattare %ENDMACRO come un'etichetta che segna l'ultima riga della macro. Una piccola mancanza delle macro rispetto alle procedure è che le macro possono avere solo un punto di entrata. Una macro, in fin dei conti, è una sequenza di righe di codice che vengono inserite nel programma nel corso dell'esecuzione. Non si chiama una macro e non si ritorna da essa. La CPU la esegue proprio come esegue qualsiasi sequenza di istruzioni. Molte o la maggior parte delle procedure possono essere espresse come macro con un po' di attenzione. Nel codice seguente, ho preso il programma precedente e ho convertito tutte le procedure in macro affinché tu possa vedere le differenze tra i due approcci.
+</p>
+
+```asm
+;  Executable name : eatmacro
+;  Version         : 2.0
+;  Created date    : 10/11/2022
+;  Last update     : 7/18/2023
+;  Author          : Jeff Duntemann
+;  Description     : A simple program in assembly for Linux, using 
+;                  : NASM 2.14.2, demonstrating the use of escape 
+;                  : escape sequences to do simple "full-screen" text
+;                  ; output through macros rather than procedures
+;
+;  Build using these commands:
+;    nasm -f elf -g -F dwarf eatmacro.asm
+;    ld -o eatmacro eatmacro.o
+;
+;
+section .data      ; Section containing initialized data
+
+    SCRWIDTH:   equ 80              ; By default 80 chars wide
+    PosTerm:    db 27,"[01;01H"     ; <ESC>[<Y>;<X>H
+    POSLEN:     equ $-PosTerm       ; Length of term position string
+    ClearTerm:  db 27,"[2J"         ; <ESC>[2J
+    CLEARLEN    equ $-ClearTerm     ; Length of term clear string
+    AdMsg:      db "Eat At Joe's!"  ; Ad message
+    ADLEN:      equ $-AdMsg         ; Length of ad message
+    Prompt:     db "Press Enter: "  ; User prompt
+    PROMPTLEN:  equ $-Prompt        ; Length of user prompt
+
+; This table gives us pairs of ASCII digits from 0-80. Rather than 
+; calculate ASCII digits to insert in the terminal control string, 
+; we look them up in the table and read back two digits at once to 
+; a 16-bit register like DX, which we then poke into the terminal 
+; control string PosTerm at the appropriate place. See GotoXY.
+; If you intend to work on a larger console than 80 X 80, you must
+; add additional ASCII digit encoding to the end of Digits. Keep in
+; mind that the code shown here will only work up to 99 X 99.
+    Digits: db "0001020304050607080910111213141516171819"
+	        db "2021222324252627282930313233343536373839"
+            db "4041424344454647484950515253545556575859"
+            db "606162636465666768697071727374757677787980"
+
+SECTION .bss       ; Section containing uninitialized data
+
+SECTION .text      ; Section containing code
+
+;-------------------------------------------------------------------------
+; ExitProg:     Terminate program and return to Linux
+; UPDATED:      10/11/2022
+; IN:           Nothing
+; RETURNS:      Nothing
+; MODIFIES:     Nothing
+; CALLS:        Kernel sys_exit
+; DESCRIPTION:  Calls syscall sys_edit to terminate the program and return
+;               control to Linux
+
+%macro  ExitProg 0
+    mov rsp,rbp     ; Epilog
+    pop rbp
+
+    mov rax,60      ; 60 = exit the program
+    mov rdi,0       ; Return value in rdi 0 = nothing to return
+    syscall         ; Call syscall sys_exit to return to Linux
+%endmacro
+
+
+;-------------------------------------------------------------------------
+; WaitEnter:    Wait for the user to press Enter at the console
+; UPDATED:      10/11/2022
+; IN:           Nothing
+; RETURNS:      Nothing
+; MODIFIES:     Nothing
+; CALLS:        Kernel sys_read
+; DESCRIPTION:  Calls sys_read to wait for the user to type a newline at
+;               the console
+
+%macro WaitEnter 0
+    mov rax,0      ; Code for sys_read
+    mov rdi,0      ; Specify File Descriptor 0: Stdin	
+    syscall        ; Make kernel call
+%endmacro
+
+
+;-------------------------------------------------------------------------
+; WriteStr:     Send a string to the Linux console
+; UPDATED:      5/10/2023
+; IN:           String address in %1, string length in %2
+; RETURNS:      Nothing
+; MODIFIES:     Nothing
+; CALLS:        Kernel sys_write
+; DESCRIPTION:  Displays a string to the Linux console through a 
+;               sys_write kernel call
+
+%macro WriteStr 2   ; %1 = String address; %2 = string length
+    push r11    ; Save pertinent registers
+    push rax
+    push rcx
+    mov rax,1   ; 1 = sys_write for syscall
+    mov rdi,1   ; 1 = fd for stdout; i.e., write to the terminal window
+    mov rsi,%1  ; Put address of the message string in rsi
+    mov rdx,%2  ; Length of string to be written in rdx
+    syscall     ; Make the system call
+    pop rcx
+    pop rax
+    pop r11
+%endmacro
+
+
+;-------------------------------------------------------------------------
+; ClrScr:       Clear the Linux console
+; UPDATED:      5/10/2023
+; IN:           Nothing
+; RETURNS:      Nothing
+; MODIFIES:     Nothing
+; CALLS:        Kernel sys_write
+; DESCRIPTION:  Sends the predefined control string <ESC>[2J to the
+;               console, which clears the full display
+
+%macro ClrScr 0
+    push rax    ; Save pertinent registers
+    push rbx
+    push rcx
+    push rdx
+    push rsi
+    push rdi
+; Use WriteStr macro to write control string to console:
+	WriteStr ClearTerm,CLEARLEN
+	pop rdi     ; Restore pertinent registers
+	pop rsi
+	pop rdx
+	pop rcx
+	pop rbx
+	pop rax	
+%endmacro
+
+
+;-------------------------------------------------------------------------
+; GotoXY:       Position the Linux Console cursor to an X,Y position
+; UPDATED:      10/11/2022
+; IN:           X in %1, Y in %2
+; RETURNS:      Nothing
+; MODIFIES:     PosTerm terminal control sequence string
+; CALLS:        Kernel sys_write
+; DESCRIPTION:  Prepares a terminal control string for the X,Y coordinates
+;               passed in AL and AH and calls sys_write to position the
+;               console cursor to that X,Y position. Writing text to the
+;               console after calling GotoXY will begin display of text
+;               at that X,Y position.
+
+%macro GotoXY 2 ; %1 is X value; %2 id Y value		
+    push rdx          ; Save caller's registers
+    push rcx
+    push rbx
+    push rax
+    push rsi
+    push rdi
+    xor rdx,rdx       ; Zero EDX
+    xor rcx,rcx       ; Ditto ECX
+; Poke the Y digits:
+    mov dl,%2                  ; Put Y value into offset term EDX
+    mov cx,word [Digits+rdx*2] ; Fetch decimal digits to CX
+    mov word [PosTerm+2],cx    ; Poke digits into control string
+; Poke the X digits:
+    mov dl,%1                    ; Put X value into offset term EDX
+    mov cx,word [Digits+rdx*2]   ; Fetch decimal digits to CX
+    mov word [PosTerm+5],cx	     ; Poke digits into control string
+; Send control sequence to stdout:
+    WriteStr PosTerm,POSLEN
+; Wrap up and go home:
+    pop rdi           ; Restore caller's registers
+    pop rsi
+    pop rbx
+    pop rcx
+    pop rdx
+%endmacro
+
+;-------------------------------------------------------------------------
+; WriteCtr:     Send a string centered to an 80-char wide Linux console
+; UPDATED:      5/10/2023
+; IN:           Y value in %1, String address in %2, string length in %3
+; RETURNS:      Nothing
+; MODIFIES:     PosTerm terminal control sequence string
+; CALLS:        GotoXY, WriteStr
+; DESCRIPTION:  Displays a string to the Linux console centered in an
+;               80-column display. Calculates the X for the passed-in 
+;               string length, then calls GotoXY and WriteStr to send 
+;               the string to the console
+
+%macro WriteCtr 3  ; %1 = row; %2 = String addr; %3 = String length
+    push rbx       ; Save caller's RBX
+    push rdx       ; Save caller's RDX
+    mov rdx,%3     ; Load string length into RDX
+    xor rbx,rbx      ; Zero RBX
+    mov bl,SCRWIDTH  ; Load the screen width value to BL
+    sub bl,dl      ; Calc diff. of screen width and string length
+    shr bl,1       ; Divide difference by two for X value
+    GotoXY bl,%1   ; Position the cursor for display
+    WriteStr %2,%3 ; Write the string to the console
+    pop rdx        ; Restore caller's RDX
+    pop rbx        ; Restore caller's RBX
+%endmacro
+
+
+global  _start     ; Linker needs this to find the entry point!
+
+_start:
+    push rbp       ; Stack alignment ptolog
+    mov rbp,rsp    ; for correct debugging
+    and rsp,-16
+
+; First we clear the terminal display...
+	ClrScr
+; Then we post the ad message centered on the 80-wide console:
+	WriteCtr 12,AdMsg,ADLEN
+; Position the cursor for the "Press Enter" prompt:
+	GotoXY 1,23
+; Display the "Press Enter" prompt:
+	WriteStr Prompt,PROMPTLEN	
+; Wait for the user to press Enter:
+	WaitEnter
+; And we're done!
+    ExitProg
+```
+
+<p align=justify>
+Confronta i macro in eatmacro con i loro equivalenti di procedura in eattermgcc. Hanno eliminato le loro istruzioni RET (e per quei macro che invocano altri macro, le loro istruzioni CALL) ma per la maggior parte consistono quasi esattamente nello stesso codice. I macro sono invocati semplicemente nominando loro. Ancora una volta, non usare l'istruzione CALL. Basta scrivere il nome del macro su una riga.
+</p>
+
+```asm
+ClrScr
+```
+
+<p align=justify>
+L'assemblatore si occuperà del resto
+</p>
+
+### Definire Macro con parametri
+
+<p align=justify>
+Le macro sono per la maggior parte un semplice trucco di sostituzione del testo, ma la sostituzione del testo ha alcune caratteristiche interessanti e a volte utili. Una di queste è la possibilità di passare parametri a un macro quando la macro viene invocata. Ad esempio, in eatmacro c'è un'invocazione del macro WriteCtr con tre parametri.
+</p>
+
+```asm
+ WriteCtr 12,AdMsg,ADDLEN
+```
+
+<p align=justify>
+La costante letterale 12 viene passata "dentro" il macro e utilizzata per specificare la riga dello schermo su cui il testo centrato deve essere visualizzato; in questo caso, la riga 12 dall'alto. Potresti sostituire il 12 con 3 o 16 o qualsiasi altro numero inferiore al numero di righe attualmente visualizzate nella console Linux. (Se tenti di posizionare il cursore su una riga che non esiste nella console, i risultati sono difficili da prevedere. In genere, il testo appare sulla riga inferiore del display.) Gli altri due parametri ricevono l'indirizzo e la lunghezza della stringa da visualizzare. I parametri del macro sono, di nuovo, artefatti dell'assemblatore. Non vengono spinti nello stack o impostati in un'area di memoria condivisa o qualcosa del genere. I parametri sono semplicemente segnaposto per i valori effettivi (chiamati) che passi al macro attraverso i suoi parametri. Diamo un'occhiata più da vicino al macro WriteCtr per vedere come funziona:
+</p>
+
+```asm
+%macro WriteCtr 3  ; %1 = row; %2 = String addr; %3 = String length
+    push rbx       ; Save caller's RBX
+    push rdx       ; Save caller's RDX
+    mov rdx,%3     ; Load string length into RDX
+    xor rbx,rbx        ; Zero RBX
+    mov bl,SCRWIDTH    ; Load the screen width value to BL
+    sub bl,dl      ; Calc diff. of screen width and string length
+    shr bl,1       ; Divide difference by two for X value
+    GotoXY bl,%1   ; Position the cursor for display
+    WriteStr %2,%3 ; Write the string to the console
+    pop rdx        ; Restore caller's RDX
+    pop rbx        ; Restore caller's RBX
+ %endmacro
+
+```
+
+<p align=justify>
+Quindi, dove sono i parametri? Questa è un'altra area in cui NASM differisce radicalmente da MASM di Microsoft. MASM ti consente di utilizzare nomi simbolici"come la parola Row o StringLength"per rappresentare i parametri. NASM si basa su un sistema più semplice che dichiara il numero di parametri nella definizione della macro e poi fa riferimento a ciascun parametro per numero all'interno della macro, piuttosto che tramite un nome simbolico. Nella definizione della macro WriteCtr, il numero 3 dopo il nome della macro indica che l'assemblatore deve cercare tre parametri. Questo numero deve essere presente"anche come 0"anche quando hai una macro come ClrScr senza parametri. Ogni macro deve avere un conteggio dei parametri. Nella definizione della macro, i parametri sono referenziati per numero. %1 indica il primo parametro utilizzato dopo l'invocazione del nome della macro WriteCtr. %2 indica il secondo parametro, contando da sinistra a destra. %3 indica il terzo parametro, e così via. I valori effettivi passati nei parametri sono chiamati argomenti. Non confondere i valori effettivi con i parametri. Se capisci Pascal, è esattamente come la differenza tra parametri formali e parametri effettivi. I parametri di una macro corrispondono ai parametri formali di Pascal, mentre gli argomenti di una macro corrispondono ai parametri effettivi di Pascal. I parametri della macro sono le etichette che seguono il nome della macro nella riga in cui è definita. Gli argomenti sono i valori specificati sulla riga in cui la macro è invocata. I parametri delle macro sono un tipo di etichetta e possono essere referenziati ovunque all'interno della macro"ma solo all'interno della macro. In WriteCtr, il parametro %3 è referenziato come operando di un'istruzione MOV. L'argomento passato alla macro in %3 viene quindi caricato nel registro RDX. Gli argomenti delle macro possono essere passati come parametri ad altre macro. Questo è ciò che accade all'interno di WriteCtr quando WriteCtr invoca la macro WriteStr. WriteStr prende due parametri e WriteCtr passa i suoi parametri %2 e %3 a WriteStr come suoi argomenti.
+</p>
+
+### Il Meccanismo d'invocazione delle Macro
+
+<p align=justify>
+Puoi passare un valore costante letterale come argomento a una macro, proprio come il valore della riga è passato alla macro WriteCtr nel programma eatmacro. Puoi anche passare un nome di registro come argomento. Questo è legale ed è un'invocazione perfettamente ragionevole di WriteCtr:
+</p>
+
+```asm
+ mov al,4
+ WriteCtr al,AdMsg,ADLEN
+```
+
+<p align=justify>
+All'interno del macro WriteCtr, NASM sostituisce il nome del registro AL con il parametro %1
+</p>
+
+```asm
+GotoXY bl,%1  ; Position the cursor for display
+```
+
+<p align=justify>
+diventa:
+</p>
+
+```asm
+ GotoXY bl,al
+```
+
+<p align=justify>
+Nota bene che tutte le consuete regole che governano gli operandi d'istruzione si applicano. Il parametro %1 può contenere solo un argomento a 8 bit, perché in ultima analisi %1 viene caricato in un registro a 8 bit all'interno di GotoXY. Non puoi legalmente passare il registro RBP o CX a WriteCtr nel parametro %1, perché non puoi spostare direttamente un registro a 64 bit, 32 bit o 16 bit in un registro a 8 bit. Allo stesso modo, puoi passare un indirizzo tra parentesi come argomento:
+</p>
+
+```asm
+WriteCtr [RowValue],AdMsg,ADLEN
+```
+
+<p align=justify>
+Questo presuppone, ovviamente, che RowValue sia una variabile nominata definita come un elemento dati a 8 bit. Se un parametro macro viene utilizzato in un'istruzione che richiede un argomento a 64 bit (come i parametri %2 e %3 di WriteCtr), puoi anche passare etichette che rappresentano indirizzi a 64 bit o valori numerici a 64 bit. Quando una macro viene invocata, i suoi argomenti sono separati da virgole. NASM inserisce gli argomenti nei parametri della macro in ordine, da sinistra verso destra. Se passi solo due argomenti a una macro con tre parametri, è probabile che tu riceva un messaggio di errore dall'assemblatore, a seconda di come hai fatto riferimento al parametro non compilato. Se passi più argomenti a una macro rispetto ai parametri disponibili per riceverli, gli argomenti superflui verranno ignorati.
+</p>
+
+### Etichette Locali all'interno di macro
+
+<p align=justify>
+I macro che ho incluso in eatmacro.asm sono stati progettati per essere semplici e piuttosto ovvi. Nessuno di essi contiene istruzioni di salto, ma il codice nelle macro può utilizzare salti condizionali e incondizionati proprio come il codice nelle procedure o nei corpi dei programmi. Tuttavia, c'è un problema importante con le etichette usate all'interno delle macro: Le etichette nei programmi in linguaggio assembly devono essere uniche, eppure una macro è essenzialmente duplicata nel codice sorgente tante volte quanto viene richiamata. Ciò significa che ci saranno messaggi di errore che segnalano etichette duplicate... a meno che le etichette di una macro non siano trattate come locali. Gli elementi locali non hanno significato al di fuori dell'immediato contesto in cui sono definiti. Le etichette locali a una macro non sono visibili al di fuori della definizione della macro, il che significa che non possono essere riferite se non dal codice all'interno dei confini %MACRO...%ENDMACRO. Tutte le etichette definite all'interno di una macro sono considerate locali alla macro e sono gestite in modo speciale dal montatore. Ecco un esempio; è un'adattamento di macro di un pezzo di codice che ho presentato in precedenza, per forzare i caratteri in un buffer da minuscole a maiuscole:
+</p>
+
+```asm
+ %macro UpCase 2      ; %1 = Address of buffer; %2 = Chars in buffer
+      mov rdx,%1     ; Place the offset of the buffer into rdx
+      mov rcx,%2     ; Place the number of bytes in the buffer into rcx
+ %%IsLC:cmp byte [rdx+rcx-1],'a'   ; Below 'a'?
+      jb %%Bump                   ; Not lowercase. Skip
+      cmp byte [rdx+rcx-1],'z'    ; Above 'z'?
+      ja %%Bump                   ; Not lowercase. Skip
+      sub byte [rdx+rcx-1],20h    ; Force byte in buffer to uppercase
+ %%Bump:dec rcx                   ; Decrement character count
+      jnz %%IsLC                  ; If more chars in the
+ buffer, repeat
+ %endmacro
+```
+
+<p align=justify>
+Un'etichetta in una macro è resa locale all'inizio con due simboli di percentuale: %% . Quando si segna una posizione nella macro, l'etichetta locale deve essere seguita da un due punti. Quando è usata come operando per un'istruzione di salto o chiamata (come JA, JB e JNZ nel precedente), l'etichetta locale non è seguita da un due punti. La cosa importante è capire che a meno che le etichette IsLC e Bump non siano state rese locali alla macro aggiungendo il prefisso %% a ciascuna, ci sarebbero più istanze di un'etichetta nel programma (supponendo che la macro sia stata invocata più di una volta), e l'assemblatore genererebbe un errore di etichetta duplicata alla seconda e a ogni successiva invocazione. Poiché le etichette devono essere in effetti uniche all'interno del tuo programma, NASM prende un'etichetta locale come %%Bump e genera un'etichetta da essa che sarà unica nel tuo programma. Lo fa usando il prefisso ..@ più un numero di quattro cifre e il nome dell'etichetta. Ogni volta che la tua macro è invocata, NASM cambierà il numero e così genererà sinonimi unici per ogni etichetta locale all'interno della macro. L'etichetta %%Bump, per esempio, potrebbe diventare ..@1771.Bump per una data invocazione, e il numero sarebbe diverso ogni volta che la macro è invocata. Questo avviene in background, e raramente sarai consapevole che sta accadendo a meno che non leggi i file di elenco del dump di codice generati da NASM.
+</p>
+
+### Librerie Macro come File di Inclusione
+
+<p align=justify>
+Proprio come le procedure possono essere raccolte in moduli di libreria esterni al programma, così le macro possono essere raccolte in librerie di macro. Una libreria di macro non è altro che un file di testo che contiene il codice sorgente per le macro nella libreria. A differenza delle procedure raccolte in un modulo, le librerie di macro non sono assemblate separatamente e devono essere passate attraverso l'assemblatore ogni volta che il programma viene assemblato. Questo è un problema con le macro in generale, non solo con le macro raccolte nelle librerie. I programmi che gestiscono la complessità dividendo il codice in macro verranno assemblati più lentamente rispetto ai programmi che sono stati divisi in moduli assemblati separatamente. Data la velocità dei PC del 2020, questo è molto meno un problema oggi rispetto al 1989 quando ho scritto la prima edizione di questo libro, ma per progetti molto grandi può influire sulla velocità di costruzione. Le librerie di macro vengono utilizzate "includendole" nel file di codice sorgente del programma. Il mezzo per farlo è la direttiva %INCLUDE. La direttiva %INCLUDE precede il nome della libreria di macro:
+</p>
+
+```asm
+%include "mylib.mac"
+```
+
+<p align=justify>
+Tecnicamente, questa dichiarazione può trovarsi ovunque nel file di codice sorgente, ma è importante tenere presente che tutte le macro devono essere completamente definite prima di essere invocate. Per questo motivo, è una buona idea utilizzare la direttiva %INCLUDE vicino all'inizio della sezione .text del file di codice sorgente, prima di qualsiasi possibile invocazione di una delle macro della libreria. Se il file macro che desideri includere in un programma non si trova nella stessa directory del tuo programma, potrebbe essere necessario fornire un percorso completamente qualificato come parte della direttiva %INCLUDE:
+</p>
+
+```asm
+ %include "../macrolibs/mylib.mac"
+```
+
+<p align=justify>
+Altrimenti, NASM potrebbe non essere in grado di trovare il file macro e ti darà un messaggio di errore. (Fai un po' di ricerca se non sai come creare un percorso completamente qualificato in Linux, poiché non è davvero un argomento di programmazione.)
+</p>
+
+### Macro contro Procedure: Pro e Contro
+
+<p align=justify>
+Ci sono vantaggi nei macro rispetto alle procedure. Uno di questi è la velocità. Ci vuole tempo per eseguire le istruzioni CALL e RET che controllano l'ingresso e l'uscita da una procedura. In una macro, nessuna delle due istruzioni viene utilizzata. Vengono eseguite solo le istruzioni che svolgono il lavoro effettivo della macro, quindi il lavoro della macro viene eseguito il più rapidamente possibile. C'è un costo per questa velocità, e il costo è in memoria extra utilizzata, specialmente se la macro viene invocata un numero molto elevato di volte. Nota nell'esempio precedente che tre invocazioni della macro WriteStr generano un totale di 18 istruzioni in memoria. se la macro fosse stata impostata come una procedura, avrebbe richiesto le sei istruzioni nel corpo della procedura, più un'istruzione RET e tre istruzioni CALL per svolgere lo stesso lavoro. Questo richiederebbe un totale di otto istruzioni per l'implementazione della procedura e diciotto per l'implementazione della macro. E se la macro fosse chiamata cinque, sette volte o più, la differenza crescerebbe. Ogni volta che una macro viene chiamata, tutte le sue istruzioni vengono duplicate nel programma un'altra volta. Nei programmi brevi, questo potrebbe non essere un problema, e in situazioni in cui il codice deve essere il più veloce possibile"come nei driver grafici" i macro hanno molti vantaggi, eliminando il sovraccarico procedurale delle chiamate e dei ritorni. è un semplice compromesso da comprendere: pensa alle macro per la velocità e alle procedure per la compattezza.
+</p>
+
+<p align=justify>
+D'altra parte, a meno che tu non stia veramente scrivendo qualcosa che dipende assolutamente dalle prestazioni"come i driver grafici"questo compromesso è minore al punto da essere insignificante. Per il software ordinario, la differenza di dimensione tra un'implementazione orientata alle procedure e un'implementazione orientata ai macro potrebbe essere di soli 2.000 o 3.000 byte, e la differenza di velocità probabilmente non sarebbe rilevabile. Su CPU moderne, è molto difficile prevedere le prestazioni di un determinato pezzo di software, e i dispositivi di archiviazione massicci e i sistemi di memoria rendono la dimensione del programma molto meno importante rispetto a un generazione fa. Se stai cercando di decidere se andare per procedure o per macro in un dato caso, fattori diversi dalla dimensione o dalla velocità prevarranno. Ad esempio, ho sempre trovato il software intensivo in macro molto più difficile da debug. Gli strumenti software non trattano necessariamente bene le macro. Ad esempio, il componente Insight del debugger Gdb non mostra il testo espanso delle macro nella sua finestra di codice sorgente. Insight non è stato progettato tenendo a mente il debug in puro assembly (Gdb, come la maggior parte degli strumenti Unix, ha un forte bias verso il C), e quando entri in una macro, l'evidenziazione del codice sorgente semplicemente si ferma, fino a quando l'esecuzione non esce dalla macro. Pertanto non puoi eseguire il passo attraverso il codice di una macro come puoi fare con il codice di procedura o programma. Gdb continuerà a fare il debug come sempre dalla finestra della console, ma il debug della console è un processo molto doloroso rispetto alla prospettiva visiva disponibile da SASM o Insight. Infine, c'è un'altra questione connessa alle macro che è molto più difficile da spiegare, ma c'è una buona ragione per usare le macro con parsimonia: se le usi in modo eccessivo, il tuo codice non assomiglierà più al linguaggio assembly. Rivediamo la parte principale del programma eatmacro.asm, senza i suoi commenti
+</p>
+
+```asm
+ ClrScr
+ WriteCtr 12,AdMsg,ADLEN
+ GotoXY 1,23
+ WriteStr Prompt,PROMPTLEN    
+ WaitEnter
+ ExitProg
+```
+
+<p align=justify>
+Questo è l'intero programma principale. L'intera cosa è stata assorbita da invocazioni di macro. è questo un linguaggio assembly, o è"buon Dio!"un dialetto di BASIC? Ammetto che ho sostituito l'intero programma principale con invocazioni di macro qui per farlo notare, ma è certamente possibile creare così tante macro che i tuoi programmi assembly iniziano a sembrare un linguaggio di alto livello strano. In realtà, ho usato qualcosa di simile alla fine degli anni '70 quando ero programmatore per la Xerox. Avevano un linguaggio interno che era fondamentalmente un assemblatore 8080 con carichi di macro da utilizzare su microcomputer 8080 basati su longobarde (molto lenti; ci crederesti 1 megahertz?). Funzionava. Doveva farlo, con quella poca potenza computazionale per eseguire i suoi processi. La difficile verità è che le macro possono chiarire cosa sta facendo un programma, oppure, usate in modo eccessivo, possono oscurare completamente come funzionano le cose realmente "sotto la superficie". Nei miei progetti, uso le macro esclusivamente per ridurre il disordine di sequenze di istruzioni molto ripetitive, specialmente cose come l'impostazione dei registri prima di effettuare chiamate di sistema Linux. Del resto, l'intero obiettivo della programmazione assembly è promuovere una comprensione completa di ciò che sta accadendo dove il software incontra la CPU. Qualsiasi cosa che ostacola quella comprensione dovrebbe essere usata con cautela, abilità e (soprattutto) parsimonia-o potresti anche benissimo imparare il C.
+</p>
+
+### Le stringhe in linguaggio Assembly
+
+<p align=justify>
+A volte le parole ci tradiscono, raccogliendo significati con la stessa facilità con cui un magnete raccoglie trucioli di ferro. La parola "string" è uno dei principali colpevoli qui. Significa grossomodo la stessa cosa in tutta la programmazione informatica, ma ci sono una moltitudine di piccole variazioni su quel tema unico. Se hai imparato a conoscere le stringhe in Pascal (come ho fatto io), scoprirai che ciò che sai non è totalmente applicabile quando programmi in C/C++, Python, BASIC o (soprattutto) assembly. Quindi ecco la Vista Generale: Una stringa è qualsiasi gruppo contiguo di byte in memoria, contenente qualsiasi tipo di dati, di qualsiasi dimensione arbitraria che il tuo sistema operativo consente. (Per un moderno Linux, questo può essere molto.) Il concetto fondamentale di una stringa in un linguaggio assembly è che i suoi byte costituenti sono tutti in fila, senza interruzioni. Questo è piuttosto fondamentale. La maggior parte dei linguaggi di alto livello si basa sul concetto di stringa in diversi modi. Le implementazioni di Pascal che discendono da UCSD (e successivamente Turbo) Pascal trattano le stringhe come un tipo di dati separato, con un contatore di lunghezza all'inizio della stringa per indicare quanti byte ci sono nella stringa. In C, una stringa non ha un byte di lunghezza davanti a sé. Invece, si dice che una stringa C finisca quando viene incontrato un byte con un valore binario di 0. Questo sarà importante nel lavoro di assembly, molto del quale si relaziona intimamente con C e la libreria standard C, dove vive il meccanismo di gestione delle stringhe di C. In BASIC, le stringhe sono memorizzate in qualcosa chiamato string space, che ha molta codifica incorporata associata, per gestire lo spazio delle stringhe e gestire la manipolazione profonda dei dati delle stringhe. Quando inizi a lavorare in assembly, devi rinunciare a tutte quelle cose dei linguaggi di alto livello. Le stringhe in assembly sono semplicemente regioni contigue di memoria. Iniziano a un indirizzo specificato, avanzano per un certo numero di byte e si fermano. Non c'è un contatore di lunghezza per dirti quanti byte ci sono nella stringa, senza caratteri di confine standard come il numero binario 0 per indicare dove inizia o finisce una stringa. Puoi certamente scrivere routine in linguaggio assembly che allocano stringhe in stile Pascal o in stile C e le manipolano. Tuttavia, per evitare confusione, devi quindi pensare ai dati elaborati dalle tue routine come stringhe Pascal o C piuttosto che come stringhe di linguaggio assembly.
+</p>
+
+<p align=justify>
+Le stringhe in assembly non hanno valori di confine o indicatori di lunghezza. Possono contenere qualsiasi valore, incluso il 0 binario. Infatti, devi davvero smettere di pensare alle stringhe in termini di regioni specifiche nella memoria. Dovresti invece pensare alle stringhe in termini dei valori dei registri che le definiscono. è leggermente al contrario rispetto a come pensi alle stringhe in linguaggi come Pascal, ma funziona: hai una stringa quando imposti un registro per puntarne una. E una volta che punti a una stringa, la lunghezza di quella stringa è definita dal valore che poni nel registro RCX. Questo è fondamentale, e a rischio di ripetermi lo dirò di nuovo: le stringhe in assembly sono completamente definite dai valori che poni nei registri. C'è un insieme di presupposti sulle stringhe e sui registri integrati nel silicio della CPU. Quando esegui una delle istruzioni per le stringhe (come descriverò a breve), la CPU utilizza quei presupposti per determinare quale area di memoria legge o scrive.
+</p>
+
+### Stringa Sorgente e stringa Destinazione
+
+<p align=justify>
+Ci sono due tipi di stringhe nel lavoro in assembly x64. Le stringhe di origine sono le stringhe da cui si legge. Le stringhe di destinazione sono le stringhe su cui si scrive. La differenza tra le due è solo una questione di registri; le stringhe di origine e le stringhe di destinazione possono sovrapporsi. Infatti, la stessa regione di memoria può essere sia una stringa di origine che una stringa di destinazione, tutto allo stesso tempo. Qui ci sono le assunzioni che la CPU fa sulle stringhe quando esegue un'istruzione di stringa in modalità lunga a 64 bit:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+		Una stringa sorgente è puntata da RSI.
+ 		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Una stringa di destinazione è puntata da RDI.
+ 		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		La lunghezza di entrambi i tipi di stringhe è il valore che inserisci in RCX. Come questa lunghezza viene utilizzata dalla CPU dipende dall'istruzione specifica e da come viene utilizzata.
+ 		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		I dati provenienti da una stringa sorgente o destinati a una stringa di destinazione devono iniziare il viaggio da, terminare il viaggio a, o passare attraverso il registro RAX.
+ 		</p>
+	</li>
+</ul>
+
+
+<p align=justify>
+La CPU è in grado di riconoscere contemporaneamente sia una stringa di origine che una stringa di destinazione, perché RSI e RDI possono contenere valori indipendenti l'uno dall'altro. Tuttavia, poiché esiste un solo registro RCX, la lunghezza delle stringhe di origine e di destinazione deve essere identica quando vengono utilizzate contemporaneamente, come nella copia di una stringa di origine in una stringa di destinazione. Un modo per ricordare la differenza tra le stringhe di origine e le stringhe di destinazione è costituito dai relativi registri di offset. Il "SI" in RSI significa "indice di origine" e il "DI" in RDI significa "indice di destinazione". La "R", come ormai sapete, è la convenzione in base alla quale i registri per uso generale sono contrassegnati con una dimensione di 64 bit.
+</p>
+
+### Uno schermo virtuale di visualizzazione del testo
+
+<p align=justify>
+Il modo migliore per cementare tutte quelle informazioni di base sulle stringhe nella tua mente è vedere alcune istruzioni sulle stringhe in azione. Nel codice seguente ho implementato un meccanismo interessante utilizzando le istruzioni sulle stringhe: un semplice display di testo virtuale per la console di Linux. Ai tempi della programmazione in modalità reale sotto DOS su macchine compatibili con PC, avevamo accesso senza restrizioni alla memoria del buffer di aggiornamento del video sullo strumento grafico del PC. Se scrivevamo un carattere ASCII o una stringa di caratteri nella regione di memoria che comprende il buffer di visualizzazione della scheda, Bam! I glifi di testo associati apparivano istantaneamente sullo schermo. Nelle edizioni precedenti di questo libro che trattavano DOS, ho sfruttato tale meccanismo di accesso diretto al display e presentato una serie di routine di visualizzazione utili che dimostravano le istruzioni sulle stringhe dell'architettura Intel. Sotto Linux, questo non è più possibile. Il buffer di visualizzazione grafica è ancora lì, ma ora è di proprietà del sistema operativo Linux, e le applicazioni in spazio utente non possono scriverci o nemmeno leggerlo direttamente. Scrivere applicazioni in modalità testo in assembly per la console di Linux non è affatto semplice come lo era sotto DOS. Nel Capitolo 10, ho spiegato come un controllo molto semplice del terminale della console potesse essere fatto scrivendo sequenze di escape sulla console tramite la SYSCALL sys_write. Tuttavia, tranne per i due o tre comandi più semplici, le variazioni nell'implementazione del terminale rendono l'uso di sequenze di escape "nude" un po' rischioso. Una determinata sequenza potrebbe significare una cosa per un terminale e qualcosa di completamente diverso per un altro. Le librerie di codice come ncurses fanno grandi sforzi per rilevare e adattarsi alla moltitudine di specifiche dei terminali esistenti. Il codice per farlo non è qualcosa che puoi assemblare in un pomeriggio e, in effetti, è un argomento troppo ampio da trattare in dettaglio in un libro introduttivo come questo.
+</p>
+
+<p align=justify>
+Tuttavia... Possiamo fare qualche trucco contro lo scorbuto e imparare alcune cose facendoli. Uno consiste nell'allocare il nostro buffer di aggiornamento video di testo in memoria come variabile denominata e scrivere periodicamente l'intero buffer nella console Linux tramite una singola istruzione SYSCALL. I nostri PC sono diventati estremamente veloci dall'era DOS e i buffer video di testo non sono grandi. Un buffer di visualizzazione del testo da 25  -  80 è lungo solo 2.000 caratteri e il tutto può essere inviato alla console Linux con una singola chiamata sys_write SYSCALL. Il buffer appare sulla console istantaneamente, almeno per quanto qualsiasi osservatore umano possa discernere. L'inserimento del testo nel buffer è una semplice questione di calcolo dell'indirizzo di una data posizione di riga e colonna nel buffer e di scrittura dei valori dei caratteri ASCII nella variabile del buffer a partire da quell'indirizzo. Dopo ogni modifica della variabile buffer, è possibile aggiornare la visualizzazione della console scrivendo l'intero buffer nella console tramite SYSCALL. Gli esperti stanchi potrebbero chiamarla "forza bruta" (e sì, non è neanche lontanamente versatile come la libreria ncurses), ma è facile da capire. Non ti dà il controllo sul colore o sugli attributi del carattere (sottolineatura, lampeggiamento e così via), ma ti darà una buona comprensione di base delle istruzioni della stringa x86. Dai un'occhiata al codice. Nelle sezioni seguenti, lo esaminerò pezzo per pezzo. Si noti che è disponibile un file separato per la compilazione tramite SASM, denominato vidbuff1gcc.asm. I due file sono quasi identici e differiscono quasi interamente negli indirizzi iniziali globali _start rispetto a quelli principali, richiesti da SASM
+</p>
+
+```asm
+;  Executable name : vidbuff1
+;  Version         : 2.0
+;  Created date    : 10/12/2022
+;  Last update     : 7/18/2023
+;  Author          : Jeff Duntemann
+;  Description     : A simple program in assembly for Linux, using NASM 2.14.02,
+;                  : demonstrating string instruction operation by "faking" 
+;                  : full-screen memory-mapped text I/O.
+;
+;    Note that the output to the console from this program will NOT display
+;    correctly unless you have enabled the IBM850 character encoding in
+;    the terminal program being used to display the console! 
+;
+
+SECTION .data           ; Section containing initialized data
+    EOL     equ 10      ; Linux end-of-line character
+    FILLCHR equ 32      ; ASCII space character
+    HBARCHR equ 196     ; Use dash char if this won't display
+    STRTROW equ 2       ; Row where the graph begins
+
+; We use this to display a ruler across the screen. 
+    TenDigits   db 31,32,33,34,35,36,37,38,39,30
+    DigitCount  db 10
+    RulerString db "12345678901234567890123456789012345678901234567890123456789012345678901234567890" 
+    RULERLEN    equ $-RulerString
+                      
+; The dataset is just a table of byte-length numbers:
+    Dataset db 9,17,71,52,55,18,29,36,18,68,77,63,58,44,0
+    Message db "Data current as of 5/13/2023"
+    MSGLEN  equ $-Message
+
+; This escape sequence will clear the console terminal and place the
+; text cursor to the origin (1,1) on virtually all Linux consoles:
+    ClrHome db 27,"[2J",27,"[01;01H"
+    CLRLEN  equ $-ClrHome   ; Length of term clear string
+	
+SECTION .bss            ; Section containing uninitialized data	
+
+    COLS    equ 81          ; Line length + 1 char for EOL
+    ROWS    equ 25          ; Number of lines in display
+    VidBuff resb COLS*ROWS  ; Buffer size adapts to ROWS & COLS
+
+SECTION .text           ; Section containing code
+
+global  _start          ; Linker needs this to find the entry point!
+
+ClearTerminal:
+    push r11            ; Save all modified registers
+    push rax
+    push rcx
+    push rdx
+    push rsi
+    push rdi
+
+    mov rax,1           ; Specify sys_write call
+    mov rdi,1           ; Specify File Descriptor 1: Standard Output
+    mov rsi,ClrHome     ; Pass address of the escape sequence
+    mov rdx,CLRLEN      ; Pass the length of the escape sequence
+    syscall             ; Make system call
+
+    pop rdi             ; Restore all modified registers
+    pop rsi
+    pop rdx
+    pop rcx
+    pop rax
+    pop r11
+    ret
+
+;-------------------------------------------------------------------------
+; Show:         Display a text buffer to the Linux console
+; UPDATED:      5/10/2023
+; IN:           Nothing
+; RETURNS:      Nothing
+; MODIFIES:     Nothing
+; CALLS:        Linux sys_write
+; DESCRIPTION:  Sends the buffer VidBuff to the Linux console via sys_write.
+;               The number of bytes sent to the console is calculated by
+;               multiplying the COLS equate by the ROWS equate.
+
+Show:	
+    push r11           ; Save all registers we're going to change
+    push rax
+    push rcx
+    push rdx
+    push rsi
+    push rdi
+    mov rax,1          ; Specify sys_write call
+    mov rdi,1          ; Specify File Descriptor 1: Standard Output
+    mov rsi,VidBuff    ; Pass address of the buffer
+    mov rdx,COLS*ROWS  ; Pass the length of the buffer
+    syscall            ; Make system call
+    pop rdi            ; Restore all modified registers
+    pop rsi
+    pop rdx
+    pop rcx
+    pop rax
+    pop r11
+    ret
+
+
+;-------------------------------------------------------------------------
+; ClrVid:       Clears a buffer to spaces and replaces overwritten EOLs
+; UPDATED:      5/10/2023
+; IN:           Nothing
+; RETURNS:      Nothing
+; MODIFIES:     VidBuff, DF
+; CALLS:        Nothing
+; DESCRIPTION:  Fills the buffer VidBuff with a predefined character
+;               (FILLCHR) and then places an EOL character at the end
+;               of every line, where a line ends every COLS bytes in
+;               VidBuff.
+
+ClrVid:
+    push rax            ; Save registers that we change
+    push rcx
+    push rdi
+    cld                 ; Clear DF; we're counting up-memory
+    mov al,FILLCHR      ; Put the buffer filler char in AL
+    mov rdi,VidBuff     ; Point destination index at buffer
+    mov rcx,COLS*ROWS   ; Put count of chars stored into RCX
+    rep stosb           ; Blast byte-length chars at the buffer
+
+; Buffer is cleared; now we need to re-insert the EOL char after each line:
+    mov rdi,VidBuff     ; Point destination at buffer again
+    dec rdi             ; Start EOL position count at VidBuff char 0
+    mov rcx,ROWS        ; Put number of rows in count register
+.PtEOL:
+    add rdi,COLS        ; Add column count to RDI
+    mov byte [rdi],EOL  ; Store EOL char at end of row
+    loop .PtEOL         ; Loop back if still more lines
+    pop rdi             ; Restore caller's registers
+    pop rcx
+    pop rax
+    ret                 ; and go home!
+
+
+;-------------------------------------------------------------------------
+; WrtLn:        Writes a string to a text buffer at a 1-based X,Y position
+; UPDATED:      5/10/2023
+; IN:           The address of the string is passed in RSI
+;               The 1-based X position (row #) is passed in RBX
+;               The 1-based Y position (column #) is passed in RAX
+;               The length of the string in chars is passed in RCX
+; RETURNS:      Nothing
+; MODIFIES:     VidBuff, RDI, DF
+; CALLS:        Nothing
+; DESCRIPTION:  Uses REP MOVSB to copy a string from the address in RSI
+;               to an X,Y location in the text buffer VidBuff.
+
+WrtLn:
+    push rax        ; Save registers we will change
+    push rbx
+    push rcx
+    push rdi
+    cld             ; Clear DF for up-memory write
+    mov rdi,VidBuff ; Load destination index with buffer address
+    dec rax         ; Adjust Y value down by 1 for address calculation
+    dec rbx         ; Adjust X value down by 1 for address calculation
+    mov ah,COLS     ; Move screen width to AH
+    mul ah          ; Do 8-bit multiply AL*AH to AX
+    add rdi,rax     ; Add Y offset into vidbuff to RDI
+    add rdi,rbx     ; Add X offset into vidbuf to RDI
+    rep movsb       ; Blast the string into the buffer
+    pop rdi         ; Restore registers we changed
+    pop rcx
+    pop rbx
+    pop rax
+    ret             ; and go home!
+
+
+;-------------------------------------------------------------------------
+; WrtHB:        Generates a horizontal line bar at X,Y in text buffer
+; UPDATED:      5/10/2023
+; IN:           The 1-based X position (row #) is passed in RBX
+;               The 1-based Y position (column #) is passed in RAX
+;               The length of the bar in chars is passed in RCX
+; RETURNS:      Nothing
+; MODIFIES:     VidBuff, DF
+; CALLS:        Nothing
+; DESCRIPTION:  Writes a horizontal bar to the video buffer VidBuff, 
+;               at th1e 1-based X,Y values passed in RBX,RAX. The bar is
+;               "made of" the character in the equate HBARCHR. The
+;               default is character 196; if your terminal won't display
+;               that (you need the IBM 850 character set) change the
+;               value in HBARCHR to ASCII dash or something else supported
+;               in your terminal.
+
+WrtHB:
+    push rax         ; Save registers we change
+    push rbx
+    push rcx
+    push rdi
+    cld              ; Clear DF for up-memory write
+    mov rdi,VidBuff  ; Put buffer address in destination register
+    dec rax          ; Adjust Y value down by 1 for address calculation
+    dec rbx          ; Adjust X value down by 1 for address calculation
+    mov ah,COLS      ; Move screen width to AH
+    mul ah           ; Do 8-bit multiply AL*AH to AX
+    add rdi,rax      ; Add Y offset into vidbuff to EDI
+    add rdi,rbx      ; Add X offset into vidbuf to EDI
+    mov al,HBARCHR   ; Put the char to use for the bar in AL
+    rep stosb        ; Blast the bar char into the buffer
+    pop rdi          ; Restore registers we changed
+    pop rcx
+    pop rbx
+    pop rax
+    ret              ; And go home!
+
+
+;-------------------------------------------------------------------------
+; Ruler:        Generates a "1234567890"-style ruler at X,Y in text buffer
+; UPDATED:      5/10/2023
+; IN:           The 1-based X position (row #) is passed in RBX
+;               The 1-based Y position (column #) is passed in RAX
+;               The length of the ruler in chars is passed in RCX
+; RETURNS:      Nothing
+; MODIFIES:     VidBuff
+; CALLS:        Nothing
+; DESCRIPTION:  Writes a ruler to the video buffer VidBuff, at the 1-based
+;               X,Y position passed in RBX,RAX. The ruler consists of a
+;               repeating sequence of the digits 1 through 0. The ruler
+;               will wrap to subsequent lines and overwrite whatever EOL
+;               characters fall within its length, if it will not fit
+;               entirely on the line where it begins. Note that the Show
+;               procedure must be called after Ruler to display the ruler
+;               on the console.
+
+Ruler:
+    push rax         ; Save the registers we change
+    push rbx
+    push rcx
+    push rdx
+    push rdi
+    mov rdi,VidBuff  ; Load video buffer address to RDI
+    dec rax          ; Adjust Y value down by 1 for address calculation
+    dec rbx          ; Adjust X value down by 1 for address calculation
+    mov ah,COLS      ; Move screen width to AH
+    mul ah           ; Do 8-bit multiply AL*AH to AX
+    add rdi,rax      ; Add Y offset into vidbuff to RDI
+    add rdi,rbx      ; Add X offset into vidbuf to RDI
+        
+; RDI now contains the memory address in the buffer where the ruler
+; is to begin. Now we display the ruler, starting at that position:
+    mov rdx,RulerString ; Load address of ruler string into RDX
+DoRule: 
+    mov al,[rdx] ; Load first digit in the ruler to AL
+    stosb             ; Store 1 char; note that there's no REP prefix!
+    inc rdx           ; Increment RDX to point to next char in ruler string
+    loop DoRule       ; Decrement RCX & Go back for another char until RCX=0
+    pop rdi           ; Restore the registers we changed
+    pop rdx
+    pop rcx
+    pop rbx
+    pop rax
+    ret               ; And go home!
+
+;-------------------------------------------------------------------------
+; MAIN PROGRAM:
+	
+_start:
+    push rbp
+    mov rbp,rsp
+    and rsp,-16
+
+; Get the console and text display text buffer ready to go:
+    call ClearTerminal ; Send terminal clear string to console
+    call ClrVid        ; Init/clear the video buffer
+
+; Next we display the top ruler:
+    mov rax,1        ; Load Y position to AL
+    mov rbx,1        ; Load X position to BL
+    mov rcx,COLS-1   ; Load ruler length to RCX
+    call Ruler       ; Write the ruler to the buffer
+
+; Throw up an informative message centered on the last line
+    mov rsi,Message  ; Load the address of the message to RSI
+    mov rcx,MSGLEN   ; and its length to RCX
+    mov rbx,COLS     ; and the screen width to RBX
+    sub rbx,rcx      ; Calc diff of message length and screen width
+    shr rbx,1        ; Divide difference by 2 for X value
+    mov rax,20       ; Set message row to Line 24
+    call WrtLn       ; Display the centered message
+
+; Here we loop through the dataset and graph the data:
+    mov rsi,Dataset  ; Put the address of the dataset in RSI
+    mov rbx,1        ; Start all bars at left margin (X=1)
+    mov r15,0        ; Dataset element index starts at 0
+.blast:	
+    mov rax,r15      ; Add dataset number to element index
+    add rax,STRTROW  ; Bias row value by row # of first bar
+    mov cl,byte [rsi+r15]   ; Put dataset value in lowest byte of RCX
+    cmp rcx,0        ; See if we pulled a 0 from the dataset
+    je .rule2        ; If we pulled a 0 from the dataset, we're done
+    call WrtHB       ; Graph the data as a horizontal bar
+    inc r15          ; Increment the dataset element index
+    jmp .blast       ; Go back and do another bar
+
+; Display the bottom ruler:
+.rule2:	
+    mov rax,r15      ; Use the dataset counter to set the ruler row
+    add rax,STRTROW  ; Bias down by the row # of the first bar
+    mov rbx,1        ; Load X position to BL
+    mov rcx,COLS-1   ; Load ruler length to RCX
+    call Ruler       ; Write the ruler to the buffer
+
+; Having written all that to the buffer, send the buffer to the console:
+    call Show        ; Refresh the buffer to the console
+
+; And return control to Linux:
+Exit:
+    mov rsp,rbp
+    pop rbp
+    
+    mov rax,60       ; End program via Exit Syscall
+    mov rdi,0        ; Return a code of zero	
+    syscall          ; Return to Linux
+```
+
+### REP STOSB, la mitragliatrice software
+
+<p align=justify>
+Il nostro buffer di visualizzazione del testo virtuale non è altro che una regione di memoria grezza riservata nella sezione .bss, utilizzando la direttiva RESB. La dimensione del buffer è definita da due equazioni, che specificano il numero di righe e colonne che desideri. Per impostazione predefinita, l'ho impostato su 25 righe e 80 colonne, ma i display della console del 2023 possono visualizzare uno schermo di testo molto più grande di così. Puoi cambiare le equazioni COLS e ROWS per definire buffer grandi fino a 255  -  255, anche se se la finestra del tuo terminale non è così grande, i tuoi risultati saranno (per dirla gentilmente) imprevedibili. Cambiare le dimensioni della tua visualizzazione del testo viene fatto modificando una o entrambe quelle equazioni. Qualsiasi altro cambiamento necessario nel codice viene gestito automaticamente. Tieni presente che questo deve essere fatto al tempo dell'assemblaggio poiché molti dei calcoli sono calcoli di tempo di assemblaggio eseguiti da NASM quando costruisci il programma. Non è necessario far combaciare esattamente la dimensione della finestra del terminale ai valori ROWS e COLS scelti, purché la finestra del terminale sia più grande di ROWS  -  COLS. Se massimizzi la finestra del terminale (come Konsole), la tua visualizzazione del testo apparirà a partire dall'angolo in alto a sinistra dello schermo.
+</p>
+
+### Mitragliatrice sul display virtuale
+
+<p align=justify>
+Quando Linux carica i tuoi programmi in memoria, solitamente azzera le variabili non inizializzate (come VidBuff nell'elenco 11.1) a zeri binari. Questo è buono, ma gli zeri binari non vengono visualizzati correttamente sulla console di Linux. Per apparire "vuoto" sulla console, la memoria del buffer di visualizzazione deve essere azzerata al carattere spazio ASCII. Ciò significa scrivere il valore 20h nella memoria dall'inizio del buffer fino alla sua fine. Tali operazioni dovrebbero sempre essere eseguite in cicli stretti. Il modo ovvio è mettere l'indirizzo del buffer di visualizzazione in RDI, il numero di byte nel tuo buffer di aggiornamento in RCX, il valore ASCII per azzerare il buffer in AL, e poi codificare un ciclo stretto in questo modo:
+</p>
+
+```asm
+Clear:  mov [rdi],al  ; Write the value in AL to memory
+ 	inc rdi       ; Bump RDI to next byte in the buffer
+ 	dec rcx       ; Decrement RCX by one position
+	jnz Clear      ; And loop again until RCX is 0
+```
+
+<p align=justify>
+Questo funzionerà. è anche ragionevolmente veloce, specialmente su CPU più recenti. Ma tutto il codice precedente è equivalente a quest'unica istruzione:
+</p>
+
+```asm
+ rep stosb
+```
+
+<p align=justify>
+Davvero. No, sul serio. L'istruzione STOSB è la più semplice delle istruzioni di stringa Intel ed è un buon punto di partenza. Ci sono due parti nell'istruzione come l'ho mostrata, una situazione che non abbiamo visto prima. REP è un nuovo tipo di elemento, chiamato prefisso, e cambia il modo in cui la CPU tratta il mnemonico dell'istruzione che lo segue. Torneremo a REP a breve. Adesso, diamo un'occhiata a STOSB. Il mnemonico significa STOrare la Stringa per Byte. Come tutte le istruzioni di stringa, STOSB fa certe assunzioni su alcuni registri della CPU. Funziona solo sulla stringa di destinazione, quindi RSI non è coinvolto. Tuttavia, queste assunzioni devono essere rispettate e affrontate:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+		RDI deve essere caricato con l'indirizzo della stringa di destinazione. (Pensa: RDI, per indice di destinazione.)
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		RCX deve essere caricato con il numero di volte che il valore in AL deve essere memorizzato nella stringa
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		AL deve essere caricato con il valore a 8 bit da memorizzare nella stringa.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Il flag di direzione DF deve essere impostato o azzerato, a seconda se si desidera che la ricerca sia verso l'alto nella memoria (azzerrato; usa CLD) o verso il basso nella memoria (impostato; usa STD). Avrò di più da dire su DF come utilizzato con STOSB un po' più tardi.
+		</p>
+	</li>
+</ul>
+
+### Esecuzione dell'istruzione STOSB
+
+<p align=justify>
+Una volta che hai impostato questi tre registri, puoi eseguire in sicurezza un'istruzione STOSB. Quando lo fai, ecco cosa succede: 
+</p>
+
+<ol>
+  <li>
+    <p align="justify">
+    Il valore byte in AL viene copiato nell'indirizzo di memoria memorizzato in RDI.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    RDI viene incrementato di 1, in modo che ora punti al byte successivo in memoria dopo quello appena scritto.
+    </p>
+  </li>
+</ol>
+
+<p align=justify>
+Nota che non stiamo sparando a raffica qui"non ancora, almeno. Una copia di AL viene copiata in una posizione di memoria. Il registro RDI viene regolato affinché sia pronto per la prossima volta che viene eseguita STOSB. Un punto molto importante da ricordare è che RCX non viene decrimentato da STOSB. RCX viene decrimentato automaticamente solo se metti il prefisso REP davanti a STOSB. Senza il prefisso REP, devi fare tu stesso il decrimento, sia esplicitamente tramite DEC o tramite l'istruzione LOOP, come spiegherò un po' più avanti in questo capitolo. Quindi, non puoi far funzionare STOSB automaticamente senza REP. Tuttavia, se vuoi, puoi eseguire altre istruzioni prima di eseguire un altro STOSB. Finché non disturbi RDI o RCX, puoi fare quello che vuoi. Poi, quando esegui di nuovo STOSB, un'altra copia di AL andrà alla posizione puntata da RDI, e RDI sarà adeguatamente aggiornato di nuovo. (Devi ricordarti di decrimentare RCX in qualche modo.) Nota che puoi cambiare il valore in AL se vuoi, ma il valore cambiato verrà copiato nella memoria. Potresti volerlo fare"non c'è legge che dice che devi riempire una stringa con solo un singolo valore. Tuttavia, questo è come la differenza tra un'arma semiautomatica (che spara un colpo ogni volta che premi e rilasci il grilletto) e un'arma completamente automatica, che spara colpi continuamente finché tieni premuto il grilletto. Per rendere STOSB completamente automatica, basta mettere il prefisso REP davanti ad essa. Ciò che fa REP è splendidamente semplice: imposta il ciclo più serrato di tutti i cicli completamente all'interno della CPU e spara copie di AL nella memoria ripetutamente (il motivo del suo nome), incrementando RDI di 1 ogni volta e decrimentando RCX di 1, fino a quando RCX non viene decrimentato a 0. Poi si ferma, e quando il fumo si dirada, vedrai che l'intera stringa di destinazione, per quanto grande, è stata riempita con copie di AL. Amico, ora questo è programmare!
+</p>
+
+<p align=justify>
+Nel programma vidbuff1, il codice per cancellare il buffer di visualizzazione si trova nella procedura ClrVid. Le righe pertinenti sono quelle mostrate qui:
+</p>
+
+```asm
+cld                 ; Clear DF so we're counting up-memory
+mov al,FILLCHR      ; Put the buffer filler char in AL
+mov rdi,VidBuff     ; Point destination index at buffer 
+mov rcx,COLS*ROWS   ; Put count of chars stored into RCX
+rep stosb           ; Blast chars at the buffer 
+```
+
+<p align=justify>
+L'equivalente FILLCHR è impostato di default a 32, che è il carattere di spazio ASCII. Puoi impostarlo per riempire il buffer con un altro carattere, anche se quanto possa essere utile questo non è chiaro. Nota anche che il numero di caratteri da scrivere in memoria viene calcolato da NASM al momento dell'assemblaggio come COLONNE per RIGHE. Questo ti consente di modificare la dimensione del tuo display virtuale senza cambiare il codice che svuota il buffer del display.
+</p>
+
+### STOSB e il Flag di Direzione DF
+
+<p align=justify>
+A guidare la sequenza di codice breve mostrata in precedenza c'è un'istruzione di cui non ho parlato prima: CLD. Essa controlla qualcosa di fondamentale nel lavoro con le istruzioni delle stringhe: la direzione in memoria che l'operazione su stringa prende. La maggior parte del tempo in cui userai STOSB, vorrai eseguirla "verso l'alto" in memoria, cioè, da un indirizzo di memoria più basso a un indirizzo di memoria più alto. In ClrVid, metti l'indirizzo dell'inizio del buffer di aggiornamento video in RDI e poi invii caratteri in memoria a indirizzi di memoria progressivamente più alti. Ogni volta che STOSB invia un byte in memoria, RDI viene incrementato per puntare al byte successivo più alto in memoria. Questo è il modo logico di lavorare, ma non deve essere fatto in questo modo in ogni momento. STOSB può tranquillamente iniziare da un indirizzo alto e muoversi verso il basso in memoria. Ad ogni memorizzazione in memoria, RDI può essere decrementato di 1 invece. Quale direzione STOSB segua"verso l'alto verso indirizzi di memoria progressivamente più alti o verso il basso verso indirizzi progressivamente più bassi"è governato da uno dei flag nel registro RFlags. Questo è il flag di Direzione DF. Il compito principale di DF è controllare la direzione dell'azione intrapresa da istruzioni particolari che, come STOSB, possono muoversi in una delle due direzioni in memoria. La maggior parte di queste (come STOSB e i suoi simili) sono istruzioni sulle stringhe.
+</p>
+
+<p align=justify>
+Il senso del DF è questo: Quando il DF è impostato (cioè, quando il DF ha il valore 1), STOSB e le sue istruzioni stringa correlate funzionano in discesa, da indirizzi più alti a indirizzi più bassi. Quando il DF è resettato (cioè, quando ha il valore 0), STOSB e i suoi simili lavorano in salita, da indirizzi più bassi a indirizzi più alti. Questo a sua volta è semplicemente la direzione in cui viene regolato il registro RDI: quando il DF è impostato, RDI viene decrementato durante l'esecuzione delle istruzioni stringa. Quando il DF è resettato, RDI viene incrementato. Il flag di Direzione predefinito è 0 (in salita) quando la CPU viene resettata. Generalmente viene cambiato in uno dei due modi: con l'istruzione CLD, o con l'istruzione STD. CLD azzera il DF a 0, e STD imposta il DF a 1. (Dovresti tenere a mente quando fai il debug che l'istruzione POPF può anche cambiare il DF estraendo un nuovo set completo di flag dallo stack nel registro RFlags.) Poiché lo stato predefinito del DF è azzerato a 0 e tutte le istruzioni stringa nel programma demo vidbuff1 lavorano in salita nella memoria, non è tecnicamente necessario includere un'istruzione CLD nella procedura ClrVid. Tuttavia, altre parti di un programma possono cambiare il DF. è sempre una buona idea inserire l'appropriato CLD o STD proprio prima di un'istruzione stringa per assicurarti che la tua mitragliatrice spari nella giusta direzione! A volte le persone si confondono e pensano che il DF governi anche se RCX viene incrementato o decrementato dalle istruzioni stringa. Non è così! Nulla in un'istruzione stringa incrementa mai RCX. RCX tiene un valore di conteggio, non un indirizzo di memoria. Inserisci un conteggio in RCX, e conta giù ogni volta che un'istruzione stringa viene eseguita fino a raggiungere 0. Il DF non ha nulla da dire al riguardo. Fondamentalmente, RDI è dove si trova l'obiettivo, e RCX è il numero di proiettili nel tuo caricatore.
+</p>
+
+### Definire le linee nel buffer di visualizzazione
+
+<p align=justify>
+Tuttavia, cancellare VidBuff per spazi vuoti non è del tutto la fine della storia. Per essere visualizzato correttamente nei programmi terminali che mostrano la console Linux, i dati di visualizzazione devono essere suddivisi in righe. Le righe sono delimitate dal carattere EOL, ASCII 10. Una riga inizia all'inizio del buffer e termina con il primo carattere EOL. La riga successiva inizia immediatamente dopo il carattere EOL e continua fino al prossimo carattere EOL, e così via. Quando il testo viene scritto a pezzi nella console, ogni riga può avere una lunghezza diversa. Nel nostro sistema di visualizzazione virtuale, tuttavia, l'intero buffer viene scritto nella console in un'unica chiamata di sistema, come una sequenza di righe tutte della stessa lunghezza. Questo significa che quando cancelliamo il buffer, dobbiamo anche inserire i caratteri EOL dove vogliamo che ciascuna riga visualizzata termini. Questo viene fatto nel resto della procedura ClrVid. Quello che dobbiamo fare è scrivere un carattere EOL nel buffer ogni COLS byte. Questo viene fatto con un ciclo molto stretto. Se guardi la seconda parte di ClrVid, potresti notare che il ciclo in questione non è del tutto ordinario. Tieni a mente questo pensiero"tornerò all'istruzione LOOP fra un po'.
+</p>
+
+### Invio del Buffer alla Console di Linux
+
+<p align=justify>
+Devo ribadire: stiamo parlando di un display virtuale qui. VidBuff è semplicemente una regione di memoria nella quale puoi scrivere caratteri e stringhe di caratteri con istruzioni di linguaggio assembly ordinarie. Tuttavia, nulla apparirà sul tuo monitor finché non invierai il buffer alla console Linux. Questo è abbastanza semplice. La procedura Show nel programma precedente effettua una sola chiamata al servizio kernel sys_write tramite SYSCALL e invia l'intero buffer alla console in una sola volta. I caratteri di fine riga (EOL) incorporati nel buffer ogni COLS byte vengono trattati come i caratteri di fine riga vengono sempre trattati dalla console e costringono a iniziare una nuova riga immediatamente dopo ciascun EOL. Poiché tutte le righe sono della stessa lunghezza, inviare VidBuff alla console crea una regione rettangolare di testo che verrà visualizzata correttamente su qualsiasi finestra del terminale che sia almeno COLS per ROWS in dimensione. (Finestra più piccole confonderanno il testo di VidBuff. Prova a eseguire il programma vidbuff1 in finestre di terminale di varie dimensioni e vedrai rapidamente cosa intendo.) Ciò che è importante è che i tuoi programmi chiamino Show ogni volta che vuoi un aggiornamento dello schermo. Questo può essere fatto ogni volta che desideri. Su PC Linux moderni, l'aggiornamento avviene così rapidamente da apparire istantaneo. Con quella velocità, non c'è motivo per cui tu non debba chiamare Show dopo ogni scrittura su VidBuff, ma dipende da te.
+</p>
+
+### L'Arma Semiautomatica: STOSB Senza REP
+
+<p align=justify>
+Tra tutte le istruzioni di stringa, ho scelto di mostrarti prima REP STOSB perché è estremamente drammatico. Ma più precisamente, è semplice: in effetti, è più semplice usare REP piuttosto che non usarlo. REP semplifica l'elaborazione delle stringhe dal punto di vista del programmatore, perché porta l'intero ciclo di istruzioni all'interno della CPU. Puoi usare l'istruzione STOSB senza REP, ma è un po' più complicato. Il lavoro comporta la preparazione del ciclo di istruzioni al di fuori della CPU e assicurarsi che sia corretto. Perché preoccuparsi? Semplicemente questo: con REP STOSB puoi ripetutamente memorizzare lo stesso valore nella stringa di destinazione. Qualunque cosa tu metta in AL prima di eseguire REP STOSB è il valore che verrà memorizzato in memoria per RCX volte. STOSB può essere utilizzato per memorizzare valori diversi nella stringa di destinazione facendolo semiautomatizzando e cambiando il valore in AL tra ciascun colpo del grilletto. Perdi un po' di tempo gestendo il ciclo da solo al di fuori della CPU. Questo perché c'è un certo tempo speso per recuperare i byte delle istruzioni del ciclo dalla memoria. Tuttavia, se mantieni il tuo ciclo il più stretto possibile, non perdi una quantità di velocità inaccettabile, specialmente sui moderni processori Intel/AMD, che fanno un uso molto efficace della cache e non recuperano le istruzioni dalla memoria esterna ogni volta che vengono eseguite.
+</p>
+
+### Chi Decrementa RCX?
+
+<p align=justify>
+All'inizio della mia esperienza con il linguaggio assembly x86, ricordo di essere stato massicciamente confuso su dove e quando il registro RCX (in realtà, molto tempo fa, era semplicemente il registro CX) venisse decrementato quando si utilizzavano le istruzioni di stringa. è una questione chiave, soprattutto quando non si utilizza il prefisso REP. Quando si usa REP STOSB (o REP con qualsiasi delle istruzioni di stringa), RCX viene decrementato automaticamente, di 1, per ogni accesso alla memoria effettuato dall'istruzione. E una volta che RCX viene decrementato a 0, REP STOSB rileva che RCX è ora 0 e smette di scrivere nella memoria. Il controllo passa quindi alla prossima istruzione in coda. Ma togli il REP, e il decremento automatico di RCX si ferma. Quindi, anche la rilevazione automatica quando RCX è stato conteggiato fino a 0. Ovviamente, qualcosa deve decrementare RCX poiché RCX governa quante volte l'istruzione di stringa accede alla memoria. Se STOSB non lo fa"hai indovinato"devi farlo in un altro posto, con un'altra istruzione. Il modo ovvio per decrementare RCX è utilizzare DEC RCX. E il modo ovvio per determinare se RCX è stato decrementato a 0 è seguire l'istruzione DEC RCX con un'istruzione JNZ (Salta se Non Zero). JNZ testa il flag Zero ZF e salta di nuovo all'istruzione STOSB fino a quando ZF diventa vero. E ZF diventa vero quando un'istruzione DEC causa che il suo operando (qui, RCX) diventi 0.
+</p>
+
+### L'Istruzione LOOP
+
+<p align=justify>
+Tenendo tutto ciò a mente, considera il seguente ciclo di istruzioni in linguaggio assembly. Questo non è tratto dal programma precedente, ma un esempio assemblato del modo "difficile" di fare le cose:
+</p>
+
+```asm
+     mov al,30h  ; Put the value of character "0" in AL
+ DoChar:
+     stosb       ; Note that there's no REP prefix!
+     inc al      ; Bump the character value in AL up by 1     
+     dec rcx     ; Decrement the count by 1..
+     jnz DoChar  ; ..and loop again if RCX> 0
+```
+
+<p align=justify>
+Guarda come funziona il ciclo. STOSB si attiva, AL viene modificato e poi RCX viene decrementato. L'istruzione JNZ verifica se l'istruzione DEC ha forzato RCX a zero. Se sì, il flag Zero ZF viene impostato e il ciclo termina. Ma fino a quando ZF non è impostato, il salto viene effettuato di nuovo all'etichetta DoChar, dove STOSB si attiva ancora una volta. C'è un modo più semplice, usando un'istruzione di cui non ho parlato fino ad ora: LOOP. L'istruzione LOOP combina il decremento di RCX con un test e un salto basato su ZF. Si presenta così:
+</p>
+
+```asm
+     mov al,30h   ; Put the value of character "0" in AL
+ DoChar:
+     stosb        ; Note that there's no REP prefix!
+     inc al        ; Bump the character value in AL up by 1
+     loop DoChar  ; Go back & do another char until RCX goes to 0
+```
+
+<p align=justify>
+Quando viene eseguita, l'istruzione LOOP prima decrementa RCX di 1. Poi controlla il flag Zero per vedere se l'operazione di decremento ha portato RCX a zero. Se sì, passa all'istruzione successiva. Se no (cioè, se ZF rimane 0, indicando che RCX è ancora maggiore di 0), LOOP salta all'etichetta specificata come suo operando. Quindi, il ciclo continua a ripetere LOOP finché RCX non arriva a 0. A quel punto, il ciclo è terminato e l'esecuzione continua con l'istruzione successiva dopo LOOP.
+</p>
+
+### Visualizzare un righello sullo schermo
+
+<p align=justify>
+Come dimostrazione utile di quando ha senso utilizzare STOSB senza REP (ma con LOOP), lasciami offrirti un altro elemento per il tuo toolkit video. La procedura Ruler nel programma precedente visualizza una sequenza ripetitiva di cifre ascendenti a partire da 1, di qualsiasi lunghezza, in una posizione selezionabile sullo schermo. In altre parole, puoi visualizzare una stringa di cifre come questa ovunque tu voglia:
+</p>
+
+```
+ 123456789012345678901234567890123456789012345678901234567890
+```
+
+<p align=justify>
+Questo potrebbe consentirti di determinare dove, nella dimensione orizzontale della finestra della console, inizia una riga o dove cade un certo carattere. La procedura Ruler ti consente di specificare quanto è lunga la riga, in cifre, e dove sullo schermo verrà visualizzata.
+</p>
+
+<p align=justify>
+Una chiamata tipica a Ruler somiglierebbe a qualcosa del genere:
+</p>
+
+```asm
+ mov rax,1       ; Load Y position to AL
+ mov rbx,1        ; Load X position to BL
+ mov rcx,COLS-1  ; Load ruler length to RCX
+ call Ruler      ; Write the ruler to the buffer
+````
+
+<p align=justify>
+Questa invocazione posiziona un righello nell'angolo in alto a sinistra del display, iniziando dalla posizione 1,1. La lunghezza del righello è passata in RCX. Qui, stai specificando un righello lungo un carattere in meno rispetto alla larghezza del display. Questo fornisce un righello che copre l'intera larghezza visibile del tuo display di testo virtuale. Perché un carattere in meno? Ricorda che c'è un carattere EOL alla fine di ogni riga. Questo carattere EOL non è visibile direttamente, ma è comunque un carattere e richiede un byte nel buffer per contenerlo. L'equivalente COLS deve sempre tenerne conto: se vuoi un display largo 80 caratteri, COLS deve essere impostato su 81. Se vuoi un display largo 96 caratteri, COLS deve essere impostato su 97. Se codifichi una chiamata a Ruler come mostrato in precedenza, NASM eseguirà alcuni calcoli durante l'assemblaggio e genererà sempre un righello che copre l'intera larghezza (visibile) del display di testo. Oltre all'istruzione LOOP, qui c'è una notevole quantità di nuove tecnologie di assemblaggio in gioco che meriterebbero una spiegazione. Facciamo una deviazione dalle istruzioni a stringa per un momento e diamo un'occhiata più da vicino.
+</p>
+
+### MUL non è IMUL
+
+<p align=justify>
+Ho descritto l'istruzione MUL e i suoi operandi impliciti molto tempo fa. La procedura Ruler usa anche MUL per calcolare una posizione X,Y nel buffer di memoria di visualizzazione dove STOSB può iniziare a posizionare i caratteri della riga. L'algoritmo per determinare l'offset in byte nel buffer per valori X e Y qualsiasi appare così.
+</p>
+
+```asm
+ Offset = ((Y * width in characters of a screen line) + X)
+```
+
+<p align=justify>
+Abbastanza ovviamente, devi spostarti Y righe verso il basso nel buffer dello schermo e poi spostarti di X byte dal margine sinistro dello schermo per raggiungere la tua posizione X,Y. Il calcolo viene fatto in questo modo all'interno della procedura Ruler:
+</p>
+
+```asm
+ mov rdi,VidBuff   ; Load video buffer address to RDI
+     dec rax       ; Adjust Y value down by 1 for address calculation
+     dec rbx       ; Adjust X value down by 1 for address calculation
+     mov ah,COLS   ; Move screen width to AH
+     mul ah        ; Do 8-bit multiply AL*AH to AX
+     add rdi,rax   ; Add Y offset into vidbuff to RDI
+     add rdi,rbx   ; Add X offset into vidbuf to RDI
+```
+
+<p align=justify>
+Le due istruzioni DEC si occupano del fatto che le posizioni X,Y in questo sistema sono basate su 1; cioè, l'angolo superiore sinistro dello schermo è la posizione 1,1 piuttosto che 0,0, come avviene in alcuni sistemi di coordinate X,Y. Pensala in questo modo: se vuoi visualizzare un righello che inizia nell'angolo superiore sinistro dello schermo, devi scrivere i caratteri del righello che partono dall'inizio del buffer, senza alcuno spostamento. A fini di calcolo, quindi, i valori X,Y devono essere basati su 0. Per una moltiplicazione a 8 bit utilizzando MUL, uno dei fattori è implicito: AL contiene il valore Y e il chiamante passa a Ruler il valore Y in RAX. Inseriamo la larghezza dello schermo in AH e poi moltiplichiamo AH per AL con MUL. (Vedi la discussione su MUL nei paragrafi precedenti se è diventato poco chiaro nel frattempo.) Il prodotto sostituisce i valori sia in AH che in AL e viene accesso come il valore in AX. Aggiungendo quel prodotto e il valore X (passato a Ruler in BL) a RDI ottieni l'indirizzo di memoria preciso in cui devono essere scritti i caratteri del righello. Ora, c'è un bug piuttosto comune di cui avvertirti: MUL non è IMUL"la maggior parte del tempo. MUL e IMUL sono istruzioni sorelle che svolgono entrambe la moltiplicazione. MUL tratta i suoi valori operandi come non firmati, mentre IMUL li tratta come firmati. Questa differenza non importa finché entrambi i fattori rimangono positivi in un contesto firmato. In termini pratici, per una moltiplicazione a 8 bit, MUL e IMUL funzionano identicamente su valori di 127 o meno. A 128 tutto cambia. I valori superiori a 127 sono considerati negativi in un contesto firmato a 8 bit. MUL considera 128 come"128. IMUL considera 128 come -1. Ops. Potresti sostituire l'istruzione MUL con IMUL in Ruler, e la procedura funzionerebbe identicamente fino a quando non le passi una dimensione dello schermo maggiore di 127. Poi, all'improvviso, IMUL calcolerebbe un prodotto che è nominalmente negativo"ma solo se stai trattando il valore come un valore firmato. Un numero negativo trattato come non firmato è un numero positivo molto grande, e un riferimento di memoria all'indirizzo rappresentato da RDI più quel valore anomalo genererà un errore di segmentazione. Provalo! Nessun danno fatto, ed è una lezione interessante. IMUL è per valori firmati. Per i calcoli degli indirizzi di memoria, lascialo perdere e assicurati di usare MUL invece.
+</p>
+
+<p align=justify>
+La procedura Ruler è un buon esempio di utilizzo di STOSB senza il prefisso REP. Dobbiamo cambiare il valore in AL ogni volta che memorizziamo AL in memoria e quindi non possiamo usare REP STOSB. Nota che non viene fatto nulla a RDI o RCX mentre cambiamo la cifra da visualizzare, e quindi i valori memorizzati in quei registri vengono mantenuti per la prossima esecuzione di STOSB. Ruler è un buon esempio di come LOOP funzioni con STOSB per ridurre RCX e restituire il controllo all'inizio del ciclo. LOOP, in un certo senso, fa all'esterno della CPU ciò che REP fa all'interno della CPU: regola RCX e chiude il ciclo. Cerca di mantenere questo concetto chiaro nella tua mente quando utilizzi qualsiasi delle istruzioni di stringa!
+</p>
+
+### Le quattro dimensioni di STOS
+
+<p align=justify>
+Prima di passare ad altre istruzioni sulle stringhe, vale la pena sottolineare che ci sono quattro diverse "dimensioni" dell'istruzione di stringa STOS:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+		STOSB memorizza il valore a 8 bit in AL nella memoria.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		STOSW memorizza il valore a 16 bit in AX nella memoria.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		STOSD memorizza il valore a 32 bit in EAX nella memoria
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		STOSQ memorizza il valore a 64 bit in RAX nella memoria
+		</p>
+	</li>
+</ul>
+
+<p align=justify>
+STOSW, STOSD e STOSQ funzionano quasi allo stesso modo di STOSB. La principale differenza risiede nel modo in cui viene modificato l'indirizzo di destinazione RDI dopo ogni operazione di trasferimento di memoria. RDI viene modificato in base alle dimensioni della quantità su cui agisce l'istruzione. Per STOSW, RDI cambia di due byte, verso l'alto o verso il basso a seconda dello stato di DF. Per STOSD, RDI cambia di quattro byte, ancora una volta verso l'alto o verso il basso a seconda dello stato di DF. STOSQ cambia RDI di otto byte, verso l'alto o verso il basso a seconda dello stato di DF. Tuttavia, in tutti i casi, con il prefisso REP davanti all'istruzione, il registro contatore (in x64, RCX) viene decrementato di uno dopo ogni operazione di trasferimento di memoria. Viene sempre decrementato, e sempre di uno. RCX conta le operazioni. Non ha nulla a che fare con gli indirizzi di memoria né con la dimensione del valore memorizzato in memoria.
+</p>
+
+### Addio Matematica BCD
+
+<p align=justify>
+Questo potrebbe sembrare un posto strano per parlare di istruzioni macchina che non sono più disponibili, ma ho un motivo. I lettori che hanno visto le edizioni precedenti di questo libro, in particolare l'edizione del 2009, potrebbero ricordare che il programma di esempio vidbuff1 utilizzava l'aritmetica BCD per generare i caratteri che compongono il righello. Per essere chiari, gli architetti di x64 hanno rimosso tutte le istruzioni di matematica BCD trovate nella definizione x86. Questo equivale a sei istruzioni: AAA, DAA, DAS, AAS, AAM, AAD. è al di fuori dell'ambito di questo libro spiegare la matematica BCD (l'edizione del 2009 ha una certa copertura se sei veramente interessato), e lo menziono solo perché nell'edizione del 2009, il programma vidbuff1 utilizzava la matematica BCD. Ci sono casi d'uso per la matematica BCD, principalmente nei calcoli finanziari, ma le istruzioni BCD di Intel risalgono a molto tempo fa, e oggi abbiamo tecniche di calcolo finanziario migliori. Fondamentalmente, la matematica BCD ti consentiva di aggiungere un carattere ASCII a un altro carattere ASCII. è complicato e lento e non è più possibile"perché le istruzioni che lo realizzano non sono più disponibili.
+</p>
+
+### MOVSB: Copie di blocco veloci
+
+<p align=justify>
+L'istruzione STOSB è un elemento affascinante, ma per pura azione racchiusa in una singola riga di codice assembly, non c'è nulla che possa eguagliare l'istruzione MOVS. Come STOS, MOVS viene in quattro "dimensioni", per gestire byte (MOVSB), parole a 16 bit (MOVSW), doppie parole a 32 bit (MOVSD) e quadruple parole a 64 bit (MOVSQ). Per lavorare con caratteri ASCII come facciamo in questo capitolo, MOVSB è quella da usare. La sostanza dell'istruzione MOVSB è questa: un blocco di dati di memoria all'indirizzo memorizzato in RSI viene copiato all'indirizzo memorizzato in RDI. Il numero di byte da spostare è posto nel registro RCX. RCX conta a rovescio di uno dopo che ogni byte è copiato, e gli indirizzi in RSI e RDI vengono regolati di uno. Per MOVSW, i registri di origine e destinazione vengono regolati di due dopo che ogni parola è copiata; per MOVSD, vengono regolati di quattro dopo che ogni doppia parola è copiata, e per MOVSQ, vengono regolati di otto byte dopo che ogni quadrupla parola è copiata. Queste regolazioni sono incrementi o decrementi, a seconda dello stato di DF. In tutti i casi, RCX viene decrementato di uno ogni volta che un elemento di dati passa dall'indirizzo sorgente all'indirizzo di destinazione. Ricorda che RCX conta le operazioni di trasferimento di memoria, non i byte di indirizzo! Il registro DF influisce su MOVSB nello stesso modo in cui influisce su STOSB. Per impostazione predefinita, DF è cancellato e le operazioni di stringa operano "oin salita" dalla memoria bassa verso la memoria alta. Se DF è impostato, la direzione in cui funzionano le operazioni di stringa va in senso contrario, dalla memoria alta verso la memoria bassa. MOVSB può operare sia semiautomatica che automaticamente, proprio come con STOSB. Aggiungi il prefisso REP a MOVSB, e (presumendo che tu abbia impostato correttamente i registri) un blocco di memoria verrà copiato da qui a lì in un'unica istruzione, in un ciclo stretto all'interno della CPU. Per dimostrare MOVSB, ho aggiunto una breve procedura chiamata WrtLn. WrtLn copia una stringa in una certa posizione X,Y nel buffer di visualizzazione VidBuff. Fa un lavoro molto simile a Write in Pascal o print in C. Prima di chiamare WrtLn, posizioni l'indirizzo sorgente della stringa in RSI, le coordinate X,Y basate su 1 in RBX e RAX, e la lunghezza della stringa in byte in RCX. Il codice che fa il lavoro in WrtLn è piuttosto semplice:
+</p>
+
+```asm
+ cld             ; Clear DF for up-memory write
+ mov rdi,VidBuff  ; Load destination index with buffer address
+ dec rax          ; Adjust Y value down by 1 for address calculation
+ dec rbx          ; Adjust X value down by 1 for address calculation
+ mov ah,COLS      ; Move screen width to AH
+ mul ah           ; Do 8-bit multiply AL*AH to AX
+ add rdi,rax      ; Add Y offset into vidbuff to RDI
+ add rdi,rbx      ; Add X offset into vidbuf to RDI
+ rep movsb        ; Blast the string into the buffer
+```
+
+<p align=justify>
+Il codice per calcolare l'offset nel VidBuff dai valori X,Y utilizzando MUL è lo stesso utilizzato in Ruler. Nella sezione principale del programma di vidbuff1, vengono effettuati alcuni calcoli aggiuntivi per visualizzare una stringa centrata nel buffer visibile, piuttosto che in una specifica posizione X,Y:
+</p>
+
+```asm
+ mov rsi,Message  ; Load the address of the message to RSI
+ mov rcx,MSGLEN   ; and its length to RCX
+ mov rbx,COLS     ; and the screen width to RBX
+ sub rbx,rcx      ; Calc diff of message length and screen width
+ shr rbx,1        ; Divide difference by 2 for X value
+ mov rax,20       ; Set message row to Line 20
+ call WrtLn       ; Display the centered message
+```
+
+### DF e Mosse di Blocco Sovrapposte
+
+<p align=justify>
+Il semplice programma dimostrativo vidbuff1 utilizza MOVSB per copiare un messaggio dalla sezione .data del programma nel buffer di visualizzazione. Sebbene WrtLn utilizzi MOVSB per copiare il messaggio "in salita" dalla memoria bassa a quella alta, si potrebbe sostenere che si potrebbe altrettanto facilmente copiarlo dalla memoria alta "in discesa" a quella bassa, e avresti ragione. Il flag di direzione DF non sembra essere più di una questione di preferenza... a meno che e fino a quando i tuoi blocchi di memoria sorgente e destinazione non si sovrappongano. Nulla richiede che RSI e RDI puntino a aree di memoria completamente separate. I blocchi di memoria sorgente e destinazione possono sovrapporsi e questo può spesso essere estremamente utile. Ecco un esempio: considera la sfida di modificare un testo memorizzato in un buffer di memoria. Supponiamo di avere una stringa in un buffer e di voler inserire un carattere da qualche parte a metà della stringa. Tutti i caratteri nella stringa oltre il punto di inserimento devono essere "spostati da parte" per fare spazio al nuovo carattere inserito. (Questo presuppone che ci sia spazio vuoto alla fine del buffer.) Questa è un'applicazione naturale per REP MOVSB"ma predisporla potrebbe essere più complicato di quanto sembri a prima vista. Ricordo vividamente la prima volta che ho provato, che non è coincidente, era la prima volta che ho mai tentato di usare MOVSB. Ciò che ho fatto è mostrato schematicamente nella parte sinistra della figura seguente. L'obiettivo era spostare una stringa a destra di una posizione in modo da poter inserire un carattere spazio davanti ad essa.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/movsb_on_overlapping_memory_blocks.png">
+</div>
+
+
+<p align=justify>
+Ho puntato RSI al primo byte della stringa e ho puntato RDI alla posizione in cui volevo spostare la stringa. Ho quindi eseguito un'istruzione REP MOVSB "in salita" e, quando la polvere si è posata, ho scoperto di aver sostituito l'intera stringa con il suo carattere iniziale. Sì, è un errore ovvio... una volta che lo vedi accadere realmente. (Sì, quando ho commesso questo errore, i registri erano di 16 bit e ero molto più giovane, ma le cose funzionano allo stesso modo in modalità long x64, e il bug è ancora molto facile da commettere.) Sul lato destro della figura c'è il modo in cui un'inserzione del genere dovrebbe essere effettivamente eseguita. Devi iniziare dalla parte alta della stringa e lavorare "in discesa" verso il punto di inserimento. Il primo spostamento del carattere deve portare l'ultimo carattere della stringa in uno spazio di buffer vuoto e fuori dal cammino del successivo spostamento del carattere, e così via. In questo modo, due aree di memoria che si sovrappongono tranne che per un byte possono essere copiate l'una nell'altra senza perdere alcun dato. Questo si mostra più facilmente di quanto si racconti. Se puoi osservare lo spostamento avvenire, diventa molto più chiaro. Ho creato una demo sandbox di un movimento di blocco sovrapposto nel codice seguente. è progettata per SASM, motivo per cui ha il suffisso gcc.
+</p>
+
+```asm
+section .data
+                 ;0000000000011
+                 ;0123456789012
+    EditBuff: db 'abcdefghijklm '
+    BUFFLEN   equ $-EditBuff
+    ENDPOS    equ 12         ; 0-based number of last visible character
+    INSRTPOS  equ 1
+	
+section .text
+
+global main
+
+main:
+    mov rbp, rsp; for correct debugging
+
+; Put your experiments between the two nops...
+    nop
+
+    std                        ; We're doing a "downhill" transfer
+    mov rbx,EditBuff
+    mov rsi,EditBuff+ENDPOS    ; Start at end of visible text
+    mov rdi,EditBuff+ENDPOS+1  ; Bump text right by 1
+    mov rcx,ENDPOS-INSRTPOS+2  ; # of chars to bump; not a 0-based address but a count
+    rep movsb                  ; Move 'em!
+    mov byte [rbx],' '         ; Write a space at insert point
+
+; Put your experiments between the two nops...
+    nop
+```
+
+<p align=justify>
+Per guardare il film in SASM, devi caricare il codice, compilarlo e poi avviare il debugger. Una volta che sei in modalità di debug, seleziona Debug -> Mostra memoria. Nel campo Variabile o espressione, inserisci EditBuff. Nel campo Tipo, seleziona Char dal primo menu a discesa e b dal secondo menu a discesa. EditBuff è lungo 14 caratteri (incluso lo spazio finale), quindi inserisci 14 nel terzo campo. Non fare clic sulla casella di controllo Indirizzo. Ecco come funziona: ENDPOS è l'offset basato su 0 dell'ultimo carattere non spazio nella stringa. Nota che questo non è un conteggio, ma un offset dall'inizio di EditBuff. L'offset dell'ultimo carattere "om" dall'inizio del buffer è di 12 byte. Se inizi con l'indirizzo di EditBuff in RSI e aggiungi 12, RSI punterà a "om." RDI, a sua volta, è puntato all'offset della prima posizione del buffer dopo l'ultimo carattere nella stringa, che è la ragione per il calcolo in fase di assemblaggio ENDPOS + 1, che punta al carattere di spazio alla fine di EditBuff. Derivare il conteggio da inserire in RCX deve tenere conto della natura basata su 0 degli offset degli indirizzi. Devi aggiungere 2 alla differenza tra la posizione finale della stringa (ENDPOS) e la posizione di inserimento (INSRTPOS) perché entrambe sono basate su 0, e per ottenere un conteggio corretto, devi aggiungere di nuovo i due 1 in più che avresti se ENDPOS e INSRTPOS fossero entrambi numeri basati su 1. (Ricorda che i conteggi di cose non sono basati su 0!) Nota l'istruzione STD che inizia il blocco di codice. STD imposta il Flag di Direzione DF su 1, il che costringe le istruzioni stringa a funzionare "in discesa" dalla memoria alta verso la memoria bassa. DF di default è 0, quindi per far funzionare questo codice, l'istruzione STD deve essere presente!
+</p>
+
+### Istruzioni di stringa REP con passo singolo
+
+<p align=justify>
+Dovrei menzionare qui che, anche se un'istruzione REP MOVSB sembra essere un'unica istruzione, in realtà si tratta di un ciclo estremamente ristretto implementato come un'unica istruzione. Fase per fase, la REP MOVSB in un debugger non esegue l'intero ciclo in un colpo solo! Ogni volta che fai clic sull'icona 'Step Into' di SASM, verrà eseguita solo un'operazione di trasferimento di memoria. Se RCX è caricato con un valore di conteggio di 13, ad esempio, dovrai fare clic sull'icona 'Step Into' 13 volte per avanzare attraverso l'intera istruzione. Questo ti consente di osservare i cambiamenti in memoria e nei registri mentre l'istruzione opera. Tuttavia, per valori di conteggio elevati in RCX, questo può comportare molti clic. Se sei sicuro della correttezza della configurazione della tua istruzione stringa, potresti voler inserire un break point dopo l'istruzione REP string e fare clic su 'Continue' (o premere F5) per eseguire l'istruzione stringa a piena velocità senza fermarti dopo ogni operazione di trasferimento di memoria. SASM si fermerà al break point, e potrai ispezionare lo stato finale del buffer di memoria e continuare a fare il single-stepping da lì. L'altro problema relativo all'osservazione dei trasferimenti di memoria con il debugger di SASM è il modo strano in cui SASM visualizza i buffer delle stringhe. Se selezioni 'Smart' dal primo menu a discesa, SASM visualizzerà EditBuff come una stringa di caratteri nella forma "oabcdefghijklm" ma senza lo spazio finale. Puoi osservare il trasferimento avvenire con quella visualizzazione, ma non è l'intera situazione e potrebbe confonderti. La visualizzazione Char di EditBuff è in parte così perché consente di includere caratteri non visualizzabili come EOL. Un carattere è mostrato come il suo equivalente decimale e poi il carattere reale tra apici singoli, come questo.
+</p>
+
+```asm
+{97'a',98'b',99'c',100'd',101'e',102'f'103'g', ... 32'}
+```
+
+<p align=justify>
+Questo formato ti mostrerà il carattere spaziatore alla fine di EditBuff, ma dovrai guardare attentamente per vedere il movimento mentre accade. La mia sincera speranza è che SASM un giorno includa una visualizzazione della memoria in stile hexdump, simile a quella di Insight.
+</p>
+
+### Memorizzare dati in stringhe discontinue
+
+<p align=justify>
+A volte devi infrangere le regole. Fino ad ora ho spiegato le istruzioni della stringa assumendo che la stringa di destinazione sia sempre una sequenza continua di byte in memoria. Questo non è necessariamente vero. Oltre a cambiare il valore in RAX tra le esecuzioni di STOSB, puoi anche cambiare l'indirizzo di destinazione. Il risultato finale è che puoi memorizzare dati in diverse aree di memoria all'interno di un singolo ciclo molto ristretto.
+</p>
+
+### Visualizzazione di una tabella ASCII
+
+<p align=justify>
+Ho creato un piccolo programma demo per SASM per mostrarvi cosa intendo. Non è utile come la procedura Ruler nel codice di prima, ma fa il suo punto ed è facile da capire se mi hai seguito finora. Il programma showchargcc utilizza molti degli stessi macchinari di base di vidbuff1, incluso il meccanismo di visualizzazione virtuale e il righello. Quindi, per risparmiare spazio sulla pagina del libro, non mostrerò l'intero programma qui. Il file completo del codice sorgente (come tutto il codice presentato in questo libro) può essere scaricato dalla mia pagina web in linguaggio assembly nel file zip dell'archivio degli elenchi. Il programma showchargcc cancella lo schermo, visualizza un righello sulla riga 1 e sotto mostra una tabella contenente 224 dei 256 caratteri ASCII, visualizzati ordinatamente in 7 righe di 32 caratteri ciascuna. La tabella include i 127 caratteri ASCII "alti", inclusi i caratteri delle lingue straniere, i caratteri di disegno delle linee e i simboli vari. Ciò che non visualizza sono i primi 32 caratteri ASCII. Linux li considera come caratteri di controllo, e anche quei caratteri per i quali sono disponibili glifi non vengono visualizzati nella console. Il programma showchargcc introduce un paio di nuovi concetti e istruzioni, tutti relativi ai cicli di programma. (Le istruzioni per stringhe come STOSB e i cicli di programma sono intimamente correlate.) Per risparmiare spazio sulla pagina, il listato seguente presenta showchargcc senza le sue procedure. Tutte le procedure e le macro che invoca sono presenti nel codice precedente.
+</p>
+
+```asm
+;  Executable name : showchargcc
+;  Version         : 2.0
+;  Created date    : 10/19/2022
+;  Last update     : 7/15/2023
+;  Author          : Jeff Duntemann
+;  Description     : A simple program in assembly for Linux, 
+;    demonstrating discontinuous string writes to memory using STOSB without
+;    REP. The program loops through characters 32 through 255 and writes a
+;    simple "ASCII chart" in a display buffer. The chart consists of 8 lines
+;    of 32 characters, with the lines not continuous in memory.
+;
+;  Build using the standard SASM x64 build lines
+;
+
+SECTION .data       ; Section containing initialized data
+    EOL 	equ 10  ; Linux end-of-line character
+    FILLCHR	equ 32  ; Default to ASCII space character
+    CHRTROW	equ 2   ; Chart begins 2 lines from top
+    CHRTLEN	equ 32  ; Each chart line shows 32 chars
+
+; This escape sequence will clear the console terminal and place the
+; text cursor to the origin (1,1) on virtually all Linux consoles:
+    ClrHome db 27,"[2J",27,"[01;01H"
+    CLRLEN  equ $-ClrHome    ; Length of term clear string
+    EOL     equ 10           ; Linux end-of-line character
+
+	
+; We use this to display a ruler across the screen. 
+    RulerString db "12345678901234567890123456789012345678901234567890123456789012345678901234567890" 
+    RULERLEN    equ $-RulerString
+	
+SECTION .bss                ; Section containing uninitialized data	
+
+    COLS	equ 81          ; Line length + 1 char for EOL
+    ROWS	equ 25          ; Number of lines in display
+    VidBuff	resb COLS*ROWS  ; Buffer size adapts to ROWS & COLS
+
+SECTION .text               ; Section containing code
+
+global   main                ; Linker needs this to find the entry point!
+
+ClearTerminal:
+    push r11            ; Save all modified registers
+    push rax
+    push rcx
+    push rdx
+    push rsi
+    push rdi
+
+    mov rax,1           ; Specify sys_write call
+    mov rdi,1           ; Specify File Descriptor 1: Standard Output
+    mov rsi,ClrHome     ; Pass address of the escape sequence
+    mov rdx,CLRLEN      ; Pass the length of the escape sequence
+    syscall	            ; Make system call
+
+    pop rdi             ; Restore all modified registers
+    pop rsi
+    pop rdx
+    pop rcx
+    pop rax
+    pop r11
+    ret
+
+;-------------------------------------------------------------------------
+; Show:         Display a text buffer to the Linux console
+; UPDATED:      5/10/2023
+; IN:           Nothing
+; RETURNS:      Nothing
+; MODIFIES:     Nothing
+; CALLS:        Linux sys_write
+; DESCRIPTION:  Sends the buffer VidBuff to the Linux console via sys_write.
+;               The number of bytes sent to the console is calculated by
+;               multiplying the COLS equate by the ROWS equate.
+
+Show:	
+    push r11            ; Save all registers we're going to change
+    push rax
+    push rcx
+    push rdx
+    push rsi
+    push rdi
+
+    mov rax,1           ; Specify sys_write call
+    mov rdi,1           ; Specify File Descriptor 1: Standard Output
+    mov rsi,VidBuff     ; Pass address of the buffer
+    mov rdx,COLS*ROWS   ; Pass the length of the buffer
+    syscall             ; Make system call
+
+    pop rdi             ; Restore all modified registers
+    pop rsi
+    pop rdx
+    pop rcx
+    pop rax
+    pop r11
+    ret
+
+;-------------------------------------------------------------------------
+; ClrVid:       Clears a buffer to spaces and replaces overwritten EOLs
+; UPDATED:      5/10/2023
+; IN:           Nothing
+; RETURNS:      Nothing
+; MODIFIES:     VidBuff, DF
+; CALLS:        Nothing
+; DESCRIPTION:  Fills the buffer VidBuff with a predefined character
+;               (FILLCHR) and then places an EOL character at the end
+;               of every line, where a line ends every COLS bytes in
+;               VidBuff.
+
+ClrVid:	push rax        ; Save registers that we change
+	push rcx
+	push rdi
+	cld                 ; Clear DF; we're counting up-memory
+	mov al,FILLCHR      ; Put the buffer filler char in AL
+	mov rdi,VidBuff     ; Point destination index at buffer
+	mov rcx,COLS*ROWS   ; Put count of chars stored into RCX
+	rep stosb           ; Blast byte-length chars at the buffer
+
+; Buffer is cleared; now we need to re-insert the EOL char after each line:
+	mov rdi,VidBuff     ; Point destination at buffer again
+	dec rdi             ; Start EOL position count at VidBuff char 0
+	mov rcx,ROWS        ; Put number of rows in count register
+
+.PtEOL:	add rdi,COLS    ; Add column count to RDI
+	mov byte [rdi],EOL  ; Store EOL char at end of row
+	loop .PtEOL         ; Loop back if still more lines
+	pop rdi             ; Restore caller's registers
+	pop rcx
+	pop rax
+	ret                 ; and go home!
+
+;-------------------------------------------------------------------------
+; Ruler:        Generates a "1234567890"-style ruler at X,Y in text buffer
+; UPDATED:      5/10/2023
+; IN:           The 1-based X position (row #) is passed in RBX
+;               The 1-based Y position (column #) is passed in RAX
+;               The length of the ruler in chars is passed in RCX
+; RETURNS:      Nothing
+; MODIFIES:     VidBuff
+; CALLS:        Nothing
+; DESCRIPTION:  Writes a ruler to the video buffer VidBuff, at the 1-based
+;               X,Y position passed in RBX,RAX. The ruler consists of a
+;               repeating sequence of the digits 1 through 0. The ruler
+;               will wrap to subsequent lines and overwrite whatever EOL
+;               characters fall within its length, if it will not fit
+;               entirely on the line where it begins. Note that the Show
+;               procedure must be called after Ruler to display the ruler
+;               on the console.
+
+Ruler:  
+    push rax         ; Save the registers we change
+    push rbx
+    push rcx
+    push rdx
+    push rdi
+
+    mov rdi,VidBuff   ; Load video buffer address to RDI
+    dec rax           ; Adjust Y value down by 1 for address calculation
+    dec rbx           ; Adjust X value down by 1 for address calculation
+    mov ah,COLS       ; Move screen width to AH
+    mul ah            ; Do 8-bit multiply AL*AH to AX
+    add rdi,rax       ; Add Y offset into vidbuff to RDI
+    add rdi,rbx       ; Add X offset into vidbuf to RDI
+        
+; RDI now contains the memory address in the buffer where the ruler
+; is to begin. Now we display the ruler, starting at that position:
+    mov rdx,RulerString  ; Load address of ruler string into RDX
+
+DoRule: 
+    mov byte al,[rdx] ; Load first digit in the ruler to AL
+    stosb             ; Store 1 char; note that there's no REP prefix!
+    inc rdx           ; Increment RDX to point to next char in ruler string
+    loop DoRule       ; Decrement RCX & Go back for another char until RCX=0
+
+    pop rdi           ; Restore the registers we saved
+    pop rdx
+    pop rcx
+    pop rbx
+    pop rax
+    ret    
+
+;-------------------------------------------------------------------------
+; MAIN PROGRAM:
+;-------------------------------------------------------------------------	
+main:
+    mov rbp,rsp
+
+; Get the console and text display text buffer ready to go:
+    call ClearTerminal  ; Send terminal clear string to console
+    call ClrVid         ; Init/clear the video buffer
+
+; Show a 64-character ruler above the table display:
+    mov rax,1           ; Start ruler at display position 1,1
+    mov rbx,1
+    mov rcx,32          ; Make ruler 32 characters wide
+    call Ruler          ; Generate the ruler
+
+; Now let's generate the chart itself:
+    mov rdi,VidBuff     ; Start with buffer address in RDI
+    add rdi,COLS*CHRTROW    ; Begin table display down CHRTROW lines
+    mov rcx,224         ; Show 256 chars minus first 32
+    mov al,32           ; Start with char 32; others won't show
+.DoLn:	mov bl,CHRTLEN  ; Each line will consist of 32 chars
+.DoChr:	stosb           ; Note that there's no REP prefix!
+    jrcxz AllDone       ; When the full set is printed, quit
+    inc al              ; Bump the character value in AL up by 1
+    dec bl              ; Decrement the line counter by one
+    loopnz .DoChr       ; Go back & do another char until BL goes to 0
+    add rdi,COLS-CHRTLEN   ; Move RDI to start of next line
+    jmp .DoLn           ; Start display of the next line
+
+; Having written all that to the buffer, send the buffer to the console:
+AllDone:
+    call Show           ; Refresh the buffer to the console
+Exit:
+    ret
+```
+### Cicli di istruzioni annidati
+
+<p align=justify>
+Una volta che tutti i registri sono stati impostati correttamente secondo le ipotesi fatte da STOSB, il lavoro reale di showchargcc è svolto da due cicli di istruzioni, uno dentro l'altro. Il ciclo interno visualizza una linea composta da 32 caratteri. Il ciclo esterno suddivide la visualizzazione in sette di queste linee. Il ciclo interno è di gran lunga il più interessante dei due. Ecco qui:
+</p>
+
+```asm
+ .DoChr:
+     stosb          ; Note that there's no REP prefix!
+     jrcxz AllDone  ; When the full set is printed, quit
+     inc al         ; Bump the character value in AL up by 1
+     dec bl         ; Decrement the line counter by one
+     loopnz .DoChr  ; Go back & do another char until BL goes to 0
+```
+
+<p align=justify>
+Il lavoro qui (mettere un carattere nel buffer di visualizzazione) è nuovamente svolto da STOSB. Ancora una volta, STOSB lavora da solo, senza REP. Senza REP per tirare il ciclo all'interno della CPU, devi impostare tu stesso il ciclo. Tieni presente cosa accade ogni volta che STOSB si attiva: il carattere in AL viene scritto nella posizione di memoria puntata da RDI, e RDI viene incrementato di 1. All'altra estremità del ciclo, l'istruzione LOOPNZ decrementa RCX di 1 e chiude il ciclo. Durante l'impostazione dei registri, abbiamo caricato RCX con il numero di caratteri che volevamo visualizzare - in questo caso, 224. (Sono 224 caratteri perché i primi 32 caratteri dell'elenco completo di 256 sono principalmente caratteri di controllo e non possono essere visualizzati.) Ogni volta che STOSB si attiva, inserisce un altro carattere nel buffer di visualizzazione VidBuff, e ci sono un carattere in meno da visualizzare. RCX funge da master counter, tenendo traccia di quando finalmente visualizziamo l'ultimo carattere rimanente. Quando RCX arriva a zero, abbiamo visualizzato il sottoinsieme appropriato del set di caratteri ASCII e il lavoro è completato.
+</p>
+
+### Salto quando RCX arriva a 0
+
+<p align=justify>
+JRCXZ è un'istruzione di salto speciale creata specificamente per aiutare con i cicli come questo. Ho spiegato come sia possibile effettuare un salto usando una delle molte variazioni dell'istruzione JMP, basata sullo stato di uno o più flag della CPU. All'inizio di questo capitolo, ho spiegato l'istruzione LOOP, che è una sorta di JMP con uno scopo speciale, combinata con un'istruzione DEC RCX implicita. JRCXZ è un'altra varietà di istruzione JMP, ma una che non osserva alcun flag o diminuisce alcun registro. Invece, JRCXZ osserva il registro RCX. Quando vede che RCX è appena andato a zero, salta all'etichetta specificata. Se RCX è ancora diverso da zero, l'esecuzione passa all'istruzione successiva in linea. Nel caso del ciclo interno mostrato in precedenza, JRCXZ salta al codice 'chiudiamo bottega' quando vede che RCX è finalmente arrivato a 0. Questo è il modo in cui termina il programma showchar. La maggior parte delle altre istruzioni JMP ha partner che saltano quando il flag di controllo non è vero. Cioè, JC (Jump on Carry) salta quando il flag di riporto è uguale a 1. Il suo partner, JNC (Jump on Not Carry), salta se il flag di riporto non è 1. Tuttavia, JRCXZ è un solitario. Non c'è istruzione JRCXNZ, quindi non cercarne una nel riferimento delle istruzioni!
+</p>
+
+### Chiusura del ciclo interno
+
+<p align=justify>
+Si supponga che RCX non sia ancora stato decrementato a 0 dall'istruzione STOSB (una condizione monitorata da JRCXZ), il ciclo continua. AL viene incrementato. In questo modo viene selezionato il successivo carattere ASCII in linea. Il valore in AL viene inviato alla posizione memorizzata in RDI da STOSB. Se incrementi il valore in AL, cambi il carattere visualizzato con il successivo nella linea. Ad esempio, se AL contiene il valore per il carattere A (65), incrementando AL cambia il carattere A in un B (66). Nella successiva esecuzione del ciclo, STOSW invierà un B allo schermo invece di un A. Dopo che il codice del carattere in AL è stato incrementato, BL viene decrementato. Ora, BL non è direttamente correlato alle istruzioni della stringa. Nulla in nessuna delle assunzioni fatte dalle istruzioni della stringa coinvolge BL. Stiamo usando BL per qualcos'altro completamente qui. BL funge da contatore che governa la lunghezza delle righe di caratteri visualizzate sullo schermo. BL è stato caricato in precedenza con il valore rappresentato dall'equazione CHRTLEN, che ha il valore 32. Ad ogni passaggio attraverso il ciclo, l'istruzione DEC BL decrementa il valore di BL di 1. Quindi, l'istruzione LOOPNZ ottiene il suo momento di gloria. LOOPNZ è leggermente diverso dal nostro amico LOOP che abbiamo esaminato in precedenza. è solo abbastanza diverso da metterti nei guai se non capisci veramente come funziona. Sia LOOP che LOOPNZ decrementano il registro RCX di 1. LOOP monitora lo stato del registro RCX e chiude il ciclo finché RCX non arriva a 0. LOOPNZ osserva sia lo stato del registro RCX sia lo stato del flag zero ZF. (LOOP ignora ZF.) LOOPNZ chiuderà il ciclo solo se RCX <> 0 e ZF = 0. In altre parole, LOOPNZ chiude il ciclo solo se RCX ha ancora qualcosa al suo interno e se il flag Zero ZF non è impostato. Quindi, cosa sta esattamente osservando LOOPNZ qui? Ricorda che immediatamente prima dell'istruzione LOOPNZ, stiamo decrementando BL di 1 attraverso un'istruzione DEC BL. L'istruzione DEC influisce sempre su ZF. Se l'operando di DEC arriva a zero per effetto dell'istruzione DEC, ZF diventa 1 (è impostato). Altrimenti, ZF rimane 0 (rimane azzerato). Quindi, effettivamente, LOOPNZ sta monitorando lo stato del registro BL. Finché BL non viene decrementato a 0 (impostando ZF), LOOPNZ chiude il ciclo. Dopo che BL è arrivato a zero, il ciclo interno è terminato e l'esecuzione passa attraverso LOOPNZ all'istruzione successiva. E per quanto riguarda RCX? Bene, LOOPNZ sta infatti osservando RCX, ma anche JRCXZ. JRCXZ è in realtà l'interruttore che governa quando l'intero ciclo "sia le porzioni interne che quelle esterne"ha svolto il suo lavoro e deve fermarsi. Quindi, mentre LOOPNZ osserva RCX, qualcun altro sta svolgendo quel compito e quel qualcun altro agirà su RCX prima che LOOPNZ possa farlo. Il compito di LOOPNZ è quindi quello di decrementare RCX ma di monitorare BL. Governa il ciclo interno dei due.
+</p>
+
+### Chiusura del ciclo esterno
+
+<p align=justify>
+Ma significa questo che JRCXZ chiude il ciclo esterno? No. JRCXZ ci dice quando entrambi i cicli sono terminati. La chiusura del ciclo esterno viene eseguita in modo leggermente diverso rispetto alla chiusura del ciclo interno. Dai un'altra occhiata ai due cicli nidificati:
+</p>
+
+```asm
+ .DoLn:
+ 	mov bl,CHRTLEN        ; Each line will consist of 32 chars
+
+ .DoChr:
+ 	stosb                 ; Note that there's no REP prefix!
+	jrcxz AllDone         ; When the full set is printed, quit
+	inc al                ; Bump the character value in AL up by 1
+ 	dec bl                ; Decrement the line counter by one
+	loopnz .DoChr         ; Go back & do another char until BL = 0
+	add rdi,COLS-CHRTLEN  ; Move RDI to start of next line
+	jmp .DoLn             ; Start display of the next line
+```
+
+<p align=justify>
+Il ciclo interno si considera completato quando abbiamo visualizzato un'intera riga della tabella ASCII sullo schermo. BL governa la lunghezza di una riga e quando BL arriva a zero (cosa che l'istruzione LOOPNZ rileva), una riga è finita. LOOPNZ quindi passa all'istruzione ADD che modifica RDI. Modifichiamo RDI per saltare dall'indirizzo della fine di una riga completata nel buffer di visualizzazione all'inizio della riga successiva al margine sinistro. Questo significa che dobbiamo "avvolgere" un certo numero di caratteri dalla fine della riga della tabella ASCII alla fine dello schermo visibile. Il numero di byte richiesto è dato dall'espressione a tempo di assemblaggio COLS-CHRTLEN. Questo è fondamentalmente la differenza tra la lunghezza di una riga della tabella ASCII e la larghezza dello schermo virtuale. (Non la larghezza della finestra del terminale a cui lo schermo virtuale è visualizzato!) Il risultato dell'espressione è il numero di byte che dobbiamo muovere ulteriormente nel buffer di visualizzazione per arrivare all'inizio della riga successiva al margine sinistro dello schermo. Ma dopo che quell'avvolgimento è stato realizzato modificando RDI, il lavoro del ciclo esterno è finito e chiudiamo il ciclo. Questa volta lo facciamo incondizionatamente tramite un semplice JMP. L'obiettivo dell'istruzione JMP è l'etichetta locale .DoLn. Nessun se, nessun argomento. Alla cima del ciclo esterno (rappresentato dall'etichetta .DoLn), ricarichiamo la lunghezza di una riga della tabella nel registro BL ora vuoto e poi torniamo nel ciclo interno. Il ciclo interno inizia a lanciare caratteri di nuovo nel buffer e continuerà a farlo finché JRCXZ non rileva che RCX è arrivato a 0. A quel punto, sia i cicli interno che esterno sono finiti e l'intera tabella ASCII è stata scritta in VidBuff. Con questo completato, il buffer può essere inviato alla console Linux chiamando la procedura Show.
+</p>
+
+###  Showchar Recap
+
+<p align=justify>
+Rivisitiamo ciò che abbiamo appena passato, poiché è indubbiamente piuttosto complesso. Il programma showchar contiene due cicli annidati: il ciclo interno invia caratteri allo schermo tramite STOSB. Il ciclo esterno invia righe di caratteri allo schermo, ripetendo il ciclo interno un certo numero di volte. (Qui, 7.) Il ciclo interno è governato dal valore nel registro BL, che è inizialmente impostato per prendere la lunghezza di una riga di caratteri. (Qui, 32.) Il ciclo esterno non è esplicitamente governato dal numero di righe da visualizzare. Cioè, non si carica il numero 7 in un registro e lo si decrementa. Invece, il ciclo esterno continua fino a quando il valore in RCX non scende a 0, indicando che l'intero lavoro"visualizzare tutti i 224 caratteri che vogliamo mostrare"è completato. Entrambi i cicli, interno ed esterno, modificano i registri con cui lavora STOSB. Il ciclo interno modifica AL dopo ogni carattere inviato allo schermo. Questo rende possibile visualizzare un carattere diverso ogni volta che STOSB viene eseguito. Il ciclo esterno modifica RDI (il registro dell'indice di destinazione) ogni volta che una riga di caratteri è completata. Questo ci consente di suddividere la stringa di destinazione in sette righe separate, non contigue e non identiche.
+</p>
+
+### Argomenti da linea di comando, ricerche di stringhe e lo stack di Linux
+
+<p align=justify>
+Quando avvii un programma al prompt dei comandi della console Linux, hai la possibilità di includere un numero ragionevole di argomenti dopo il percorso del programma eseguibile. In altre parole, puoi eseguire un programma chiamato showargs1 in questo modo:
+</p>
+
+```
+$./showargs1 time for tacos
+```
+
+<p align=justify>
+I tre argomenti seguono il nome del programma e sono separati da caratteri di spazio. Nota che questi non sono gli stessi dei parametri di reindirizzamento I/O, che richiedono l'uso degli operatori di reindirizzamento "o>" o "o<" e sono gestiti separatamente da Linux. Quando uno dei tuoi programmi inizia a essere eseguito, qualsiasi argomento della riga di comando che è stato inserito al momento del lancio del programma viene passato al programma nello stack di Linux. In questo capitolo, vedremo come accedere agli argomenti della riga di comando di un programma da un programma in linguaggio assembly. Nel processo, vedremo un'altra istruzione di stringa x86 in azione: SCASB.
+</p>
+
+### Visualizzazione degli argomenti della riga di comando da SASM
+
+<p align=justify>
+Il fatto che Linux posizioni gli argomenti della riga di comando nello stack non significa che tu debba accedere direttamente allo stack per ottenerli. Dai programmi scritti all'interno dell'IDE SASM, l'accesso agli argomenti ti arriva nei registri RSI e RDI. Funziona in questo modo:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+		All'avvio del programma, il registro RDI contiene un valore, 1 o maggiore, che indica il numero di argomenti della riga di comando. Il valore è sempre almeno 1 perché Linux posiziona sempre il testo di invocazione della riga di comando del programma come primo elemento nella sua lista di argomenti della riga di comando.
+		</p>
+	</li>
+ 		<p align=justify>
+		All'avvio, il registro RSI contiene l'indirizzo del primo elemento nella lista degli argomenti della riga di comando. Ricorda che quel primo elemento è sempre l'invocazione della riga di comando del programma. Se non ci sono argomenti della riga di comando, il testo di invocazione è l'unica cosa a cui puoi accedere da RSI. Se ci sono argomenti della riga di comando, ci sarà un elenco di indirizzi in memoria, con ogni indirizzo che punta a uno degli argomenti.
+		</p>
+	</li>
+</ul>
+
+<p align=justify>
+Ricorda che questo vale per i programmi che crei con SASM utilizzando i parametri di build predefiniti, o per i programmi non SASM che colleghi con gcc. Perché? SASM utilizza il compilatore Gnu C gcc come linker e richiede l'etichetta main: come inizio del programma. Tutti i programmi C hanno quella che viene chiamata la funzione principale, main(), che è la parte del programma che scrivi. In sostanza, ciò che SASM costruisce è un programma C per il quale si scrive la funzione main(). La parte difficile è che gcc si collega a un blocco di codice che viene eseguito prima che la funzione main() inizi l'esecuzione. Questo codice di "avvio" fa una serie di cose. Per questa discussione, ciò che conta è che copi il conteggio degli argomenti e il puntatore alla tabella degli argomenti dallo stack e nei registri RSI e RDI. Vedere la figura seguente. Si noti che i programmi collegati a glibc ma costruiti al di fuori di SASM hanno le stesse informazioni utili in RSI e RDI, per gentile concessione del codice di avvio di glibc. Più avanti spiegherò come i programmi assembly compilati senza collegarsi con gcc possono leggere le stesse informazioni dallo stack. Per ora date un'occhiata al listato seguente, un programma che visualizza i parametri della riga di comando, scritto per SASM.
+</p>
+
+```asm
+;  Executable name : showargs1gcc
+;  Version         : 2.0
+;  Created date    : 10/17/2022
+;  Last update     : 7/18/2023
+;  Author          : Jeff Duntemann
+;  Description     : A simple program in assembly for Linux, using NASM 2.14.02,
+;                    demonstrating how to access command line arguments from
+;                    programs written/built in SASM.
+;
+;                Build using SASM standard x64 build setup
+;
+SECTION .data                   ; Section containing initialised data
+
+    ErrMsg db "Terminated with error.",10
+    ERRLEN equ $-ErrMsg
+        
+    MAXARGS equ 5               ; More than 5 arguments triggers an error
+	
+SECTION .bss                    ; Section containing uninitialized data	
+
+SECTION .text                   ; Section containing code
+
+global 	main                    ; Linker needs this to find the entry point!
+	
+main:
+    mov rbp, rsp            ; for correct SASM debugging
+    nop                     ; This no-op keeps gdb happy...
+
+    mov r14,rsi             ; Put offset of arg table in r14
+    mov r15,rdi             ; Put argument count in r15
+
+    cmp qword r15,MAXARGS   ; Test for too many arguments
+    ja Error                ; Show error message if too many args & quit
+              
+; Use SCASB to find the 0 at the end of the single argument
+    xor rbx,rbx             ; RBX contains the 0-based # (not address) of current arg 
+Scan1:
+    xor rax,rax             ; Searching for string-termination 0, so clear AL to 0
+    mov rcx,0000ffffh       ; Limit search to 65535 bytes max
+    mov rdi,qword [r14+rbx*8] ; Put address of string to search in RDI, for SCASB     
+    mov rdx,rdi             ; Copy string address into RDX for subtraction
+                                                                                                                                                                                                                                                                                                                    
+    cld                     ; Set search direction to up-memory
+    repne scasb             ; Search for null (0) in string at RDI
+    jnz Error               ; Jump to error message display if null not found.
+
+    mov byte [rdi-1],10     ; Store an EOL where the null used to be
+    sub rdi,rdx             ; Subtract position of 0 in RDI from start address in RDX
+    mov r13,rdi             ; Put calculated arg length into R13
+
+; Display the argument to stdout:
+    mov rax,1               ; Specify sys_write call
+    mov rdi,1               ; Specify File Descriptor 1: Standard Output
+    mov rsi,rdx             ; Pass offset of the arg in RSI
+    mov rdx,r13             ; Pass length of arg in RDX
+    syscall                 ; Make kernel call
+
+    inc rbx                 ; Increment the argument counter
+    cmp rbx,r15             ; See if we've displayed all the arguments
+    jb Scan1                ; If not, loop back and do another
+    jmp Exit                ; We're done! Let's pack it in!
+
+Error:
+    mov rax,1               ; Specify sys_write call
+    mov rdi,1               ; Specify File Descriptor 2: Standard Error
+    mov rsi,ErrMsg          ; Pass offset of the error message
+    mov rdx,ERRLEN          ; Pass the length of the message
+    syscall                 ; Make kernel call
+
+Exit:
+    ret
+```
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/how_to_access_parameters_from_within_SASM.png">
+</div>
+
+### Ricerche di stringhe con SCASB
+
+<p align=justify>
+Poiché il codice di avvio di glibc copia il conteggio degli argomenti e il puntatore alla tabella nei registri per te, accedere agli argomenti della riga di comando è facile. Hai quello che equivale a una tabella di indirizzi nello stack, e ogni indirizzo punta a un argomento. L'unica parte complicata è determinare quanti byte appartengono a ciascun argomento in modo da poter copiare i dati degli argomenti altrove se necessario, o passarli a una chiamata di sistema Linux come sys_write. Poiché ogni argomento termina con un singolo byte 0, la sfida è chiara: dobbiamo cercare quel 0. Questo può essere fatto nel modo ovvio, in un ciclo che legge un byte da un indirizzo in memoria, e poi confronta quel byte con 0 prima di incrementare un contatore e leggere il byte successivo in memoria. Tuttavia, la buona notizia è che il set di istruzioni x64 implementa un tale ciclo in un'istruzione di stringa che non memorizza dati (come STOSB) o copia dati (come MOVSB) ma cerca invece in memoria un valore di dato particolare. Questa istruzione è SCASB (Scan String by Byte), e se hai seguito la mia presentazione sulle altre istruzioni di stringa finora, capirla dovrebbe essere un gioco da ragazzi. Il codice precedente dimostra SCASB esaminando gli argomenti della riga di comando nello stack e costruendo una tabella delle lunghezze degli argomenti. Successivamente, restituisce gli argomenti (insieme al testo di invocazione del file eseguibile) a stdout tramite una chiamata a sys_write. La prima cosa da fare è copiare il conteggio degli argomenti e il puntatore della tabella in registri differenti, in questo caso R14 e R15. Perché? I registri RSI e RDI hanno entrambi agende segrete: RDI fa parte dell'uso di SCASB (ne parlerò tra poco) e RSI è utilizzato per effettuare chiamate sys_write. Vuoi mantenere il conteggio degli argomenti e il puntatore della tabella degli indirizzi al sicuro in registri che non saranno utilizzati per altre cose. Stiamo usando un prefisso qui per la prima volta in questo libro: REPNE. Questo può essere letto come "oRipeti finché non è uguale." Spiegherò questo in maggior dettaglio tra poco. Quando REPNE è usato insieme a SCASB, l'istruzione REPNE SCASB può trovare il byte 0 alla fine di ogni argomento. Configurare SCASB è grossomodo lo stesso che configurare STOSB:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+		Per le ricerche in memoria avanzata (come questa), viene utilizzata l'istruzione CLD per garantire che il flag di Direzione DF sia resettato.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		L'indirizzo del primo byte della stringa da cercare è collocato in RDI. Qui, è l'indirizzo di un argomento della riga di comando memorizzato da qualche parte nello stack.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Il valore da cercare è posizionato nel registro a 8 bit AL. (Qui, il numero binario 0.)
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Un conteggio massimo è impostato in RCX. Questo viene fatto per evitare di cercare troppo lontano nella memoria nel caso in cui il byte che stai cercando non sia effettivamente presente.
+		</p>
+	</li>
+</ul>
+
+<p align=justify>
+Con tutto ciò in atto, REPNE SCASB può essere eseguito. Come con STOSB, questo crea un ciclo stretto all'interno della CPU. Ad ogni passaggio nel ciclo, il byte a [RDI] viene confrontato con il valore in AL. Se i valori sono uguali, il ciclo è soddisfatto e REPNE SCASB smette di essere eseguito. Se i valori non sono uguali, RDI viene incrementato di 1, RCX viene decrementato di 1 e il ciclo continua con un altro test del byte a [RDI]. Quando REPNE SCASB trova il carattere in AL e termina, RDI punterà al byte dopo la posizione del carattere trovato nella stringa di ricerca. Se vuoi accedere al carattere trovato, devi sottrarre 1 da RDI, come fa il programma quando sostituisce il carattere terminatore 0 con un carattere EOL:
+</p>
+
+```asm
+mov byte [rdi-1],10 ; Store an EOL where the 0 used to be
+```
+
+### REPNE vs. REPE
+
+<p align=justify>
+Vale la pena dare un'occhiata più da vicino al prefisso REPNE qui, insieme al suo partner con il senso opposto, REPE. L'istruzione SCASB è un po' diversa da STOSB e MOVSB in quanto è un'istruzione di stringa condizionale. STOSB e MOVSB ripetono entrambi la loro azione incondizionatamente quando sono preceduti dal prefisso REP. Non ci sono test in corso se non il test di RCX per vedere se il ciclo è continuato per il numero di iterazioni predeterminato. Al contrario, SCASB esegue un test separato ogni volta che viene attivato, e ogni test può andare in due modi. Ecco perché non utilizziamo il prefisso REP incondizionato con SCASB, ma il prefisso REPNE oppure il prefisso REPE. Quando stiamo cercando un byte nella stringa di ricerca che corrisponde al byte in AL, usiamo il prefisso REPNE, come viene fatto nel programma showargs1gcc. Quando stiamo cercando un byte nella stringa di ricerca che non corrisponde al byte in AL, usiamo REPE. Potresti pensare che suoni all'incontrario in qualche modo, e lo è. Tuttavia, il senso del prefisso REPNE è questo: Ripeti SCASB finché [RDI] non è uguale ad AL. Allo stesso modo, il senso del prefisso REPE è questo: Ripeti SCASB finché [RDI] è uguale ad AL. Il prefisso indica per quanto tempo l'istruzione SCASB dovrebbe continuare a scattare, non quando dovrebbe fermarsi. è importante ricordare che REPNE SCASB può terminare per due motivi: trova una corrispondenza con il byte in AL, oppure conta RCX fino a 0. Nella quasi totalità dei casi, se RCX è zero quando REPNE SCASB finisce, significa che il byte in AL non è stato trovato nella stringa di ricerca. Tuttavia, c'è la possibilità casuale che RCX sia semplicemente conteggiato fino a zero quando [RDI] conteneva una corrispondenza con AL. Questo non è molto probabile, ma ci sono alcune combinazioni di dati in cui potrebbe verificarsi. Ogni volta che SCASB scatta, esegue un confronto, e quel confronto imposta o cancella il flag Zero ZF. REPNE terminerà l'istruzione quando il suo confronto imposta ZF a 1. REPE terminerà l'istruzione quando il suo confronto cancella ZF a 0. Tuttavia, per essere assolutamente sicuro di catturare il risultato "ricerca fallita", devi testare immediatamente ZF dopo la fine dell'istruzione SCASB.
+</p>
+
+<p align=justify>
+Per REPNE SCASB: Usa JNZ. 
+</p>
+
+<p align=justify>
+Per REPE SCASB: Usa JZ
+</p>
+
+### Non puoi passare argomenti da linea di comando ai programmi all'interno di SASM
+
+<p align=justify>
+Se costruisci e poi esegui il Listato codice precedente all'interno di SASM, ciò che verrà mostrato sarà il primo elemento nell'elenco, che è il testo di invocazione per il programma. Tuttavia, questo testo di invocazione non includerà il nome showargs1gcc. Quello che vedrai sarà questo o qualcosa di molto simile a questo:
+</p>
+
+```
+/tmp/SASM/SASMprog.exe
+```
+
+<p align=justify>
+Perché? Quando esegui un programma all'interno di SASM, ciò che stai eseguendo è un file binario temporaneo chiamato SASMprog.exe. SASM genera questo file quando costruisce un programma per te. è lo stesso nome del file per qualsiasi programma tu scriva in SASM. Il file eseguibile showargs1gcc non esiste finché non lo crei salvando l'eseguibile su disco. E non puoi eseguirlo fino a quando non apri una finestra del terminale, non navighi nella cartella in cui esiste il programma eseguibile, e poi lo esegui dalla riga di comando. Questo ci porta a uno dei principali difetti di SASM: per quanto ne so, non esiste un meccanismo in SASM per memorizzare gli argomenti della riga di comando che verranno passati a un programma eseguito all'interno di SASM. Per far sì che showargs1gcc mostri effettivamente gli argomenti, devi salvarlo come file eseguibile ed eseguirlo dalla riga di comando del terminale.
+</p>
+
+<p align=justify>
+Se esegui showargs1gcc dalla riga di comando in questo modo:
+</p>
+
+```
+$ ./showargs1gcc time for tacos
+```
+
+<p align=justify>
+vedrai il seguente nella finestra del terminale:
+</p>
+
+```
+./showargs1gcc
+ time
+ for
+ tacos
+```
+
+<p align=justify>
+Ogni argomento della riga di comando è su una riga separata perché il programma sostituisce il byte 0 alla fine di ogni argomento con un carattere EOL. Solo un rapido promemoria: salva un file eseguibile selezionando l'elemento di menu File -> Salva .exe in SASM e poi inserendo il nome che vuoi dare al file del programma eseguibile. Il nome non deve essere necessariamente quello del file del codice sorgente meno il .asm. Non è necessario usare il suffisso .exe. La maggior parte degli eseguibili Linux sono semplicemente un nome senza alcun suffisso. Puoi chiamarlo come vuoi. Tuttavia, ti consiglio vivamente di salvare il file eseguibile nella stessa cartella in cui si trovano il suo file di codice sorgente e il makefile.
+</p>
+
+### Lo Stack, la sua struttura e come usarlo
+
+<p align=justify>
+Lo stack è molto più grande e complesso di quanto tu possa pensare. Quando Linux carica il tuo programma, posiziona una grande quantità di informazioni nello stack prima di permettere l'esecuzione del codice del programma. Questo include il testo di invocazione dell'eseguibile in esecuzione, eventuali argomenti della riga di comando inseriti dall'utente durante l'esecuzione del programma e lo stato corrente dell'ambiente Linux, che è una grande collezione di stringhe di configurazione testuali che definiscono come è impostato Linux. Tutto questo è organizzato secondo un piano, e ho riassunto il piano nella figura seguente. Prima, alcune rinfrescate di gergo: la parte superiore dello stack è (controintuitivamente) in fondo al diagramma. è il luogo di memoria indicato da RSP quando il tuo programma inizia a essere eseguito. La parte inferiore dello stack è in cima al diagramma. è l'indirizzo più alto nello spazio degli indirizzi virtuali che Linux assegna al tuo programma quando lo carica e lo esegue. Questa distinzione tra "oalto" e "obasso" è una convenzione antica che confonde molte persone. I diagrammi di memoria solitamente iniziano con la memoria bassa in fondo alla pagina e raffigurano la memoria più alta sopra di essa, anche se questo significa che la parte inferiore dello stack si trova in cima al diagramma. Abituati, se vuoi comprendere la letteratura, non hai scelta. Linux costruisce lo stack dalla memoria alta verso la memoria bassa, iniziando dalla parte inferiore dello stack e proseguendo verso la memoria più bassa. Quando il codice del tuo programma inizia effettivamente a essere eseguito, RSP punta alla parte superiore dello stack. Ecco una descrizione più dettagliata di ciò che troverai nello stack all'avvio:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+		In RSP (cioè, la cima dello stack) c'è un numero a 64 bit che indica il numero di argomenti della riga di comando presenti nello stack. Questo valore è sempre almeno 1, anche se non sono stati inseriti argomenti. Il testo digitato dall'utente durante l'esecuzione del programma viene conteggiato insieme a eventuali parametri della riga di comando, e questo "testo di invocazione" è sempre presente, motivo per cui il conteggio è sempre almeno 1.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Il prossimo elemento a 64 bit in memoria a partire da RSP è l'indirizzo del testo di invocazione con cui è stato eseguito il file eseguibile. Il testo può essere completamente qualificato, il che significa che il percorso include il percorso della directory al file dalla tua directory /home; ad esempio, /home/asmstuff/asm4ecode/showargs2/showargs2. Questo è come appare il testo di invocazione quando esegui il tuo programma dal debugger Insight. (Ulteriori informazioni su Insight nell'Appendice A.) Se utilizzi il metodo "punto slash" per invocare un eseguibile dalla directory corrente, vedrai il nome dell'eseguibile preceduto da ./.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Se sono stati inseriti dei parametri da riga di comando, i loro indirizzi a 64 bit si trovano sopra la memoria rispetto a RSP, con l'indirizzo del primo (più a sinistra) parametro seguito dall'indirizzo del secondo, e così via. Il numero di parametri è ovviamente variabile, anche se raramente avrai bisogno di più di quattro o cinque.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		La lista degli indirizzi degli argomenti della riga di comando è terminata da un puntatore nullo, che è gergo per 64 bit di zero binario.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		La memoria superiore dal puntatore nullo inizia un lungo elenco di indirizzi a 64 bit. Quanti siano dipende dal tuo particolare sistema Linux, ma può essere vicino a 200. Ognuno di questi indirizzi punta a una stringa terminata da nullo (ne parleremo tra poco) contenente una delle definizioni appartenenti all'ambiente Linux.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Alla fine dell'elenco degli indirizzi delle variabili ambientali di Linux c'è un altro puntatore nullo a 64 bit, e questo segna la fine della "directory" dello stack. Oltre questo punto, utilizzi gli indirizzi trovati in precedenza nello stack per accedere a elementi ancora più in alto nella memoria.
+		</p>
+	</li>
+</ul>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/linux_stack_at_program_execution.png">
+</div>
+
+### Accedere allo Stack direttamente
+
+<p align=justify>
+Il Listato precedente viene eseguito in SASM, e il codice di avvio C copia utilmente il conteggio degli argomenti e l'indirizzo della tabella degli argomenti nei registri. Se non stai usando SASM, quel passaggio utile non avverrà. Devi accedere direttamente allo stack. Il Listato seguente mostra come ciò può essere fatto.
+</p>
+
+```asm
+;  Executable   : showargs2
+;  Version      : 2.0
+;  Created date : 11/3/2022
+;  Last update  : 5/11/2023
+;  Author       : Jeff Duntemann
+;  Description  : A simple program in assembly for Linux, using NASM 2.15.05,
+;                 demonstrating the way to access command line arguments on 
+;                 the stack. This version accesses the stack "nondestructively"
+;                 by using memory references calculated from RBP rather than
+;                 POP instructions.
+;
+;    Use this makefile to build:
+;    showargs2: showargs2.o
+;        ld -o showargs2 -g showargs2.o
+;    showargs2.o: showargs2.asm
+;        nasm -f elf64 -g -F dwarf showargs2.asm -l showargs2.lst 
+;
+
+SECTION .data           ; Section containing initialized data
+
+    ErrMsg db "Terminated with error.",10
+    ERRLEN equ $-ErrMsg
+	
+SECTION .bss            ; Section containing uninitialized data	
+
+; This program handles up to MAXARGS command-line arguments. Change the
+; value of MAXARGS if you need to handle more arguments than the default 10.
+; Argument lengths are stored in a table. Access arg lengths this way:
+;     [ArgLens + <index reg>*8]
+; Note that when the argument lengths are calculated, an EOL char (10h) is
+; stored into each string where the terminating null was originally. This
+; makes it easy to print out an argument using sys_write. 
+
+    MAXARGS   equ  10       ; Maximum # of args we support
+    ArgLens:  resq MAXARGS	; Table of argument lengths
+
+SECTION .text       ; Section containing code
+
+global  _start      ; Linker needs this to find the entry point!
+	
+_start:
+    push rbp        ; Standard prolog
+    mov rbp, rsp
+    and rsp,-16    
+
+
+; Copy the command line argument count from the stack and validate it:
+    mov r13,[rbp+8]         ; Copy argument count from the stack
+    cmp qword r13,MAXARGS   ; See if the arg count exceeds MAXARGS
+    ja Error                ; If so, exit with an error message
+
+; Here we calculate argument lengths and store lengths in table ArgLens:
+    mov rbx,1               ; Stack address offset starts at RBX*8
+
+ScanOne:
+    xor rax,rax     ; Searching for 0, so clear AL to 0
+    mov rcx,0000ffh ; Limit search to 65535 bytes max
+    mov rdi,[rbp+8+rbx*8] ; Put address of string to search in RDI
+    mov rdx,rdi     ; Copy starting address into RDX
+
+    cld	            ; Set search direction to up-memory
+    repne scasb     ; Search for null (binary 0) in string at RDI
+    jnz Error       ; REPNE SCASB ended without finding AL
+
+    mov byte [rdi-1],10	; Store an EOL where the null used to be
+    sub rdi,rdx     ; Subtract position of 0 from start address
+    mov [ArgLens+rbx*8],rdi    ; Put length of arg into table
+    inc rbx         ; Add 1 to argument counter
+    cmp rbx,r13     ; See if arg counter exceeds argument count
+    jbe ScanOne     ; If not, loop back and scan another one
+
+; Display all arguments to stdout:
+    mov rbx,1 ; Start (for stack addressing reasons) at 1
+Showem:
+    mov rax,1       ; Specify sys_write call
+    mov rdi,1       ; Specify File Descriptor 1: Standard Output
+    mov rsi,[rbp+8+rbx*8]   ; Pass offset of the argument
+    mov rdx,[ArgLens+rbx*8] ; Pass the length of the argument
+    syscall         ; Make kernel call
+    inc rbx         ; Increment the argument counter
+    cmp rbx,r13     ; See if we've displayed all the arguments
+    jbe Showem      ; If not, loop back and do another
+    jmp Exit        ; We're done! Let's pack it in!
+
+Error:
+    mov rax,1       ; Specify sys_write call
+    mov rdi,1       ; Specify File Descriptor 2: Standard Error
+    mov rsi,ErrMsg  ; Pass offset of the error message
+    mov rdx,ERRLEN  ; Pass the length of the message
+    syscall         ; Make kernel call
+
+Exit:
+    mov rsp,rbp
+    pop rbp
+    
+    mov rax,60      ; Code for Exit Syscall
+    mov rdi,0       ; Return a code of zero	
+    syscall         ; Make kernel call
+```
+
+### Stack Alignment Prolog
+
+```asm
+ push rbp        ; Alignment prolog
+ mov rbp, rsp
+ and rsp,-16
+```
+
+<p align=justify>
+Va all'inizio dei programmi che non si collegano con la libreria glibc. (Questi sono programmi che iniziano con l'etichetta _start: I programmi creati con make di solito usano il prologo di allineamento.) Lo standard x64 ABI richiede che lo stack sia allineato su un confine di 16 byte (non bit!). L'istruzione AND RSP,-16 è quella che garantisce l'allineamento dello stack. Ho già parlato dell'AND prima; dovresti afferrare rapidamente che questa istruzione costringe i quattro bit inferiori del puntatore dello stack a 0. Ora è allineato su un confine di 16 byte, anche se prima non lo era. Il push di RBP nello stack ti fornisce un'ancora da cui indirizzare elementi di dati come i parametri della riga di comando esistenti "opiù in basso" (il che significa veramente "oin memoria più alta") nello stack. Aiuta anche a mantenere lo stack allineato, anche se come funziona dovrà aspettare il prossimo capitolo. La conseguenza pratica di avere RBP in cima allo stack è che contiene il valore originale del puntatore dello stack. Lo svantaggio è che devi saltarlo per arrivare agli argomenti della riga di comando. C'è anche qualcosa chiamato epilogo, che arriva alla fine del programma, proprio prima che restituisca il controllo a Linux. L'epilogo (di nuovo, solo per programmi non-SASM) arriva giusto prima che il programma esca usando SYSCALL.
+</p>
+
+```asm
+ mov rsp,rbp
+ pop rbp
+```
+
+<p align=justify>
+Lo scopo dell'epilogo è ripristinare lo stack allo stato in cui si trovava all'ingresso nella funzione. Ora, potreste chiedere qui perché abbiamo utilizzato il prologo di allineamento in questo esempio e non in quelli precedenti. Per i programmi collegati con il compilatore gcc e la libreria glibc, lo stack sarà già allineato. Quindi, i programmi SASM non hanno bisogno del prologo di allineamento. SASM richiede istruzione MOV RBP,RSP all'inizio della funzione MAIN:, altrimenti la sua interfaccia di debug potrebbe non funzionare correttamente. Ancora, parlerò dell'allineamento dello stack in modo più dettagliato successivamente. Per programmi semplici che non utilizzano molto lo stack (come la maggior parte degli esempi in questo libro), il disallineamento dello stack potrebbe non causare molti o nessun problema. Tuttavia, è una buona idea prendere l'abitudine di inserire il prologo di allineamento all'inizio dei vostri programmi non-SASM.
+</p>
+
+### Indirizzamento dei dati nello Stack
+
+<p align=justify>
+Il "dove" inizia da quello che chiamiamo la cima dello stack, che è l'indirizzo presente nel puntatore dello stack RSP quando il programma inizia a essere eseguito. Nota che subito dopo aver spinto RBP nello stack, il prologo copia RSP in RBP. Questo ti fornisce un puntatore solido allo stack così come esisteva quando Linux ha iniziato a eseguire il tuo programma. Con la cima originale dello stack a disposizione in RBP, il puntatore dello stack RSP può spostarsi verso l'alto o verso il basso man mano che le procedure vengono chiamate e restituite. (Il programma showargs2 non fa nulla di questo, per semplificare.) Inoltre, puoi spingere valori temporanei nello stack per un uso successivo, anche se, con il doppio dei registri generali nell'architettura x64, questo viene fatto sempre meno man mano che viene scritto nuovo codice. RBP era un tempo BP nell'era a 16 bit, e il nome significava "puntatore di base". è stato creato per contenere il valore iniziale del puntatore dello stack, fornendo una "base" da cui fare riferimento ad altri elementi nello stack. Allora, cosa c'è nello stack mentre lo erediti da Linux? L'ho disegnato nella figura precedente. Questo è il suo stato prima che il prologo spinga RBP su di esso. In cima allo stack c'è un valore di 8 byte che rappresenta il numero di argomenti della riga di comando. C'è sempre almeno 1 elemento nello stack: il testo di invocazione del programma. In altre parole, se il valore in [RBP] è 5, ci sono quattro argomenti reali della riga di comando. Il quinto elemento è il testo di invocazione, che appare per primo nello stack. Il programma visualizzerà un messaggio di errore se vengono inseriti più di MAXARGS argomenti (qui, 10). Immediatamente dopo il conteggio degli argomenti c'è una tabella di indirizzi a 64 bit che puntano agli argomenti reali. Quanti indirizzi ci sono dipende da quanti argomenti sono stati inseriti sulla riga di comando. C'è sempre almeno uno. Il primo indirizzo nella tabella è l'indirizzo del testo inserito dall'utente per invocare il programma. Dopo di ciò, gli indirizzi puntano agli argomenti della riga di comando nell'ordine in cui sono stati inseriti dall'utente. Tutto ciò che viene letto dallo stack in showargs2 è letto in base all'indirizzo in RBP. Il test del numero di argomenti rispetto a un valore massimo viene effettuato in questo modo:
+</p>
+
+```asm
+ mov r13,[rbp+8]   ; Copy argument count from the stack into R13
+ cmp r13,MAXARGS   ; See if the arg count exceeds MAXARGS
+ ja Error          ; If so, exit with an error message
+```
+
+<p align=justify>
+Qui, il conteggio degli argomenti si trova all'indirizzo contenuto in RBP più otto byte, perché RBP è stato inserito nello stack dal prologo e deve essere "superato" per raggiungere il conteggio degli argomenti. Il fatto che RBP contenga l'indirizzo informa l'assemblatore che il valore rappresentato da MAXARGS deve essere trattato come una parola quad di 64 bit, anche se il suo valore è solo 10. Ricorda che le equazioni sono valori, non posizioni in memoria. Se il conteggio degli argomenti è superiore a 10, il programma si interrompe con un breve messaggio di errore. La scansione di ciascuno degli argomenti per localizzare il suo carattere zero di terminazione è effettuata utilizzando il calcolo dell'indirizzo efficace più complesso possibile in x64: Base + (Indice x Scala) + Dislocamento. (Vedi la discussione sugli effective address, specialmente le figure)
+</p>
+
+```asm
+ mov rsi,qword [rbp+8+rbx*8]
+```
+
+<p align=justify>
+I termini dell'indirizzo efficace qui sono mostrati in un ordine diverso nel codice per renderlo un po' più facile da capire come funziona questo particolare riferimento alla memoria. Leggilo in questo modo:
+</p>
+
+<ol>
+  <li>
+    <p align="justify">
+    Inizi con l'indirizzo "base" per il riferimento allo stack, in RBP.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Aggiungi 8 alla base per "superare" RBP in cima allo stack. Questo è il termine di "spostamento" dell'indirizzo efficace.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Moltiplichi il numero ordinale a partire da 1 dell'indirizzo a cui si accede per 8, che è la dimensione (in byte) di tutti gli indirizzi in x64. In altre parole, per il secondo elemento nella lista degli argomenti, moltiplicheresti il numero ordinale memorizzato in RBX per 8, la dimensione degli indirizzi in x64. Il valore più piccolo aggiunto è almeno 8, che ti porta oltre il conteggio degli argomenti.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Aggiungi il prodotto di RBX e 8 alla base più lo spostamento, e avrai l'indirizzo del primo argomento nella tabella. Questo indirizzo è copiato in RDI, per essere utilizzato con l'istruzione REPNE SCASB.
+    </p>
+  </li>
+</ol>
+
+<p align=justify>
+Se questo non ti è completamente chiaro, torna indietro e leggilo di nuovo. L'indirizzamento della memoria è il concetto più importante nel lavoro con il linguaggio assembly. Se non comprendi l'indirizzamento della memoria, conoscere le istruzioni della macchina e i registri ti aiuterà poco, se non del tutto.
+</p>
+
+<p align=justify>
+Accedere agli elementi nello stack estraendoli con pop nei registri funziona sicuramente, ma ora nel 2023 ti consiglio di evitare di estrarre cose dallo stack a meno che il tuo codice non le abbia inserite lì. Come puoi immaginare, estrarre il conteggio degli argomenti in un registro come RAX modifica i contenuti originali dello stack spostando RSP. Se puoi fare riferimento ai contenuti dello stack tramite un singolo indirizzo di memoria basato su RBP, non dovrai preoccuparti tanto dei bug che possono verificarsi una volta che RSP non punta più alla cima dello stack come lo hai ricevuto originalmente da Linux.
+</p>
+
+
+### Usare gcc per l'assembly
+
+<p align=justify>
+Perché usare un compilatore C per lavorare in assembly? Principalmente questo: gcc fa molto di più che semplicemente compilare il codice C. è una sorta di strumento di sviluppo multiuso. Infatti, potrei caratterizzare meglio ciò che fa come costruire software piuttosto che semplicemente compilarlo. Oltre a compilare il codice C in codice oggetto, gcc governa sia il passaggio di assembly che il passaggio di linking. Passaggio di assembly? Sì, proprio così. Esiste un assemblatore GNU chiamato gas, anche se è una cosa strana che non è realmente destinata ad essere utilizzata da programmatori umani. Ciò che fa gcc è controllare gas e il linker GNU ld (che stai già usando nei makefile) come marionette sui fili. Se usi gcc, specialmente a livello principiante, non devi fare molto direttamente con gas o ld. Parliamo di più di questo.
+</p>
+
+<p align=justify>
+Il lavoro con il linguaggio assembly è un distacco dal lavoro in C, e gcc è prima di tutto un compilatore C. Pertanto, dobbiamo prima esaminare il processo di costruzione del codice C. A prima vista, costruire un programma C per Linux utilizzando gli strumenti GNU è piuttosto semplice. Tuttavia, dietro le quinte, è un affare seriamente complicato. Anche se sembra che gcc faccia tutto il lavoro, ciò che gcc fa veramente è agire come un controllore principale per diversi strumenti GNU, supervisionando una catena di assemblaggio del codice che non è necessario vedere a meno che non lo desideri specificamente. Teoricamente, questo è tutto ciò che devi fare per generare un file binario eseguibile dal codice sorgente C:
+</p>
+
+```
+gcc eatc.c -o eatc
+
+```
+
+<p align=justify>
+Qui, gcc prende il file eatc.c (che è un file di codice sorgente C) e lo elabora per produrre il file eseguibile eatc. (L'opzione -o dice a gcc come nominare il file di output eseguibile.) Tuttavia, c'è di più in corso qui di quanto sembri a prima vista. Dai un'occhiata alla figura seguente mentre la esaminiamo. Nella figura, le frecce in ombra indicano il movimento delle informazioni. Le frecce vuote indicano il controllo del programma.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/how_gcc_builds_linux_executables.png">
+</div>
+
+<p align=justify>
+Il programmatore invoca gcc dalla riga di comando della shell, di solito in una finestra del terminale. Poi gcc prende il controllo del sistema e invoca immediatamente un'utilità chiamata preprocessore C, cpp. Il preprocessore prende il file sorgente C originale e gestisce determinati elementi come #includes e #defines. Può essere considerato come una sorta di passaggio di espansione macro sul file sorgente C. Quando cpp ha finito il suo lavoro, gcc prende il comando in modo serio. Dal file sorgente C preprocessato, gcc genera un file di codice sorgente in linguaggio assembly con un'estensione .s. Questo è letteralmente il codice assembly equivalente delle dichiarazioni C nel file .c originale, in forma leggibile dagli esseri umani. Se sviluppi qualche abilità nella lettura della sintassi e dei mnemonici dell'assembly AT&T (di cui parleremo tra poco), puoi imparare molto ispezionando i file .s prodotti da gcc. Quando gcc ha completato la generazione dell'equivalente in linguaggio assembly del file sorgente C, invoca l'assemblatore GNU, gas, per assemblare il file .s in codice oggetto. Questo codice oggetto viene scritto in un file con estensione .o. L'ultimo passaggio coinvolge il linker, ld. Il file .o contiene codice binario, ma è solo il codice binario generato dalle dichiarazioni nel file .c originale. Il file .o non contiene il codice delle librerie C standard che sono così importanti nella programmazione C. Quelle librerie sono già state compilate e devono semplicemente essere collegate all'applicazione. Il linker ld svolge questo lavoro sotto la direzione di gcc. La cosa positiva è che gcc sa esattamente quali librerie C standard devono essere collegate alla tua applicazione per farla funzionare e include sempre le librerie giuste nelle loro versioni corrette. Quindi, anche se gcc non fa effettivamente il collegamento, sa cosa deve essere collegato e questa è veramente una conoscenza preziosa, man mano che i tuoi programmi diventano sempre più complessi. Infine, ld restituisce il file del programma completamente collegato ed eseguibile. A quel punto, la compilazione è completata e gcc restituisce il controllo alla shell di Linux. Nota che tutto ciò è generalmente fatto con un semplice comando a gcc!
+</p>
+
+### SAMS usa GCC
+
+<p align=justify>
+Alcuni di questi concetti potrebbero iniziare a suonare familiari. Abbiamo utilizzato SASM per diversi capitoli ormai, e SASM ha un modo di lavorare fondamentalmente diverso da quello che abbiamo imparato con i makefile e l'utility make di Linux. Ho accennato all'inizio al fatto che ciò che SASM produce è in realtà un programma C scritto in linguaggio assembly. Se guardi la scheda Build nel menu delle Impostazioni di SASM, nota che gcc (e non ld) è mostrato nel percorso del linker. Questo non significa che ld non venga utilizzato, come accade quando usiamo i makefile. Significa che gcc ha il pieno controllo del processo di collegamento, chiamando ld quando necessario per collegare librerie precompilate di codice C binario.
+</p>
+
+### Come usare GCC in assembly
+
+<p align=justify>
+Il processo che ho appena descritto, e che ho illustrato per voi nella figura precedente, è come un programma C viene costruito sotto Linux utilizzando gli strumenti GNU. Sono andato nei dettagli qui perché useremo parte"anche se solo parte"di questo processo per rendere più facile la nostra programmazione in assembly. è vero che non abbiamo bisogno di convertire il codice sorgente C in codice assembly"e infatti, non abbiamo bisogno di gas per convertire il codice sorgente assembly gas in codice oggetto. Tuttavia, abbiamo bisogno dell'esperienza di gcc nel collegamento. Ci atterremo al processo di costruzione del codice GNU nella fase di collegamento in modo che gcc possa coordinare per noi il passo di collegamento. Quando assembliamo un programma .asm per Linux utilizzando NASM, NASM genera un file .o contenente codice oggetto binario. Come abbiamo visto, invocare NASM sotto Linux a 64 bit si fa tipicamente in questo modo:
+</p>
+
+```
+nasm -f elf64 -g -F dwarf eatclib.asm
+```
+
+<p align=justify>
+Questo comando indirizzerà NASM a assemblare il file eatclib.asm e a generare un file chiamato eatclib.o. La parte -f elf64 indica a NASM di generare codice oggetto nel formato ELF a 64 bit piuttosto che in uno dei numerosi altri formati di codice oggetto che NASM è in grado di produrre. La parte -g -F dwarf abilita la generazione di informazioni di debug nel file di output, nel formato DWARF. Il file eatclib.o non è eseguibile da solo. Deve essere linkato. Quindi, chiamiamo gcc e lo istruiamo a collegare il programma per noi.
+</p>
+
+```
+gcc eatclib.o -o eatclib -no-pie
+```
+
+<p align=justify>
+Cosa di tutto ciò dice a gcc di linkare e non compilare? L'unico file di input menzionato nel comando è un file .o contenente codice oggetto. Questo fatto da solo dice a gcc che tutto ciò che deve essere fatto è collegare il file .o con la libreria runtime C per produrre l'eseguibile finale. La parte -o eatclib dice a gcc che il nome del file eseguibile finale deve essere eatclib. Includere il delimitatore -o è importante. Se non dici a gcc con precisione come nominare il file eseguibile finale, si fermerà e darà al file il nome predefinito per un eseguibile, a.out. L'argomento della riga di comando -no-pie dice a gcc di non collegare l'eseguibile per la tecnologia degli eseguibili indipendenti dalla posizione (PIE). Spiegherò questo in dettaglio più avanti in questo capitolo. Si tratta di ridurre la vulnerabilità di un eseguibile a determinati exploit. è accettabile utilizzare l'opzione -no-pie in programmi semplici e didattici come quelli in questo libro. Per il codice di produzione, hai bisogno di PIE.
+</p>
+
+### Perché no GAS?
+
+<p align=justify>
+Potresti chiederti perché, se c'è un assemblatore perfettamente funzionante installato automaticamente con ogni copia di Linux, mi sia preoccupato di mostrarti come installarne e utilizzarne un altro. Due motivi:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+		L'assemblatore GNU gas utilizza una sintassi peculiare che è completamente diversa da quella di tutti gli altri assemblatori familiari utilizzati nel mondo x86/x64, incluso NASM. Ha un insieme intero di mnemonici di istruzione unici. Li trovo brutti, non intuitivi e difficili da leggere. Questa è la sintassi AT&T, così chiamata perché è stata creata da AT&T come una notazione di assembly portatile per rendere più facile il porting di Unix da una CPU sottostante a un'altra. è brutta in parte perché è stata progettata per essere generica e può essere riconfigurata per qualsiasi architettura CPU ragionevole che potrebbe apparire.
+		</p>
+	</li>
+		<li>
+		<p align=justify>
+		Più specificamente, il concetto di un "linguaggio assembly portatile" è, a mio avviso, una contraddizione in termini. Un linguaggio assembly dovrebbe essere un riflesso diretto, completo, uno-a-uno dell'architettura della macchina sottostante. Qualsiasi tentativo di rendere un linguaggio assembly generico allontana il linguaggio dalla macchina e limita la capacità di un programmatore assembly di dirigere la CPU come è stata progettata per essere diretta. L'organizzazione che crea e evolve un'architettura CPU è nella posizione migliore per definire i mnemonici delle istruzioni di una CPU e la sintassi del linguaggio assembly senza compromessi. è per questo che utilizzerò sempre e insegnerò i mnemonici Intel.
+		</p>
+	</li>
+</ul>
+
+<p align=justify>
+Se fosse così semplice, non menzionerei affatto il gas, poiché non è necessaria l'unità di gas per scrivere in linguaggio assembly Linux in NASM. Tuttavia, uno dei principali modi per imparare molte delle chiamate standard della libreria C è utilizzarle in brevi programmi C e poi ispezionare i file di output assembly .s generati da gcc. Pertanto, avere una certa capacità di leggere le mnemoniche AT&T può essere utile mentre ti senti a tuo agio con le convenzioni di chiamata C utilizzate sotto Linux. Fornirò una panoramica della sintassi AT&T un po' più avanti in questo capitolo.
+</p>
+
+### Linking alla libreria standard del C
+
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "File, Makefile, debugging e progetto" del percorso Intermedio per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Linking alla libreria standard del C" lo studente dovrebbe aver seguito il lavoro precedente su "Passaggio di parametri a printf()", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Linking alla libreria standard del C", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Passaggio di parametri a printf()" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Costruzione di librerie di procedure esterne". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Linking alla libreria standard del C", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Costruzione di librerie di procedure esterne" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: ASM_PROGRAMMING.md sezione "Linking alla libreria standard del C" (#linking-alla-libreria-standard-del-c). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+
+<p align=justify>
+Quando scrivi un programma interamente in assembly utilizzando un makefile e l'utility make, scrivi tutto. A parte un'occasionale immersione nei servizi del kernel Linux, tutto il codice che viene eseguito è solo il codice che scrivi. L'integrazione di librerie di procedure in linguaggio assembly esterno complica un po' questo quadro, soprattutto se non sei tu a aver scritto quelle librerie. L'integrazione di funzioni nella libreria standard C (che per Linux si chiama glibc) complica ulteriormente la situazione. Può essere un conforto sapere che l'integrazione delle routine di glibc è più semplice nel linguaggio assembly x64 rispetto a quanto lo fosse nell'assembly x86 a 32 bit. Come ho accennato in precedenza, scrivere un programma in assembly in SASM è molto simile a scrivere un programma C nel quale scrivi il corpo principale del programma in assembly. I programmi generati da SASM sono una sorta di ibrido tra C e linguaggio assembly. Se crei un programma in linguaggio assembly per Linux che integra le funzioni di glibc, stai facendo praticamente la stessa cosa. La struttura di questo ibrido è mostrata nella figura seguente
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/structure_of_hybrid_C_assembly.png">
+</div>
+
+<p align=justify>
+Il tuo programma non è più il semplice affare di iniziare dall'alto e scendere come lo erano i tuoi precedenti programmi di assemblaggio. glibc non è solo una raccolta di funzioni disgiunte. è la libreria di runtime standard C e, come parte della sua standardità, impone una certa struttura a tutti i programmi che si collegano ad essa. Questa struttura include un blocco di codice che viene eseguito prima che il tuo programma inizi e un altro blocco di codice che viene eseguito dopo che il tuo programma è terminato. Il tuo programma è chiamato dal codice di avvio come se fosse una procedura (con l'istruzione CALL) e restituisce il controllo al codice della libreria C utilizzando un'istruzione RET. Tecnicamente, il tuo programma è una procedura (ancora una volta, chiamata funzione nel mondo C) e aiuta pensarlo come tale. è così che l'ho rappresentato nella figura precedente. Quando Linux inizia a eseguire il tuo programma, in realtà inizia, non dall'inizio del codice che hai scritto, ma dall'inizio del blocco di codice di avvio. Quando il codice di avvio ha fatto ciò che deve, esegue un'istruzione CALL che porta l'esecuzione nel tuo codice di assemblaggio. Quando il tuo programma in linguaggio assembly restituisce il controllo al suo chiamante tramite RET, inizia l'esecuzione del codice di chiusura, ed è il codice di chiusura che restituisce effettivamente il controllo a Linux tramite la necessaria chiamata di sistema al kernel. Una volta che colleghi codice C ai tuoi programmi di assemblaggio, non è una buona idea utilizzare il servizio SYSCALL 60 per terminare un programma e tornare a Linux. Ci sono alcune operazioni di gestione da fare, che possono includere lo svuotamento dei buffer e la chiusura dei file o delle connessioni di rete. Il codice di chiusura C fa tutto questo, e se lo salti, possono succedere brutte cose. Quelle brutte cose probabilmente non accadranno quando stai lavorando su semplici esempi di codice come quelli presentati in questo libro, ma una volta che inizi a diventare ambizioso e scrivere programmi di mille righe, tutto ciò diventa possibile e ti causerà non poca disperazione. Fondamentalmente, quando lavori con C, fai le cose nel modo C. Tra il codice di avvio e il codice di chiusura, puoi fare quante più chiamate a glibc desideri. Quando colleghi il tuo programma usando gcc, il codice contenente le routine della libreria C che chiami è collegato al tuo programma. Nota bene che il codice di avvio e di chiusura, così come tutto il codice per le funzioni della libreria che il tuo programma chiama, è tutto fisicamente presente nel file eseguibile che generi con gcc.
+</p>
+
+### Convenzioni di chiamata C
+
+<p align=justify>
+La libreria glibc non tratta in modo speciale i programmi in linguaggio assembly. I programmi in puro C funzionano quasi esattamente allo stesso modo, ed è per questo che la parte principale di un programma C è chiamata funzione main. è davvero una funzione, il codice standard della libreria C per l'avvio la chiama con un'istruzione CALL, e restituisce il controllo al codice di chiusura eseguendo un'istruzione RET. Il modo in cui il programma principale ottiene il controllo è quindi il primo esempio che vedrai di un insieme di regole che chiamiamo convenzioni di chiamata C. La libreria standard C non è niente se non coerente, e questo è il suo maggiore pregio. Tutte le funzioni della libreria C implementate su processori x64 seguono queste regole. Incidentalmente, fissale nei tuoi sinapsi sin dall'inizio, e perderai molto meno capelli di quanto ho fatto io cercando di capirle sbattendo la testa contro di esse. Prima di tutto, il tuo programma deve iniziare con l'etichetta globale main:. Usare _start: non funzionerà. La funzione main è etichettata come main:, punto. I programmi SASM iniziano sempre con main: perché SASM usa gcc per collegare il codice da glibc. Questa è la partenza. Il resto diventa piuttosto complicato piuttosto rapidamente.
+</p>
+
+### Chiamanti, Chiamati e Sovrascrittori
+
+<p align=justify>
+Se hai mai studiato la programmazione assembly per Linux a 32 bit, hai appreso che passare parametri a funzioni in stile C avveniva spingendo i parametri nello stack prima di effettuare la chiamata. Tutto scomparso. (Ok, quasi tutto scomparso. Ci tornerò.) La maggiore differenza singola tra le convenzioni di chiamata a 32 bit e quelle a 64 bit risiede nel modo in cui si passano i parametri alle funzioni. Passare i primi sei parametri a una funzione x64 avviene tramite registri piuttosto che nello stack. Se una funzione ha più di sei parametri (cosa poco comune e spesso una cattiva progettazione) i parametri rimanenti vengono passati nello stack. Questo è stato fatto perché abbiamo molti più registri ora di quanti ne avessimo nell'era a 32 bit. Spingere e sollevare dallo stack tocca la memoria e quindi è lento. Scrivere e leggere dai registri rimane all'interno della CPU e quindi è molto più veloce. La tecnologia moderna della cache della CPU rende l'uso dello stack più veloce rispetto ai tempi antichi, è vero, ma anche l'accesso alla cache della memoria è più lento rispetto all'accesso ai registri. Potresti ricordare che nei capitoli precedenti i programmi passavano parametri alle chiamate di funzione di Linux utilizzando l'istruzione x64 SYSCALL. Tutti i parametri del genere (almeno nei semplici programmi con cui abbiamo lavorato) vengono passati nei registri. Inoltre, c'è un sistema in questo: i primi sei parametri vengono passati in registri specifici in un ordine molto specifico. Questo ordine è il seguente:
+</p>
+
+<ol>
+  <li>
+    <p align="justify">
+    RDI
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    RSI
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    RDX
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    RCX
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    R8
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    R9
+    </p>
+  </li>
+</ol>
+
+<p align=justify>
+Il primo parametro passato a una funzione è sempre passato in RDI. Se ci sono due parametri da passare a una funzione, il primo è passato in RDI e il secondo in RSI, e così via. Questo è vero per le chiamate tramite SYSCALL, ed è anche vero per la chiamata delle funzioni della libreria C. L'ordine dei parametri nei registri è semplice. La parte successiva è sottile: quali registri può utilizzare internamente una funzione e quindi modificare, e quali registri devono rimanere invariati dopo l'esecuzione della funzione? Per dirlo in gergo da programmatore: quali registri possiamo sovrascrivere? Ancora una volta, c'è un sistema. Questi sette registri non possono essere sovrascritti da una funzione: RSP, RBP, RBX, R12, R13, R14 e R15. Questo gruppo di registri è chiamato registri non volatili, il che significa fondamentalmente registri che devono essere preservati (o lasciati non utilizzati) dall'ebitente. Aspetta"cosa? Maggiore gergo. Le funzioni possono chiamare altre funzioni. Una funzione che chiama un'altra funzione è il chiamante. La funzione che viene chiamata è l'ebitente. C'è una sorta di rapporto di fiducia tra il chiamante e l'ebitente: l'ebitente promette al chiamante che i valori di RSP, RBP, RBX, R12, R13, R14 e R15 saranno gli stessi quando l'ebitente termina l'esecuzione rispetto a quando l'ebitente inizia l'esecuzione. L'ebitente può utilizzare i registri non volatili, ma quelli che utilizza devono prima essere salvati (spinti nello stack) e ripristinati (estratti dallo stack) prima che l'ebitente torni al chiamante. Gli altri registri sono chiamati volatili, il che significa che l'ebitente può usarli e modificarli senza problemi. Questi sono RAX, RCX, RDX, RSI, RDI, R8, R9, R10 e R11. Se sei sveglio, noterai che tutti e sei i registri utilizzati nella convenzione di chiamata C sono registri volatili. Questo ha senso poiché il chiamante li sta già utilizzando per passare valori all'ebitente. Ma cosa succede se il chiamante sta già utilizzando alcuni dei registri volatili? Se il chiamante desidera che uno dei registri volatili sopravviva a un viaggio attraverso l'ebitente, il chiamante deve salvarli prima di chiamare la funzione dell'ebitente. Dopo che l'ebitente è tornato al chiamante, il chiamante ripristina quindi i registri volatili che aveva salvato nello stack estraendo i valori salvati nei registri.
+</p>
+
+<p align=justify>
+Questo implica molto più push e pop di quanto accada di solito. Una delle sfide che un buon programmatore di linguaggio assembly deve affrontare è semplicemente rimanere fuori dalla memoria, il che include il push e il pop dello stack. Abbiamo più registri da utilizzare ora e l'ingegnosità nell'uso di quei registri ripaga, rendendo l'accesso allo stack meno frequente. 
+</p>
+
+<p align=justify>
+<i>Salva solo i registri che devi salvare, dopo aver esaurito tutte le altre opzioni.</i> 
+</p>
+
+<p align=justify>
+Ci sono state ragioni per cui il set di istruzioni x64 ha eliminato PUSHA e POPA.
+</p>
+
+### Impostare lo Stack Frame
+
+<p align=justify>
+Nonostante ci siano più registri, lo stack è ancora estremamente importante nel lavoro di linguaggio assembly, e questo è doppiamente vero nei programmi che si interfacciano con il C, perché nel C (e in verità nella maggior parte degli altri linguaggi di alto livello a codice nativo, inclusi Pascal) lo stack ha un ruolo centrale. Un meccanismo di basso livello che ha a che fare con il lavoro in assembly su Linux è quello del frame dello stack. I compilatori si basano sui frame dello stack per creare variabili locali nelle funzioni, e mentre i frame dello stack sono meno utili nel lavoro di puro assembly, devi comprenderli se intendi chiamare funzioni scritte da un compilatore di linguaggio di alto livello. Un frame dello stack è una posizione nello stack contrassegnata come appartenente a una particolare funzione, inclusa la funzione main(). è fondamentalmente la regione tra gli indirizzi contenuti in due registri: il puntatore base RBP e il puntatore dello stack RSP. Questo si spiega meglio di quanto non si disegni; vedi figura seguente. Un frame dello stack viene creato spingendo una copia di RBP nello stack e poi copiando il puntatore dello stack RSP nel registro RBP. Le prime due istruzioni in qualsiasi programma assembly che rispetti le convenzioni di chiamata del C devono essere queste:
+</p>
+
+```asm
+ push rbp
+ mov  rbp,rsp
+```
+
+<p align=justify>
+Molte persone chiamano questo il prologo del programma, poiché deve essere incluso all'inizio di qualsiasi programma che rispetti le convenzioni di chiamata C. A meno che il prologo non sia presente, il debugger gdb e le sue interfacce come Insight non opereranno correttamente. Una volta che RBP è ancorato come un capo del tuo frame dello stack, il puntatore dello stack RSP è libero di muoversi su e giù nello stack come il tuo codice richiede per la memoria temporanea. Chiamare funzioni in glibc sotto x64 richiede meno push e pop rispetto a quanto non fosse nel vecchio mondo a 32 bit, ora che la maggior parte dei parametri viene passata alle funzioni in registri.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/stack_frame.png">
+</div>
+
+### Distruggere lo Stack Frame (in epilogo)
+
+<p align=justify>
+Prima che il tuo programma termini la sua esecuzione restituendo il controllo al codice di avvio/chiusura (fai riferimento alla penultima figura se questa relazione non è chiara), il suo frame dello stack deve essere distrutto. Questo sembra a molte persone come se stesse accadendo qualcosa di sbagliato, ma non è così: il frame dello stack deve essere distrutto, altrimenti il tuo programma andrà in crash. ("oRiporre" potrebbe essere un termine migliore di "odistruggere"... ma i programmatori preferiscono linguaggio colorito, come imparerai una volta che trascorrerai del tempo significativo tra loro.) Il tuo stack deve essere pulito prima di distruggere il frame dello stack e restituire il controllo al codice di chiusura. Questo significa semplicemente che eventuali registri salvati dal chiamato e valori temporanei che potresti aver inviato nello stack durante l'esecuzione del programma devono essere eliminati. Pop quello che pushi! Una volta fatto ciò, annulliamo la logica seguita nella creazione del frame dello stack: estraiamo il valore RBP del chiamante dallo stack e usciamo, tramite due istruzioni che insieme vengono spesso chiamate epilogo.
+</p>
+
+```asm
+ pop rbp
+ ret
+```
+
+<p align=justify>
+Ecco! Il frame dello stack è scomparso e lo stack è ora nello stesso stato in cui si trovava quando il codice di avvio ha passato il controllo al tuo programma. L'istruzione RET invia il controllo al codice di chiusura della libreria C, in modo che possa fare qualsiasi operazione di pulizia necessaria prima di restituire il controllo a Linux.
+</p>
+
+### Allineamento dello Stack
+
+<p align=justify>
+Lo scopo del prologo e dell'epilogo non è immediatamente ovvio, specialmente se si arriva a x64 per la prima volta dopo aver lavorato nel mondo Linux a 32 bit. Si riduce a un nuovo requisito: lo stack x64 deve essere allineato su un confine di 16 byte. Ciò significa che quando si ritorna da una funzione (inclusa main:), il puntatore dello stack deve puntare a un indirizzo divisibile uniformemente per 16. Perché è un problema? Ricorda che quando viene chiamata una procedura (una funzione nel gergo C), il chiamante spinge l'indirizzo di ritorno nello stack. Un indirizzo di ritorno è di 8 byte. Ma se accedi allo stack dopo aver aggiunto 8 byte ad esso (anziché 16), possono succedere cose cattive. Non è una garanzia, ma può succedere, specialmente quando il tuo codice diventa più ambizioso degli esempi semplici in questo libro. Il prologo spinge RBP nello stack. Questo aggiunge altri 8 byte allo stack, per un totale di 16. Lo stack è quindi ancora allineato. Nell'epilogo, riprendi il valore di RBP dallo stack. L'istruzione RET che termina l'epilogo preleva l'indirizzo di ritorno dallo stack nel puntatore delle istruzioni, quindi hai rimosso un totale di 16 byte dallo stack. Lo stack era allineato quando la tua funzione main: ha preso il controllo, grazie al codice di avvio della glibc, e sarebbe meglio se continuasse a essere allineato quando il tuo programma esegue l'istruzione RET che restituisce il controllo al codice di spegnimento della glibc. L'allineamento dello stack è richiesto anche quando la glibc non è coinvolta, come nei programmi che utilizzano un'etichetta _start: invece di main:. Questa volta la glibc non ti aiuterà perché non è presente. Un prologo e un epilogo devono comunque essere presenti, anche se c'è un po' più da fare rispetto a quando colleghi la glibc nel tuo programma. Il prologo richiesto è chiamato il prologo di allineamento dello stack:
+</p>
+
+```asm
+ push rbp
+ mov rbp,rsp
+ and rsp,-16
+```
+
+<p align=justify>
+La differenza risiede nell'istruzione AND RSP,-16. Questa istruzione azzera i quattro bit più bassi del puntatore dello stack RSP. L'ultima cifra esadecimale dell'indirizzo diventa quindi 0 e lo stack è allineato su un confine di 16 byte. Se sei attento nel tuo utilizzo dello stack, esso rimarrà allineato, come vedremo tra poco. Ecco l'epilogo dell'allineamento dello stack.
+</p>
+
+```asm
+ mov rsp,rbp
+ pop rbp
+```
+
+<p align=justify>
+Un'altra differenza quando si utilizza _start è che l'epilogo non può restituire il controllo a Linux eseguendo un'istruzione RET. Devi usare il servizio Exit tramite SYSCALL, come ho spiegato nei capitoli precedenti. Dopo aver eseguito POP RBP, puoi utilizzare il servizio SYSCALL 60 per restituire il controllo a Linux. E per quanto riguarda le procedure che scrivi da solo? Idealmente, tutte le procedure dovrebbero iniziare con il prologo e finire con l'epilogo. Spesso puoi fare a meno di utilizzare il prologo/epilogo nelle tue funzioni, specialmente se sono semplici e non fanno molto con lo stack. Ho omesso il prologo/epilogo in alcuni dei programmi esempio di questo libro per semplificare. Inoltre, non approfondisco i frame dello stack in dettaglio fino a questo capitolo finale, ed è impossibile dare senso all'allineamento dello stack senza sapere come funziona lo stack. Più avanti , nell'esempio, randtest, il programma passa un settimo parametro a printf() mettendo il parametro nello stack. Mantenere lo stack allineato su un confine di 16 byte viene fatto in un altro modo: mettendo un elemento "dummy" nello stack (qui, RAX; il suo contenuto è ininfluente) e poi, dopo aver chiamato printf(), aggiungendo 16 a RSP invece di 8. Ecco dove viene fatto; non preoccuparti se non capisci tutto nel seguente frammento.
+</p>
+
+```asm
+shownums:
+    mov r12,qword [Pulls]    ; Put pull count into r12
+    xor r13,r13
+ .dorow:
+    mov rdi,ShowArray        ; Pass address of base string
+    mov rsi,[Stash+r13*8+0]  ; Pass first element
+    mov rdx,[Stash+r13*8+8]  ; Pass second element
+    mov rcx,[Stash+r13*8+16] ; Pass third element
+    mov r8,[Stash+r13*8+24]  ; Pass fourth element
+    mov r9,[Stash+r13*8+32]  ; Pass fifth element
+    push rax                 ; To keep the stack 16 bytes
+ aligned
+    push qword [Stash+r13*8+40] ; Pass sixth element on the
+ stack.
+    xor rax,rax         ; Tell printf() no vector values
+ coming
+    call printf         ; Display the random numbers
+    add rsp,16          ; Stack cleanup: 2 item X 8 bytes = 16
+```
+
+<p align=justify>
+In questa parte del codice, il push di RAX decrementa lo stack di 8. Il push del settimo parametro sullo stack decrementa ulteriormente lo stack di altri 8, per un totale di 16, mantenendo lo stack allineato. Finora tutto bene. Ma questo è solo metà del lavoro. Quindi, dopo che la chiamata a printf() è stata effettuata, 'ripuliamo' lo stack con un po' di aritmetica veloce: aggiungiamo di nuovo le dimensioni sia del parametro sia della copia fittizia di RAX al puntatore dello stack. Nel frammento, il push di due valori QWORD sullo stack ha spostato l'indirizzo in RSP in direzione della memoria verso il basso di 16 byte. Per ripulire, aggiungiamo di nuovo questi 16 byte con un'istruzione ADD RSP,16. Lo stack sarà quindi di nuovo sia allineato che 'pulito'.
+</p>
+
+<p align=justify>
+In precedenza ti ho detto di "pop what you push". A volte il pop non è pratico. Finché ripristini il puntatore dello stack al valore che aveva prima del push, tutto funzionerà. Se metti valori nello stack come memoria locale, assicurati di aggiungere alla RSP la dimensione totale di tutti quei valori per rendere di nuovo "pulito" lo stack. E se non stai mettendo un multiplo di 16 byte nello stack, riempilo spingendo valori fittizi fino a quando il totale non è un multiplo di 16. Ora, perché gli autori dell'ABI System V x86-64 hanno imposto uno stack allineato a 16 byte? Mantenere lo stack allineato su confini di 16 byte in ogni momento semplifica il codice per diversi aspetti, incluso l'uso dei vettori SSE quando vengono memorizzati nello stack. Non tratterò SSE o gli altri sottosistemi matematici nei processori Intel in questo libro, quindi non preoccuparti se non ha senso per ora. Una volta che avrai acquisito esperienza nel linguaggio assembly, ti incoraggio a esplorare le istruzioni matematiche x64 e i registri dei vettori. Una nota finale sull'allineamento dello stack: SASM ha problemi con il prologo e l'epilogo che mostro qui. Ha bisogno dell'istruzione mov rbp, rsp all'inizio, ma nulla oltre a questo. L'epilogo di SASM è semplicemente il RET finale.
+</p>
+
+### Caratteri via Puts()
+
+<p align=justify>
+Una delle funzioni più semplici e utili in glibc è puts(), che invia caratteri all'output standard. Effettuare una chiamata a puts() dal linguaggio assembly è così semplice che può essere fatto in tre righe di codice. Il programma seguente dimostra puts(). Il programma eatlibc include il prologo e l'epilogo. Se rimuovi le tre istruzioni che impostano e fanno la chiamata a puts(), puoi trattare il resto come boilerplate per creare nuovi programmi che chiamano funzioni in glibc. Chiamare puts() in questo modo è un buon esempio, in miniatura, del processo generale che utilizzerai per chiamare la maggior parte delle routine delle librerie C. Ancora una volta, in conformità con le convenzioni di chiamata x64 generali, posizioniamo l'indirizzo della stringa da visualizzare in RDI. Non è necessario passare un valore della lunghezza della stringa. La funzione puts() inizia all'inizio della stringa all'indirizzo passato in RDI e invia caratteri a stdout fino a quando non incontra un carattere 0 (null). Qualunque sia il numero di caratteri che si trova tra il primo byte della stringa e il primo null, è il numero di caratteri che la console riceve.
+</p>
+
+```asm
+;  Executable name : eatlibc
+;  Version         : 3.0
+;  Created date    : 11/12/2022
+;  Last update     : 5/13/2023
+;  Author          : Jeff Duntemann
+;  Description     : Demonstrates calls made into libc, using NASM 2.14.02 
+;                    to send a short text string to stdout with puts().
+;
+;  Build using these commands:
+;    nasm -f elf64 -g -F dwarf eatlibc.asm
+;    gcc eatlibc.o -o eatlibc
+
+
+SECTION .data           ; Section containing initialised data
+	
+EatMsg: db "Eat at Joe's!",0	
+	
+SECTION .bss            ; Section containing uninitialized data
+
+SECTION .text           ; Section containing code
+	
+extern puts             ; The simple "put string" routine from libc
+global main             ; Required so the linker can find the entry point
+	
+main:
+    push rbp            ; Set up stack frame for debugger
+	mov rbp,rsp
+;;; Everything before this is boilerplate; use it for all ordinary apps!
+		
+    mov rdi,EatMsg      ; Put address of string into rdi	
+    call puts           ; Call libc function for displaying strings
+    xor rax,rax         ; Pass a 0 as the program's return value.
+
+;;; Everything after this is boilerplate; use it for all ordinary apps!
+	mov rsp,rbp	        ; Destroy stack frame before returning
+    pop rbp
+
+    mov rax,60
+    mov rdi,0
+    syscall             ; Return control to Linux
+```
+### Testo formattato con printf()
+
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "File, Makefile, debugging e progetto" del percorso Intermedio per Terzo anno. Serve a lavorare su formattazione dell'output e corrispondenza tra specificatori e argomenti. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Testo formattato con printf()" lo studente dovrebbe aver seguito il lavoro precedente su "Convertire le stringhe in numeri con sscanf()", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Testo formattato con printf()", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Convertire le stringhe in numeri con sscanf()" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Passaggio di parametri a printf()". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Testo formattato con printf()", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Passaggio di parametri a printf()" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: ASM_PROGRAMMING.md sezione "Testo formattato con printf()" (#testo-formattato-con-printf). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+
+<p align=justify>
+La routine della libreria puts() può sembrare piuttosto utile, ma rispetto ad alcuni dei suoi più sofisticati "fratelli", è roba da bambini. Con puts() puoi inviare solo una semplice stringa di testo a un file (per impostazione predefinita, stdout), senza alcun tipo di formattazione. Peggio ancora, puts() include sempre un carattere EOL alla fine della sua visualizzazione, sia che tu ne includa uno nei tuoi dati di stringa o meno. Questo ti impedisce di utilizzare più chiamate a puts() per stampare più stringhe di testo tutte sulla stessa riga nel terminale. Circa il meglio che puoi dire per puts() è che ha la virtù della semplicità. Per quasi tutte le tue necessità di output di caratteri, è molto meglio usare una funzione di libreria molto più potente chiamata printf(). La funzione printf() ti consente di fare un numero di cose davvero utili, il tutto con una sola chiamata di funzione:
+</p>
+
+<ul>
+	<li>
+		<p align=justify>
+		Output testo con o senza un EOL terminante
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Convertire i dati numerici in testo in numerosi formati, fornendo i codici di formattazione insieme ai dati.
+		</p>
+	</li>
+ 	<li>
+		<p align=justify>
+		Scrivi il testo in un file che include più stringhe memorizzate separatamente.
+		</p>
+	</li>
+</ul>
+
+<p align=justify>
+Se hai lavorato con C per più di mezz'ora, printf() ti sarà perfettamente ovvio, ma per le persone che provengono da altri linguaggi potrebbe prendere un po' di spiegazioni. La routine printf() mostrerà volentieri una stringa semplice come "Mangia da Joe!" ma puoi unire altre stringhe di testo e dati numerici convertiti con quella stringa base mentre viaggia verso l'output standard, e mostrarle tutte insieme senza problemi. Questo viene fatto inserendo i codici di formattazione nella stringa base e poi passando un elemento dati a printf() per ciascuno di quei codici di formattazione, insieme alla stringa base. Un codice di formattazione inizia con un segno di percento e include informazioni relative al tipo e alla dimensione dell'elemento dati che viene unito con la stringa base, così come a come quelle informazioni devono essere presentate. Diamo un'occhiata a un esempio molto semplice per cominciare. Ecco una stringa base contenente un codice di formattazione:
+</p>
+
+```c
+ "The answer is %d, and don't you forget it!"
+```
+
+<p align=justify>
+Il codice di formattazione %d indica semplicemente a printf() di convertire un valore intero firmato in testo e sostituire quel testo per il codice di formattazione nella stringa base. Ovviamente, ora devi passare un valore intero a printf() (e ti mostrerò come si fa a breve), ma quando lo fai, printf() convertirà l'intero in testo e lo fonderà con la stringa base mentre invia testo allo stream. Se il valore decimale passato è 42, sulla console vedrai questo:
+</p>
+
+```c
+ The answer is 42, and don't you forget it!
+```
+
+<p align=justify>
+Un codice di formattazione ha in realtà una buona quantità di struttura, e il meccanismo printf() nel suo insieme ha più complessità di quante ne possa descrivere in dettaglio in questo libro. Qualsiasi buona guida C spiegherà tutto in dettaglio. Il trattamento su Wikipedia è eccellente.
+</p>
+
+<p align="justify">
+<a href="https://en.wikipedia.org/wiki/Printf">https://en.wikipedia.org/wiki/Printf</a>
+</p>
+
+<p align=justify>
+Il miglioramento più significativo che puoi apportare ai codici di formattazione è inserire un valore intero tra il simbolo % e la lettera del codice:
+</p>
+
+```c
+ %5d
+```
+
+<p align=justify>
+Questo codice dice a printf() di visualizzare il valore allineato a destra all'interno di un campo largo cinque caratteri. Se non inserisci un valore per la larghezza del campo, printf() semplicemente darà al valore tanto spazio quanto richiedono le sue cifre. Ricorda che se hai bisogno di visualizzare un simbolo percentuale, devi includere due simboli percentuali consecutivi nella stringa: il primo è un codice di formattazione che dice a printf() di visualizzare il secondo come se stesso, e non come l'inizio di un codice di formattazione.
+</p>
+
+### Passaggio di parametri a printf()
+
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "File, Makefile, debugging e progetto" del percorso Intermedio per Terzo anno. Serve a lavorare su formattazione dell'output e corrispondenza tra specificatori e argomenti. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Passaggio di parametri a printf()" lo studente dovrebbe aver seguito il lavoro precedente su "Testo formattato con printf()", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Passaggio di parametri a printf()", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Testo formattato con printf()" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Linking alla libreria standard del C". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Passaggio di parametri a printf()", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Linking alla libreria standard del C" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: ASM_PROGRAMMING.md sezione "Passaggio di parametri a printf()" (#passaggio-di-parametri-a-printf). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+
+<p align=justify>
+Passare valori a printf() segue le convenzioni di chiamata x64. Se stai visualizzando una stringa con codici di formato incorporati, la stringa base dovrebbe essere il primo parametro, con il suo indirizzo passato in RDI. Dopo, il primo valore da unire alla stringa viene passato in RSI, il secondo in RDX e così via, nell'ordine standard dei registri dei parametri. I valori vengono inseriti nei codici della stringa in ordine, da sinistra a destra. Il programma seguente presenta una dimostrazione molto semplice del formato di printf(). Una cosa interessante da notare è che puoi passare numeri sia per riferimento che per valore. Il primo intero viene passato posizionando il suo indirizzo in RSI. Il secondo intero viene passato copiando un valore letterale in RDX. Il terzo intero è anch'esso passato come letterale in RCX. Il terzo valore è mostrato in notazione esadecimale, anche se il letterale era un semplice valore intero decimale caricato in RCX. La funzione printf() può effettuare molte conversioni di questo tipo. Puoi unire stringhe di testo alla stringa base in modo simile caricando gli indirizzi delle stringhe da unire nei registri e utilizzando il codice %s che istruisce printf() su dove inserire le stringhe secondarie. Ho eliminato l'intestazione del commento per risparmiare spazio sulla pagina. Il makefile per answer.asm è questo:
+</p>
+
+```make
+answer: answer.o
+     gcc answer.o -o answer -no-pie
+answer.o: answer.asm
+nasm -f elf64 -g -F dwarf answer.asm
+```
+
+<p align=justify>
+Non dimenticare di inserire le tabulazioni richieste se digiti e salvi il makefile
+</p>
+
+```asm
+section .data
+        answermsg db    "The answer is %d ... or is it %d? No! It's 0x%x!",10,0
+        answernum dd    42
+
+section .bss
+
+section .text
+
+extern  printf
+
+global  main
+
+main:
+    push rbp            ; Prolog
+    mov rbp,rsp
+
+    mov rax,0           ; Count of floating point args..here, 0
+
+    mov rdi,answermsg   ; Message/format string goes in RDI
+    mov rsi,[answernum] ; Second arg in RSI
+    mov rdx,43          ; Third arg in RDX. You can use a numeric literal
+    mov rcx,42          ; Fourth arg in RCX. Show this one in hex
+    call printf         ; Call printf()
+
+    mov rsp,rbp         ; Epilog
+    pop rbp
+
+    ret                 ; Return from main() to shutdown code
+```
+
+<p align=justify>
+Quando esegui la risposta, questo è ciò che vedrai
+</p>
+
+```
+The answer is 42 ... or is it 43? No! It's 0x2a!
+```
+
+### Printf() necessita di uno 0 precedente in RAX
+
+<p align=justify>
+C'è un'altra piccola sottigliezza nell'uso di printf(). In quasi tutti i casi (e certamente mentre stai appena iniziando con l'assembly), dovresti posizionare l'istruzione MOV RAX,0 prima della chiamata a printf(). Lo 0 in RAX dice alla funzione printf() che non ci sono parametri in virgola mobile nei registri vettoriali che le vengono passati. Una volta che inizi a usare valori vettoriali, devi inserire il conteggio di quei parametri in RAX prima di chiamare printf(). Spiegare i registri in virgola mobile e vettoriali va oltre l'ambito di questo libro, quindi se sei interessato, fai delle ricerche online. Questo stesso requisito si applica anche a scanf().
+</p>
+
+### Gcc --no-pie
+
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "File, Makefile, debugging e progetto" del percorso Intermedio per Terzo anno. Serve a lavorare su concetto tecnico previsto dal percorso, con attenzione al legame tra teoria, esempi e laboratorio. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Gcc --no-pie" lo studente dovrebbe aver seguito il lavoro precedente su "Note sulla raccolta delle procedure in librerie", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Gcc --no-pie", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Note sulla raccolta delle procedure in librerie" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "il consolidamento attraverso esercizi, debug e progetto". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Gcc --no-pie", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "il consolidamento attraverso esercizi, debug e progetto" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: ASM_PROGRAMMING.md sezione "Gcc --no-pie" (#gcc---no-pie). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+
+<p align=justify>
+Nei makefile per i programmi di questo capitolo che usano gcc come linker, vedrai l'opzione gcc -no-pie. Lo scopo di questa opzione è impedire a gcc di collegare il tuo programma come un PIE. Spiegare in dettaglio il PIE sarebbe un argomento avanzato ben oltre lo scopo di questo libro. In breve: il PIE è un modo per prevenire certi tipi di exploit del codice, collocando porzioni del file eseguibile in posizioni casuali quando l'eseguibile viene caricato. Questo rende impossibile prevedere dove una determinata sezione di codice verrà eseguita. Gli attacchi di programmazione orientata al ritorno (ROP) dipendono dalla conoscenza di dove si trovano alcune porzioni di un programma nel sistema di memoria virtuale di Linux. I programmi PIE sono meno vulnerabili agli attacchi ROP. L'opzione -no-pie indica che il linker non genererà un PIE. Questo rende teoricamente vulnerabili ai attacchi i programmi di esempio -no-pie di questo libro. Teoricamente. Una volta che sei un programmatore esperto che produce software per uso generale (e non semplicemente apprendendo la programmazione), dovresti sapere abbastanza per comprendere le problematiche e dovresti informarti online. Il PIE complica qualche aspetto del debugging, motivo per cui non uso il PIE nei miei esempi qui. Ma una volta che un programma che stai scrivendo è stato debuggato e funziona bene, ricompilalo come PIE, che è il valore predefinito quando gcc funge da linker.
+</p>
+
+### Dati in con fgets() e scanf()
+
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "File, Makefile, debugging e progetto" del percorso Intermedio per Terzo anno. Serve a lavorare su lettura dell'input, conversione dei dati e gestione dei casi problematici. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Dati in con fgets() e scanf()" lo studente dovrebbe aver seguito il lavoro precedente su "Scrivere testo su file con fprintf()", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Dati in con fgets() e scanf()", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Scrivere testo su file con fprintf()" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Utilizzando scanf() per l'inserimento di valori numerici". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Dati in con fgets() e scanf()", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Utilizzando scanf() per l'inserimento di valori numerici" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: ASM_PROGRAMMING.md sezione "Dati in con fgets() e scanf()" (#dati-in-con-fgets-e-scanf). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+
+<p align=justify>
+Leggere i caratteri dalla tastiera Linux utilizzando l'istruzione SYSCALL e la chiamata di sistema sys_read è semplice ma non molto versatile. La libreria standard C ha un modo migliore. Infatti, le funzioni della libreria C per leggere dati dalla tastiera (che è la sorgente di dati predefinita assegnata all'input standard) sono quasi l'inverso di quelle che visualizzano dati sull'output standard. Se fai un po' di ricerche in un riferimento della libreria C (e dovresti - ci sono una moltitudine di routine interessanti che puoi chiamare dai programmi in assembly), potresti scoprire la routine gets(). Potresti esserti chiesto (se non ho scelto di dirti qui) perché non l'ho trattata. La routine gets() è di una semplicità disarmante: gli passi il nome di un array di stringhe in cui posizionare i caratteri, e poi l'utente digita i caratteri sulla tastiera, che vengono collocati nell'array. Quando l'utente preme Invio, gets() aggiunge un null alla fine del testo inserito e restituisce. Cosa c'è da non amare? Ebbene, quanto è grande l'array? E quanto è stupido il tuo utente? Ecco il problema: non c'è modo di dire a gets() quando smettere di accettare caratteri. Se l'utente digita più caratteri di quanti ne hai allocato nello spazio per accettarli in un array, gets() continuerà felicemente ad accettare caratteri e sovrascriverà qualsiasi dato sia seduto accanto al tuo array in memoria. Se quel qualcosa è qualcosa di importante, il tuo programma malfunzionerà quasi certamente e potrebbe semplicemente bloccarsi. è per questo che, se provi a usare gets(), gcc ti avviserà che gets() è pericoloso. è un'antica routine, e molto meglio è stata creata negli (innumerevoli) decenni trascorsi da quando Unix e la libreria standard C furono progettati per la prima volta. Il successore designato di gets() è fgets(), che ha alcuni elementi di sicurezza incorporati - e anche alcune complicazioni. Le complicazioni derivano dal fatto che devi passare un handle di file a fgets(). In generale, le routine della libreria standard C i cui nomi iniziano con f agiscono su file. (Spiegherò come lavorare con i file su disco un po' più avanti in questo capitolo.) Puoi usare fgets() per leggere testo da un file su disco - ma ricorda, in termini Unix, la tua tastiera è già collegata a un file, il file chiamato input standard, stdin. Se possiamo collegare fgets() all'input standard, possiamo leggere testo dalla tastiera, che è ciò che la vecchia e pericolosa funzione gets() fa automaticamente.
+</p>
+
+<p align=justify>
+Il vantaggio nell'uso di fgets() è che ci consente di specificare un numero massimo di caratteri che la routine può accettare dalla tastiera. Qualsiasi altra cosa che l'utente digita sarà troncata e scartata. Se questo valore massimo non è maggiore del buffer di stringa che definisci per contenere i caratteri inseriti dall'utente, non c'è possibilità che l'uso di fgets() faccia crashare il tuo programma. Collegare fgets() all'input standard è facile. Come ho spiegato in precedenza in questo libro, Linux predefinisce tre gestori di file standard, e questi gestori sono collegati automaticamente al tuo programma. I tre sono stdin (input standard), stdout (output standard) e stderr (errore standard). Per accettare input dalla tastiera attraverso fgets(), vogliamo usare l'identificatore stdin. è già lì; devi semplicemente dichiararlo come EXTERN per riferirlo all'interno dei tuoi programmi in linguaggio assembly. Quindi, ecco come utilizzare la funzione fgets().
+</p>
+
+<ol>
+  <li>
+    <p align="justify">
+    Assicurati di aver dichiarato EXTERN fgets e EXTERN stdin insieme alle tue altre dichiarazioni esterne nella parte superiore della sezione .text del tuo programma.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Dichiara una variabile buffer abbastanza grande da contenere i dati della stringa che vuoi che l'utente inserisca. Usa la direttiva RESB nella sezione .bss del tuo programma.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Carica l'indirizzo del buffer in RDI.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Successivamente, carica il valore che indica il numero massimo di caratteri che vuoi che fgets() accetti in RSI. Assicurati che non sia maggiore della variabile buffer che dichiari in .bss!
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Carica il valore di stdin in RDX. Nota bene: Non passare l'indirizzo del valore esterno stdin. Passa il valore reale che l'elemento esterno stdin contiene, usando le parentesi: [stdin]
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Chiama fgets.
+    </p>
+  </li>
+</ol>
+
+<p align=justify>
+Come sempre, i parametri che passi a fgets() vengono inseriti nei registri nell'ordine specificato nella convenzione di chiamata x64. Questo è molto più comodo rispetto a spingerli nello stack, come avveniva nel mondo a 32 bit. Il codice sotto è un semplice programma che dimostra come ottenere testo dall'input standard tramite fgets(). Di nuovo, per brevità ho omesso l'intestazione dei commenti.
+</p>
+
+```asm
+;  Executable name : fgetstest
+;  Version         : 3.0
+;  Created date    : 11/19/2022
+;  Last update     : 7/18/2022
+;  Author          : Jeff Duntemann
+;  Description     : Demonstrates calls made into libc, using NASM 2.14.02 
+;                    to enter a short text string with gets() and display 
+;                    with printf().
+;
+;                  : Build with this makefile, being mindful of the required tabs:
+;   fgetstest: fgetstest.o
+;       gcc fgetstest.o -o fgetstest -no-pie
+;   fgetstest.o: fgetstest.asm
+;       nasm -f elf64 -g -F dwarf fgetstest.asm
+
+SECTION .data           ; Section containing initialized data	
+
+message: db "You just entered: %s."	
+	
+SECTION .bss            ; Section containing uninitialized data
+
+testbuf: resb 20 
+BUFLEN   equ $-testbuf
+
+SECTION .text           ; Section containing code
+
+extern printf
+extern stdin	
+extern fgets
+
+global main             ; Required so the linker can find the entry point
+	
+main:
+    push rbp             ; Set up stack frame for debugger
+	mov rbp,rsp
+    and rsp,-16
+;;; Everything before this is boilerplate; use it for all ordinary apps!
+
+; Get a number of characters from the user:		
+    mov rdi,testbuf      ; Put address of buffer into RDI
+    mov rsi,BUFLEN       ; Put # of chars to enter in RSI
+    mov rdx,[stdin]
+    call fgets           ; Call libc function for entering data
+
+;Display the entered characters:
+    mov rdi,message      ; Base string's address goes in RDI
+    mov rsi,testbuf      ; Data entry buffer's address goes in RSI
+    xor rax,rax          ; 0 in RAX tells printf no SSE registers are coming    
+    call printf          ; Call libc function to display entered chars
+
+;;; Everything after this is boilerplate; use it for all ordinary apps!
+	mov rsp,rbp          ; Destroy stack frame before returning
+    pop rbp
+
+    ret                  ; Return to glibc shutdown code
+```
+
+<p align="justify">
+Il programma fgetstest dimostra come incorporare un codice stringa %s nella stringa base. Non è necessario fare altro che posizionare %s nella stringa base e poi copiare l'indirizzo della stringa da inserire nel prossimo registro disponibile secondo la convenzione di chiamata x64. Qui, si tratta di RSI. Dal lato dell'utente dello schermo, fgets() accetta semplicemente caratteri fino a quando l'utente non preme Invio. Non ritorna automaticamente dopo che l'utente ha digitato il numero massimo di caratteri consentiti. (Questo impedirebbe all'utente di correggere l'input.) Tuttavia, qualsiasi cosa digitata dall'utente oltre il numero di caratteri consentiti viene scartata.
+</p>
+
+### Utilizzando scanf() per l'inserimento di valori numerici
+
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "File, Makefile, debugging e progetto" del percorso Intermedio per Terzo anno. Serve a lavorare su lettura dell'input, conversione dei dati e gestione dei casi problematici. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Utilizzando scanf() per l'inserimento di valori numerici" lo studente dovrebbe aver seguito il lavoro precedente su "Dati in con fgets() e scanf()", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Utilizzando scanf() per l'inserimento di valori numerici", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Dati in con fgets() e scanf()" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Convertire le stringhe in numeri con sscanf()". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Utilizzando scanf() per l'inserimento di valori numerici", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Convertire le stringhe in numeri con sscanf()" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: ASM_PROGRAMMING.md sezione "Utilizzando scanf() per l'inserimento di valori numerici" (#utilizzando-scanf-per-linserimento-di-valori-numerici). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+
+<p align="justify">
+In un modo peculiare, la funzione scanf() della libreria C è printf() che funziona all'indietro: invece di produrre dati formattati in un flusso di caratteri, scanf() prende un flusso di dati carattere dalla tastiera e lo converte in dati numerici memorizzati in una variabile numerica. La funzione scanf() funziona molto bene e comprende molti formati che non sarò in grado di spiegare qui, specialmente per l'inserimento di numeri in virgola mobile. (I valori in virgola mobile rappresentano un problema speciale nel lavoro in assembly e non li tratterò in questo libro.) La voce di Wikipedia è molto buona.
+</p>
+
+<p align="justify">
+<a href="https://en.wikipedia.org/wiki/Scanf_format_string">https://en.wikipedia.org/wiki/Scanf_format_string</a>
+</p>
+
+<p align="justify">
+Per la maggior parte dei programmi semplici che potresti scrivere mentre prendi confidenza con l'assembly, inserirai numeri interi semplici, e scanf() è molto utile per questo. Passi a scanf() il nome di una variabile numerica in cui memorizzare il valore inserito e un codice di formato che indica quale forma avrà quel valore all'ingresso dei dati. La funzione scanf() prenderà i caratteri digitati dall'utente e li convertirà nel valore intero che i caratteri rappresentano. Cioè, scanf() prenderà i due caratteri ASCII "4" e "2" inseriti consecutivamente e li convertirà nel valore numerico in base 10 42 dopo che l'utente preme Invio. E per quanto riguarda una stringa di richiesta, che istruisce l'utente su cosa digitare? Bene, molti nuovi arrivati hanno l'idea che puoi combinare la richiesta con il codice di formato in un'unica stringa passata a scanf(), ma purtroppo, questo non funzionerà. Sembra che dovrebbe funzionare"dopo tutto, puoi combinare i codici di formato con la stringa base da visualizzare usando printf(). E in scanf(), teoricamente puoi usare una stringa base contenente codici di formato ... ma poi l'utente dovrebbe digitare sia la richiesta che i dati numerici! Quindi, in termini pratici, l'unica stringa utilizzata da scanf() è una stringa contenente i codici di formato. Se vuoi una richiesta, devi visualizzarla usando printf() prima di chiamare scanf(). Per mantenere la richiesta e l'inserimento dei dati sulla stessa riga, assicurati di non avere un carattere EOL alla fine della tua stringa di richiesta! La funzione scanf() acquisisce automaticamente input di caratteri da input standard. Non devi passarle il gestore di file stdin, come fai con fgets(). Esiste una funzione glibc separata chiamata fscanf() a cui devi passare un gestore di file, ma per l'inserimento di dati interi non c'è rischio nell'usare scanf(). Ecco come utilizzare la routine scanf(): 
+</p>
+
+<ol>
+  <li>
+    <p align="justify">
+    Assicurati di aver dichiarato EXTERN scanf insieme alle tue altre dichiarazioni esterne nella parte superiore della sezione .TEXT.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Dichiarare una variabile di memoria del tipo appropriato per contenere i dati numerici letti e convertiti da scanf(). I miei esempi qui saranno per dati interi, quindi dovresti creare tale variabile con la direttiva DQ o la direttiva RESQ. Ovviamente, se intendi mantenere diversi valori separati, dovrai dichiarare una variabile per ogni valore inserito.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Per chiamare scanf() per l'inserimento di un singolo valore, prima copia l'indirizzo della stringa di formato che specifica in quale formato arriveranno i dati in RDI. Per i valori interi, questa è tipicamente la stringa %d.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Copia l'indirizzo della variabile di memoria che conterrà il valore in RSI. (Vedi la seguente discussione sull'inserimento di più valori in una sola chiamata.)
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Azzerare RAX, dicendo a scanf() che nessun parametro di registro vettoriale viene passato nella chiamata di funzione.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Chiama scanf().
+    </p>
+  </li>
+</ol>
+
+<p align="justify">
+è possibile presentare a scanf() una stringa contenente più codici di formattazione in modo che l'utente possa inserire più valori numerici con una sola chiamata a scanf(). L'ho provato e risulta in un'interfaccia utente piuttosto peculiare. Questa funzionalità è meglio utilizzata se stai scrivendo un programma per leggere un file di testo contenente righe di valori interi espressi come testo e convertirli in variabili intere reali in memoria. Per ottenere semplicemente valori numerici dall'utente tramite la tastiera, è meglio accettare solo un valore per ogni chiamata a scanf(). Il programma charsin.asm (mostrato di seguito) mostra come impostare messaggi insieme a un campo di inserimento dati per accettare sia dati stringa che dati numerici dall'utente attraverso la tastiera. Dopo aver accettato i dati, il programma visualizza ciò che è stato inserito, utilizzando printf()
+</p>
+
+```asm
+
+;  Executable name : charsin
+;  Version         : 3.0
+;  Created date    : 11/19/2022
+;  Last update     : 11/20/2022
+;  Author          : Jeff Duntemann
+;  Description     : A character input demo for Linux, using NASM 2.14.02,
+;                  : incorporating calls to both fgets() and scanf().
+;
+;  Build using these commands:
+;    nasm -f elf64 -g -F dwarf charsin.asm
+;    gcc charsin.o -o charsin -no-pie
+;	
+
+[SECTION .data]         ; Section containing initialised data
+	
+SPrompt  db 'Enter string data, followed by Enter: ',0		
+IPrompt  db 'Enter an integer value, followed by Enter: ',0
+IFormat  db '%d',0
+SShow    db 'The string you entered was: %s',10,0
+IShow    db 'The integer value you entered was: %5d',10,0
+	
+[SECTION .bss]          ; Section containing uninitialized data
+
+IntVal   resq 1         ; Reserve an uninitialized double word
+InString resb 128       ; Reserve 128 bytes for string entry buffer
+		
+[SECTION .text]         ; Section containing code
+
+extern stdin            ; Standard file variable for input
+extern fgets
+extern printf	
+extern scanf		
+
+global main             ; Required so linker can find entry point
+	
+main:
+    push rbp            ; Set up stack frame
+    mov rbp,rsp
+
+;;; Everything before this is boilerplate; use it for all ordinary apps!
+
+; First, an example of safely limited string input using fgets:
+    mov rdi,SPrompt	    ; Load address of the prompt string into RDI
+    call printf         ; Display it
+
+    mov rdi,InString    ; Copy address of buffer for entered chars
+    mov rsi,72          ; Accept no more than 72 chars from keybd
+    mov rdx,[stdin]     ; Load file handle for standard input into RDX
+    call fgets          ; Call fgets to allow user to enter chars
+
+    mov rdi,SShow       ; Copy address of the string prompt into RSI
+    mov rsi,InString    ; Copy address of entered string data into RDI
+    call printf         ; Display it
+
+; Next, use scanf() to enter numeric data:
+    mov rdi,IPrompt     ; Copy address of integer input prompt into RDI
+    call printf         ; Display it
+
+    mov rdi,IFormat     ; Copy address of the integer format string into RDI
+    mov rsi,IntVal      ; Copy address of the integer buffer into RSI
+    call scanf          ; Call scanf to enter numeric data
+
+    mov rdi,IShow       ; Copy address of base string into RDI
+    mov rsi,[IntVal]    ; Copy the integer value to display into RSI
+    call printf         ; Call printf to convert & display the integer
+
+;;; Everything after this is boilerplate; use it for all ordinary apps!
+
+    mov rsp,rbp         ; Destroy stack frame before returning
+    pop rbp
+	
+    ret                 ; Return control to Linux
+```
+
+### Essere un Signore del Tempo Linux
+
+<p align="justify">
+Le librerie standard C contengono un gruppo piuttosto sostanzioso di funzioni che manipolano date e orari. Sebbene queste funzioni siano state originariamente progettate per gestire valori di data generati dall'orologio in tempo reale nell'hardware dei minicomputer AT&T dell'antichità, che era attuale negli anni '70, sono ormai diventate un'interfaccia standard per il supporto dell'orologio in tempo reale di qualsiasi sistema operativo. Le persone che programmando in C per Windows utilizzano lo stesso gruppo di funzioni e funzionano più o meno allo stesso modo indipendentemente dal sistema operativo su cui si sta lavorando. Comprendendo come chiamare queste funzioni come procedure in linguaggio assembly, sarai in grado di leggere la data corrente, esprimere i valori di tempo e data in numerosi formati, applicare timestamp ai file e fare molte altre cose molto utili. Diamo un'occhiata a come funziona.
+</p>
+
+### La macchina del tempo della libreria C
+
+<p align="justify">
+Da qualche parte nel profondo della libreria standard C, c'è un blocco di codice che, quando invocato, guarda all'orologio in tempo reale del computer, legge la data e l'ora correnti e traduce questo in un valore intero firmato standard. Questo valore è (teoricamente) il numero di secondi trascorsi nell'"oepoca Unix", (o negli ambienti di programmazione, semplicemente "ol'epoca"), che è iniziata il 1 gennaio 1970, 00:00:00 ora universale. Ogni secondo che passa aggiunge 1 a questo valore. Quando leggi l'ora o la data corrente tramite la libreria C, ciò che recupererai è il valore attuale di questo numero. Il numero si chiama time_t. Per quasi tutta la sua storia, time_t era un intero firmato a 32 bit. Col passare degli anni, la gente ha iniziato a chiedersi cosa sarebbe successo quando un intero firmato a 32 bit non sarebbe stato abbastanza grande per contenere il numero di secondi dal 1970. Alle 3:14:07 UTC del 19 gennaio 2038, i computer che considerano time_t come un intero firmato a 32 bit lo vedranno azzerarsi a 0, perché un intero firmato a 32 bit può esprimere quantità solo fino a 2.147.483.647. Sono un sacco di secondi (e un tempo ragionevolmente lungo per prepararsi), ma io avrò solo 86 anni e mi aspetto di essere qui quando accadrà. (Ricordo tutta la panico del Y2K, eh.) In verità, non succederà, proprio come il famigerato fenomeno Y2K non ha fatto crollare la civiltà, come certa gente che avrebbe dovuto saperlo ha affermato all'epoca. Una libreria C implementata correttamente non presuppone affatto che time_t sia una quantità a 32 bit. Quindi, quando il time_t firmato a 32 bit scoppierà nel 2038, avremo utilizzato valori a 64 bit per tutto e il problema sarà rimandato per altri 292 miliardi di anni o giù di lì. Se non lo avremo risolto una volta per tutte entro allora, meriteremo di andare giù con l'intero universo nel Big Crunch che i cosmologi prevedono poco dopo. Certamente il problema non esiste più in Linux. Tutti i sistemi Linux a 64 bit utilizzano un time_t a 64 bit e, dalla versione 5.6 di Linux nel 2020, anche le versioni a 32 bit del sistema operativo utilizzano un time_t a 64 bit.
+</p>
+
+<p align="justify">
+Il valore time_t è semplicemente un conteggio arbitrario dei secondi e di per sé non ti dice molto, anche se può essere utile per calcolare i tempi trascorsi in secondi. Un altro tipo di dato standard implementato dalla libreria standard C è molto più utile. Una struttura tm (che viene spesso chiamata struct, e tra le persone del Pascal un record) è un raggruppamento di nove valori numerici a 32 bit che esprimono l'ora e la data attuali in segmenti utili separatamente, come riassunto nella figura seguente. Nota che, sebbene una struct (o record) sia nominalmente un raggruppamento di valori dissimili, nell'attuale implementazione x64 di Linux, un valore tm è più simile a un array o a una tabella dati, poiché tutti e nove gli elementi hanno la stessa dimensione, che è 32 bit, o 4 byte. L'ho descritto in questo modo nella figura seguente, includendo un valore che rappresenta l'offset dall'inizio della struttura per ciascun elemento della struttura. Questo ti consente di utilizzare un puntatore all'inizio della struttura e un offset dall'inizio per creare l'indirizzo effettivo di un dato elemento della struttura. Nota che anche in un'istanza Linux a 64 bit, i campi tm sono di dimensioni 32 bit. Perché ancora 32 bit? Facile: nessuno degli elementi in tm ha bisogno di qualcosa vicino a 8 byte per essere espresso. Il valore più grande possibile è tm_yday, che contiene il numero ordinale del giorno corrente, ovvero un numero da 1 a 366, con 1 che è il primo giorno di gennaio. Naturalmente, tra alcuni secoli, il numero di anni dal 1900 supererà 366, ma ancora una volta, non aspettarti.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/values_contained_in_the_tm_structure.png">
+</div>
+
+<p align="justify">
+L'unico elemento che necessita di una spiegazione un po' più dettagliata è tm_isdst. Il valore in tm_isdst è positivo se l'ora legale (DST) è in vigore e zero se l'ora legale non è in vigore. Se il sistema non riesce a determinare se l'ora legale è in vigore, il valore in tm_isdst è negativo. Esistono funzioni della libreria C che convertono i valori time_t in valori tm e viceversa. Ne tratto alcune in questo capitolo, ma sono tutte piuttosto semplici e, una volta che hai assimilato a fondo le convenzioni di chiamata C, dovresti essere in grado di elaborare un protocollo di chiamata in assembly per ciascuna di esse. Un'altra nota precauzionale: il valore time_t non è il numero esatto e preciso di secondi dall'inizio dell'epoca Unix. Ci sono problemi nel modo in cui Unix conta i secondi e il time_t non è corretto per gli errori astronomici accumulati come fa il tempo reale NIST, attraverso i "secondi intercalari". Quindi, su brevi intervalli (idealmente, meno di un anno), il time_t può essere considerato accurato. Oltre a questo, si deve presumere che sarà impreciso di alcuni secondi o più, senza un modo semplice per capire come compensare gli errori.
+</p>
+
+### Recupero valori time_t dall'orologio di sistema
+
+<p align="justify">
+Ogni singolo secondo di tempo (almeno quei secondi dopo il 1 gennaio 1970) può essere rappresentato come un intero con segno a 64 bit in un sistema compatibile con Unix. Il recupero del valore per l'ora corrente viene eseguito chiamando la funzione time(). Come tutte le funzioni progettate in conformità con le convenzioni di chiamata x64, time() restituisce il suo valore time_t in RAX. Tuttavia, c'è un problema che a volte fa inciampare i principianti: time() può prendere un parametro. Come tutti i primi parametri, viene passato a time() in RDI. Il trucco: è facoltativo. Più o meno. Quando si chiama time(), se RDI contiene 0, il valore time_t verrà restituito in RAX. Se RDI contiene qualcosa di diverso da 0, time() presumerà che il valore in RDI sia un indirizzo e tenterà di scrivere il valore time_t in memoria a quell'indirizzo. Se RDI contiene "avanzi" che non sono indirizzi validi, la chiamata time() di solito causa un errore di segmentazione. Dico "di solito" perché ho sentito dire che su alcuni sistemi, l'implementazione di time() contiene alcuni macchinari extra per rilevare gli indirizzi spazzatura, e se un indirizzo in RDI è spazzatura, tornerà a restituire il valore in RAX. Tuttavia, non puoi contare su questo. Non è necessario passare altri parametri a time(). Al ritorno, avrai il valore time_t corrente in RAX. Questo è tutto quello che c'è da fare. Data la possibilità di differenze di implementazione, non consiglio di consegnare a time() un indirizzo. Quello che consiglio è di avere il valore time_t restituito in RAX. Ciò richiede che si cancelli RDI su 0 prima di chiamare time().
+</p>
+
+### Convertire un valore time_t in una stringa formattata
+
+<p align="justify">
+Ancora una volta, da solo, un valore time_t non ti dice molto. La libreria C contiene una funzione che restituirà un puntatore a una rappresentazione di stringa formattata di un dato valore time_t. Questa è la funzione ctime(). Restituisce un puntatore a una stringa sepolta da qualche parte nella libreria di runtime. Questa stringa ha il seguente formato:
+</p>
+
+```
+ Wed Nov 28 12:13:21 2022
+```
+
+<p align="justify">
+Il primo campo è un codice di tre caratteri per il giorno della settimana, seguito da un codice di tre caratteri per il mese e un campo di due spazi per il giorno del mese. L'ora segue, in formato 24 ore, e l'anno chiude il tutto. Per completezza (anche se a volte può essere una seccatura), la stringa restituita da ctime termina con una nuova linea. Ecco come chiamare ctime e visualizzare la stringa di data/ora che genera:
+</p>
+
+```asm
+mov rdi,TimeValue   ; Copy *address* of time_t value into rdi
+call ctime          ; Returns pointer to ASCII time string in rax
+mov rdi,rax         ; Copy the address in rax into rdi
+call puts           ; Call puts to display the ASCII time string
+```
+
+<p align="justify">
+Questo sembra piuttosto convenzionale, ma c'è qualcosa di cui devi essere consapevole, poiché si discosta dalla nostra recente esperienza con glibc: devi passare a ctime() l'indirizzo di un valore time_t, non il valore stesso! Sei abituato a passare valori interi alle funzioni copiando quei valori in RDI, RSI e così via. Non è così qui. Un valore time_t è attualmente, sotto Linux, rappresentato come un intero a 8 byte, ma non c'è alcuna garanzia che rimanga sempre così. Le versioni più vecchie di Linux potrebbero utilizzare un time_t a 32 bit. Altre implementazioni di Unix potrebbero variare notevolmente. Quindi, per mantenere aperte le sue opzioni (e per assicurarsi che Unix possa essere utilizzato per migliaia o addirittura miliardi di anni a venire, eh), la funzione della libreria C ctime() richiede un puntatore al valore time_t corrente piuttosto che un valore time_t stesso. Passa l'indirizzo del valore time_t che vuoi rappresentare come stringa in RDI, e poi chiama ctime(). Ciò che ctime() restituisce in RAX è un puntatore alla stringa, che mantiene da qualche parte all'interno della libreria di runtime. Puoi usare quel puntatore per visualizzare la stringa sullo schermo tramite puts o printf o scriverla su un file di testo.
+</p>
+
+### Generazione di valori locali di tempo separati
+
+<p align="justify">
+La libreria glibc ti offre anche una funzione per separare i vari componenti di data e ora in valori distinti in modo da poterli utilizzare separatamente o in varie combinazioni. Questa funzione è localtime(), e dato un valore time_t, separerà la data e l'ora nei campi di una struttura tm, come descritto nella figura precedente. Ecco il codice per chiamarla:
+</p>
+
+```asm
+ mov rdi,TimeValue    ; Pass address of calendar time value in rdi
+ call localtime       ; Returns pointer to static time structure in rax
+```
+
+<p align="justify">
+Qui, TimeValue è un valore time_t. Data questo valore, localtime() restituisce in RAX"molto come ctime()"un puntatore a una struttura tm all'interno della libreria C da qualche parte. Utilizzando questo puntatore come indirizzo base, puoi accedere ai singoli campi nella struttura. Il trucco sta nel conoscere l'offset dentro tm per il singolo campo data/ora che desideri, e utilizzare quell'offset come uno spostamento costante dall'indirizzo base.
+</p>
+
+```asm
+ mov rdi, yrmsg           ; Pass address of the base string in rdi
+ mov rsi, dword [rax+20]  ; Year value tm_year is 20 bytes offset into tm
+ mov rax,0                ; Count of vector regs..here, 0
+ call printf              ; Display string and year value with printf
+```
+
+<p align="justify">
+Utilizzando gli spostamenti mostrati nella figura precedente, è possibile accedere a tutti gli altri componenti dell'ora e della data nella struttura tm, ciascuno memorizzato come un valore intero a 32 bit.
+</p>
+
+### Creare una copia della struttura tm di glibc con MOVSD
+
+<p align="justify">
+A volte è utile mantenere una copia separata di una struttura tm, soprattutto se stai lavorando con diversi valori di data/ora contemporaneamente. Quindi, dopo aver usato localtime() per riempire la struttura tm nascosta della libreria C con valori di data/ora, puoi copiare quella struttura in una struttura allocata nella sezione .bss o .data del tuo programma. Effettuare una tale copia è un uso diretto dell'istruzione REP MOVSD (Ripeti Copia Stringa Doppia), una delle istruzioni che ho introdotto nei paragrafi precedenti. MOVSD è una cosa quasi magica: una volta impostati i puntatori sull'area dati che vuoi copiare e sul luogo in cui vuoi copiarla, memorizzi la dimensione dell'area in RCX e lasci che REP MOVSD faccia il resto. In un'unica operazione copierà un intero buffer da un luogo nella memoria a un altro. Per usare REP MOVSD, posizioni l'indirizzo dei dati sorgente"cioè, i dati da copiare"nell'RSI. Sposti l'indirizzo della posizione di destinazione"dove i dati devono essere posizionati"nell'RDI. Il numero di elementi da spostare viene posto in RCX. Ti assicuri che il flag di Direzione DF sia resettato (per ulteriori dettagli, vedi paragrafi precedenti) e poi esegui REP MOVSD:
+</p>
+
+```asm
+ mov rsi,rax    ; Copy address of static tm from rax to rsi
+ mov rdi,tmcopy ; Put the address of the local tm vartiable in rdi
+ mov rcx,9      ; A tm struct is 9 dwords in size under Linux
+ cld            ; Clear df to 0 so we move up-memory
+ rep movsd      ; Copy static tm struct to local tm copy
+```
+
+<p align="justify">
+Perché usare MOVSD invece del suo fratello maggiore MOVSQ a 64 bit? La struttura tm è fondamentalmente un array di nove elementi da 4 byte, non da 8 byte. Qui, stiamo trasferendo la struttura tm della libreria C in un buffer allocato nella sezione .bss del programma. La struttura tm è composta da nove parole doppie"36 byte"di dimensione. Quindi, dobbiamo riservare tanto spazio e dargli un nome.
+</p>
+
+```asm
+ TmCopy resd 9 ; Reserve 9 32-bit fields for time struct tm
+```
+
+<p align="justify">
+Il codice precedente presuppone che l'indirizzo della struttura tm già compilata della libreria C sia in RAX e che sia stata allocata una struttura tm TmCopy. Una volta eseguito, copierà tutti i dati tm dal suo nascondiglio all'interno della libreria di esecuzione C nel tuo buffer appena allocato TmCopy.
+</p>
+
+<p align="justify">
+Il prefisso REP mette MOVSD in modalità fucile automatico, come ho spiegato nei paragrafi precedenti. Cioè, MOVSD continuerà a spostare dati dall'indirizzo in RSI all'indirizzo in RDI, decrementando RCX di uno ad ogni spostamento, fino a quando RCX non arriva a zero. Poi si ferma. Un errore facile da evitare è dimenticare che il conteggio in RCX è il conteggio degli elementi di dati da spostare, non il numero di byte da spostare! In virtù della D alla fine del suo mnemonico, MOVSD sposta doppie parole, e il valore che inserisci in RCX deve essere il numero di elementi da 4 byte da spostare. Quindi, spostando nove doppie parole, MOVSD trasporta effettivamente 36 byte da una posizione a un'altra - ma stai contando doppie parole qui, non byte. Il programma nell'Elenco 12.5 unisce tutti questi frammenti di codice in una demo delle principali funzionalità di cronologia di Unix. Ci sono molte altre funzioni temporali da studiare nella libreria C, e con ciò che ora sai sulle chiamate di funzione C, dovresti essere in grado di elaborare protocolli di chiamata per ognuna di esse.
+</p>
+
+```asm
+;  Executable name : timetest
+;  Version         : 3.0
+;  Created date    : 11/28/2022
+;  Last update     : 11/28/2022
+;  Author          : Jeff Duntemann
+;  Description     : A demo of time-related functions for Linux, using
+;                    NASM 2.14.02
+;
+;  Build using these commands:
+;    nasm -f elf64 -g -F stabs timetest.asm
+;    gcc timetest.o -o timetest -no-pie
+;
+
+[SECTION .data]         ; Section containing initialised data
+
+TimeMsg  db "Hey, what time is it?  It's %s",10,0
+YrMsg	 db "The year is %d.",10,10,0
+PressEnt db "Press enter after a few seconds: ",0
+Elapsed  db "A total of %d seconds has elapsed since program began running.",10,0	
+	
+[SECTION .bss]          ; Section containing uninitialized data
+
+OldTime	 resq 1         ; Reserve 3 quadwords for time_t values
+NewTime  resq 1
+TimeDiff resq 1	
+TimeStr  resb 40        ; Reserve 40 bytes for time string
+TmCopy	 resd 9         ; Reserve 9 integer fields for time struct tm			
+
+[SECTION .text]         ; Section containing code
+
+extern ctime
+extern difftime
+extern getchar
+extern printf
+extern localtime	
+extern strftime	
+extern time
+									
+global main             ; Required so linker can find entry point
+	
+main:
+    push rbp            ; Set up stack frame
+    mov rbp,rsp
+    
+;;; Everything before this is boilerplate; use it for all ordinary apps!	
+
+; Generate a time_t calendar time value with clib's time function
+    xor rdi,rdi         ; Clear rdi to 0
+    call time           ; Returns calendar time in rax
+    mov [OldTime],rax   ; Save time value in memory variable
+
+; Generate a string summary of local time with clib's ctime function
+    mov rdi,OldTime     ; Push address of calendar time value
+    call ctime          ; Returns pointer to ASCII time string in rax
+
+    mov rdi,TimeMsg     ; Pass address of base string in rdi
+    mov rsi,rax         ; Pass pointer to ASCII time string in rsi
+    call printf         ; Merge and display the two strings
+
+; Generate local time values into libc's static tm struct
+    mov rdi,OldTime     ; Push address of calendar time value
+    call localtime      ; Returns pointer to static time structure in rax
+
+; Make a local copy of libc's static tm struct
+    mov rsi,rax         ; Copy address of static tm from rax to rsi
+    mov rdi,TmCopy      ; Put the address of the local tm copy in rdi
+    mov rcx,9           ; A tm struct is 9 dwords in size under Linux
+    cld                 ; Clear DF so we move up-memory
+    rep movsd           ; Copy static tm struct to local copy
+
+; Display one of the fields in the tm structure
+	mov rdx,[TmCopy+20] ; Year field is 20 bytes offset into tm
+	add rdx,1900        ; Year field is # of years since 1900
+	mov rdi,YrMsg       ; Put address of the base string into rdi
+    mov rsi,rdx
+	call printf         ; Display string and year value with printf
+
+; Display the 'Press Enter: ' prompt
+    mov rdi,PressEnt    ; Put the address of the base string into rdi
+    call printf
+
+; Wait a few seconds for user to press Enter so we have a time difference:
+    call getchar        ; Wait for user to press Enter
+
+; Calculating seconds passed since program began running:
+    xor rdi,rdi         ; Clear rdi to 0
+    call time           ; Get current time value; return in EAX
+    mov [NewTime],rax   ; Save new time value
+
+    sub rax,[OldTime]   ; Calculate time difference value
+    mov [TimeDiff],rax  ; Save time difference value
+
+    mov rsi,[TimeDiff]  ; Put difference in seconds rdi
+    mov rdi,Elapsed     ; Push addr. of elapsed time message string
+    call printf         ; Display elapsed time
+		
+;;; Everything after this is boilerplate; use it for all ordinary apps!
+
+    mov rsp,rbp         ; Destroy stack frame before returning
+    pop rbp
+
+    ret                 ; Return to glibc shutdown code
+```
+
+<p align="justify">
+Se mai ti trasferisci in altre implementazioni di Unix al di fuori della sfera GNU, tieni presente che il valore di time_t potrebbe già avere una definizione diversa da un intero a 32 bit. In questo momento, glibc definisce time_t come un intero a 64 bit, e puoi calcolare le differenze di tempo tra due valori di time_t semplicemente sottraendoli. Per altre implementazioni di Unix non GNU, è meglio utilizzare la funzione difftime() nella libreria libc per restituire una differenza tra due valori di time_t.
+</p>
+
+### Comprendere i mnemonici di istruzione AT&T
+
+<p align="justify">
+Esistono più di un insieme di mnemoniche per le istruzioni delle CPU x86, e questo è stato fonte di molta confusione. Una mnemonica di istruzione è semplicemente un modo per gli esseri umani di ricordare cosa significa per la CPU il modello binario 1000100111000011. Invece di scrivere 16 uno e zero in fila (o anche l'equivalente esadecimale leggermente più comprensibile 89C3h), diciamo MOV BX,AX. Tieni presente che le mnemoniche sono proprio questo: stimolatori della memoria per gli esseri umani, e sono creature sconosciute alla CPU stessa. Gli assemblatori traducono le mnemoniche in istruzioni macchina. Anche se possiamo concordare tra di noi che MOV BX,AX si tradurrà in 1000100111000011, non c'è nulla di magico nella stringa MOV BX,AX. Avremmo potuto anche concordare su COPY AX TO BX o STICK GPREGA INTO GPREGB. Usamo MOV BX,AX perché è stata l'indicazione suggerita da Intel, e poiché Intel ha progettato e produce i chip per CPU, potrebbe sapere meglio come descrivere i dettagli interni dei propri prodotti. L'insieme alternativo di mnemoniche per istruzioni x86 che chiamiamo mnemoniche AT&T è emerso dal desiderio di rendere Unix il più facile possibile da portare su diverse architetture di computer. Tuttavia, gli obiettivi degli implementatori dell'insieme di istruzioni non sono gli stessi di quelli dei programmatori in linguaggio assembly, e se il tuo obiettivo è avere un comando completo e ottimale delle CPU x86/x64, è meglio scrivere codice con l'insieme Intel, come ho insegnato in questo libro. In verità, le mnemoniche AT&T appaiono strane e un po' opache, anche per me. Il motivo è che non sono mai state progettate per essere utilizzate dagli esseri umani per scrivere programmi in linguaggio assembly. Sono state progettate per essere un linguaggio intermedio facilmente portabile, cioè un linguaggio scritto da un pezzo di software per essere elaborato da un pezzo di software completamente diverso. In Linux, questo sarebbe generalmente il compilatore di linguaggio C gcc e l'assemblatore Gnu, gas. Infatti, il linguaggio C era originariamente considerato un 'assemblatore di alto livello', e rispetto ad altri linguaggi di programmazione come COBOL, FORTRAN o Pascal, lo è. Anche se ci sono buone ragioni per saper leggere le mnemoniche e la sintassi AT&T, è diventato abbastanza complesso che non posso giustificare di insegnarlo in modo approfondito in un libro per principianti come questo.
+</p>
+
+### Convenzioni mnemoniche di AT&T
+
+<p align="justify">
+Quindi ecco un riepilogo: quando gcc compila un file di codice sorgente C in codice macchina, ciò che fa realmente è tradurre il codice sorgente C in codice sorgente assembly, utilizzando i mnemonici AT&T. Torna alla figura su gcc. Il compilatore gcc prende come input un file di codice sorgente .c e genera un file di codice sorgente assembly .s, che viene poi passato all'assemblatore GNU gas per l'assemblaggio. Questo è il modo in cui gli strumenti GNU funzionano su tutte le piattaforme, con tutti i linguaggi GNU, dei quali ce ne sono diversi oltre a C e C++. Il passaggio assembly è generalmente invisibile per il programmatore, con il file .s scartato dopo che gas lo converte in codice macchina e ld lo collega. Puoi far salvare a gcc il file di codice sorgente assembly AT&T su disco utilizzando l'opzione -S:
+</p>
+
+```
+gcc eatc.c -S -o eatc
+```
+
+<p align="justify">
+Nota che l'opzione -S utilizza una S maiuscola. Quasi tutto in Linux e in altri discendenti di Unix è sensibile al maiuscolo e minuscolo. Ora, se hai intenzione di affrontare la libreria standard C e le moltitudini di altre librerie di funzioni scritte in C e per C, ha senso diventare almeno vagamente familiari con i mnemotecnici AT&T. Ci sono alcune regole generali che, una volta metabolizzate, rendono tutto molto più facile. Ecco l'elenco in breve.
+</p>
+
+<ul>
+	<li>
+		<p align="justify">
+		Le mnemoniche e i nomi dei registri AT&T sono invariabilmente in minuscolo. Questo è in linea con la convenzione Unix di sensibilità al maiuscolo e al minuscolo. Ho mescolato maiuscole e minuscole nel testo e negli esempi per farti abituare a vedere il codice assembly in entrambi i modi, ma devi ricordare che mentre la sintassi di Intel (e quindi NASM) suggerisce l'uso delle maiuscole ma accetterà le minuscole, la sintassi AT&T richiede l'uso delle minuscole.
+   		</p>
+	</li>
+ 	<li>
+		<p align="justify">
+		I nomi dei registri sono sempre preceduti dal simbolo di percentuale, %. Cioè, ciò che Intel scriverebbe come AX o RBX, AT&T lo scriverebbe come %ax e %rbx. Questo aiuta l'assemblatore a riconoscere i nomi dei registri.
+   		</p>
+	</li>
+ 	<li>
+		<p align="justify">
+		Ogni mnemonico di istruzione macchina AT&T che ha operandi ha un suffisso di un singolo carattere che indica la grandezza dei suoi operandi. Le lettere del suffisso sono b, w, l e q che indicano byte (8 bit), parola (16 bit), lungo (32 bit) e quad (64 bit). Ciò che Intel scriverebbe come MOV RBX,RAX, AT&T lo scriverebbe come movq %rax,%rbx.
+   		</p>
+	</li>
+ 	<li>
+		<p align="justify">
+		Quando un'istruzione non prende operandi (call, leave, ret), non ha un suffisso di dimensione dell'operando. Le chiamate e i ritorni sembrano praticamente uguali sia nella sintassi Intel che in quella AT&T.
+   		</p>
+	</li>
+ 	<li>
+		<p align="justify">
+		Nella sintassi AT&T, gli operandi sorgente e destinazione sono posti nell'ordine opposto rispetto alla sintassi Intel. Cioè, ciò che Intel scriverebbe come MOV RBX,RAX, AT&T lo scriverebbe come movq %rax,%rbx. In altre parole, nella sintassi AT&T, l'operando sorgente viene prima, seguito dall'operando di destinazione.
+   		</p>
+	</li>
+ 	<li>
+		<p align="justify">
+		Nella sintassi AT&T, gli operandi immediati sono sempre preceduti dal simbolo del dollaro, $. Ciò che Intel scriverebbe come PUSH 42, AT&T lo scriverebbe come pushq $42. Questo aiuta l'assemblatore a riconoscere gli operandi immediati.
+   		</p>
+	</li>
+ 	<li>
+		<p align="justify">
+		Non tutte le mnemoniche di istruzione AT&T sono generate da gcc. Gli equivalenti di JCXZ, JECXZ, LOOP, LOOPZ, LOOPE, LOOPNZ e LOOPNE di Intel sono stati aggiunti al set di mnemoniche AT&T non molto tempo fa e, in alcune versioni, gcc non genera codice che le utilizza.
+   		</p>
+	</li>
+ 	<li>
+		<p align="justify">
+		Nella sintassi AT&T, gli spostamenti nelle riferimenti di memoria sono quantità con segno posizionate all'esterno delle parentesi contenenti i valori di base, indice e scala. Tratterò questo separatamente un po' più tardi, poiché lo vedrai spesso nei file .s, e dovresti essere in grado di leggere e comprendere la sintassi degli indirizzi di memoria di ATT.
+   		</p>
+	</li>
+ 	<li>
+		<p align="justify">	
+		Quando viene citato, il nome di una stringa di messaggio è preceduto da un simbolo di dollaro ($) nello stesso modo in cui lo sono i letterali numerici. In NASM, una variabile di stringa nominata è considerata una variabile e non un letterale. Questo è solo un altro peccadillo di AT&T di cui essere a conoscenza.
+   		</p>
+	</li>
+ 	<li>
+		<p align="justify">
+		Si noti che il delimitatore dei commenti nello schema AT&T è il cancelletto (#) piuttosto che il punto e virgola utilizzato in quasi tutti gli assemblatori in stile Intel, compreso NASM.
+   		</p>
+	</li>
+</ul>
+
+### Sintassi di riferimento della memoria AT&T
+
+<p align="justify">
+Come ricorderai dai capitoli precedenti, fare riferimento a una posizione di memoria (a differenza di fare riferimento al suo indirizzo) avviene racchiudendo la posizione dell'indirizzo tra parentesi quadre, in questo modo:
+</p>
+
+```asm
+ mov rax,[rbp]
+```
+
+<p align="justify">
+Qui, stiamo prendendo qualsiasi quantità a 64 bit che si trova all'indirizzo contenuto in RBP e caricandola nel registro RAX. Un indirizzamento della memoria più complesso può apparire così:
+</p>
+
+```asm
+ mov rax,[rbx-8]         ; Base minus displacement
+ mov ax, word [bx+di+28] ; Base plus index plus displacement
+ mov al, byte [bx+di*4]  ; Base plus index times scale
+```
+
+<p align="justify">
+la sintassi per l'indirizzamento della memoria è considerevolmente diversa. In vece delle parentesi quadre, le mnemoniche AT&T usano le parentesi tonde per racchiudere i componenti di un indirizzo di memoria:
+</p>
+
+```asm
+ movb (%rbx),%al     # mov byte al,[rbx] in Intel syntax
+```
+
+<p align="justify">
+Qui, stiamo spostando la quantità di byte in [rbx] in AL. (Non dimenticare che l'ordine degli operandi è invertito rispetto a come fa la sintassi Intel!) All'interno delle parentesi metti la base, l'indice e il fattore di scala, quando presente. (La base deve esserci sempre.) Lo spostamento, quando esiste, deve andare davanti e all'esterno delle parentesi:
+</p>
+
+```asm
+ movl "8(%rbx),%rax       # mov dword rax,[rbx-8] (Intel)
+ movb 28(%rbx,%rdi),%eax  # mov byte rax,[rbx+edi+28] (Intel)
+```
+
+<p align="justify">
+Si noti che nella sintassi AT&T, non si esegue il calcolo all'interno delle parentesi. La base, l'indice e il fattore di scala sono separati da virgole, e i segni più e gli asterischi non sono consentiti. Lo schema per interpretare un riferimento di memoria AT&T è il seguente:
+</p>
+
+```asm
+ ±disp(base,index,scale)
+```
+
+<p align="justify">
+Il simbolo ± che uso nell'esempio schematico precedente indica che lo spostamento è firmato; cioè, può essere sia positivo che negativo per indicare se il valore dello spostamento viene aggiunto o sottratto al resto dell'indirizzo. Di solito, vedi il segno solo come esplicitamente negativo; senza il simbolo meno, il predefinito è che lo spostamento sia positivo. I valori di spostamento e scala sono facoltativi. Tuttavia, ciò che vedrai la maggior parte delle volte è un tipo molto semplice di riferimento alla memoria:
+</p>
+
+```asm
+-16(%rbp)
+```
+
+<p align="justify">
+Gli spostamenti varieranno, ovviamente, ma ciò che questo significa quasi sempre è che un'istruzione fa riferimento a un elemento dati da qualche parte nello stack. Il codice C alloca le sue variabili nello stack, in un frame dello stack, e poi fa riferimento a quelle variabili tramite offset letterali rispetto al valore in RBP. RBP funge da punto di partenza per l'indirizzo, e gli elementi nello stack possono essere referenziati in termini di offset (sia positivi che negativi) rispetto a RBP. Il riferimento precedente indicherebbe a un'istruzione macchina di lavorare con un elemento all'indirizzo in RBP meno 16 bytes.
+</p>
+
+### Generazione di numeri casuali
+
+<p align="justify">
+assemblaggio, facciamo qualcosa di seriamente casuale. (O modestamente pseudocasuale, perlomeno.) La libreria standard C ha un paio di funzioni che consentono ai programmi di generare numeri pseudocasuali. Il pseudo è significativo qui. Le ricerche suggeriscono che non esiste un modo provabile per generare un numero veramente casuale esclusivamente tramite software. In effetti, l'intero concetto di ciò che significa veramente casuale è inquietante e tiene molti matematici lontani dalle strade. Teoreticamente, avresti bisogno di ottenere attivatori da qualche fenomeno quantistico (la radioattività è quello più spesso menzionato) per raggiungere la vera casualità. Creature di questo tipo esistono. Ma mancando un generatore di numeri casuali attivato dalla radiazione, dovremo tornare al pseudo e imparare a viverci. Una definizione semplificata di pseudocasuale sarebbe qualcosa del genere: un generatore di numeri pseudocasuali produce una sequenza di numeri senza un modello riconoscibile, ma la sequenza può essere ripetuta passando lo stesso valore di seme al generatore. Un valore di seme è semplicemente un numero intero che funge da valore di input per un algoritmo arcano che crea la sequenza di numeri pseudocasuali. Passa lo stesso seme al generatore e ottieni la stessa sequenza. Tuttavia, all'interno della sequenza, la distribuzione dei numeri all'interno dell'intervallo del generatore è ragionevolmente dispersa e casuale. La libreria standard C contiene due funzioni relative ai numeri pseudocasuali:
+</p>
+
+<ul>
+	<li>
+		<p align="justify">
+		La funzione srand() passa un nuovo valore di seme al generatore di numeri casuali. Questo valore deve essere un intero a 32 bit. Se non viene passato alcun valore di seme, il valore di seme predefinito è 1.
+   		</p>
+	</li>
+ 	<li>
+		<p align="justify">
+		La funzione rand() restituisce un numero pseudorandom di 31 bit. Il bit più alto è sempre 0 e quindi il valore è sempre positivo se trattato come un intero con segno di 32 bit.
+   		</p>
+	</li>
+</ul>
+
+<p align="justify">
+Una volta che capisci come funzionano, usarli è quasi banale.
+</p>
+
+### Inizializzare il generatore con srand()
+
+<p align="justify">
+Inserire il valore del seme nel generatore è in realtà più complesso rispetto a effettuare la chiamata che estrae il prossimo numero pseudocasuale nella sequenza corrente. E non è che la chiamata a srand() sia così difficile: carichi il valore del seme in RDI e poi chiami srand(). è tutto quello che devi fare! La funzione srand() non restituisce un valore. Ma... cosa utilizzi come valore del seme? Ecco il problema. Se è importante che i tuoi programmi non funzionino con la stessa esatta sequenza di numeri pseudocasuali ogni volta che vengono eseguiti, chiaramente non vuoi usare un intero ordinario codificato nel programma. Idealmente, vorresti ottenere un valore del seme diverso ogni volta che esegui il programma. Il modo più semplice per farlo (anche se ce ne sono altri) è di utilizzare il conteggio dei secondi dal 1 gennaio 1970, come restituito dalla funzione time(), per alimentare le chiamate a srand(). Questo valore, chiamato time_t, è un intero firmato che cambia ogni secondo, quindi con ogni secondo che passa hai un nuovo valore del seme a tua disposizione, uno che per definizione non si ripeterà mai. (Sto assumendo qui che il problema del rollover di time_t di cui ho parlato nella sezione precedente sarà risolto entro l'anno 2038.) Quasi tutti fanno così, e l'unico avvertimento è che devi essere certo di non chiamare srand() per rinfrescare la sequenza più spesso di una volta al secondo. Nella maggior parte dei casi, per programmi che vengono eseguiti, fanno il loro lavoro e terminano in pochi minuti o ore, devi chiamare srand() solo una volta, quando il programma inizia l'esecuzione. Se stai scrivendo un programma che rimarrà in esecuzione per giorni o settimane o più a lungo senza terminare (come un server), potrebbe essere una buona idea ripristinare il generatore di numeri casuali una volta al giorno. Ecco un breve frammento di codice che chiama time() per recuperare il valore attuale di time_t e poi passa il valore del tempo a srand() in RDI:
+</p>
+
+```asm
+ xor rdi,rdi  ; Make sure rdi is set to 0 before calling time()
+ call time    ; Returns time_t value (32-bit integer) in rax
+ mov rdi,rax  ; Pass the seed value to srand in rdi
+ call srand   ; Time_t is the seed value for random # generator
+```
+
+<p align="justify">
+Impostare RDI a 0 prima di chiamare time() informa la funzione time() che non stai passando una variabile per accettare il valore del tempo. Il valore time_t che desideri mantenere viene restituito in RAX.
+</p>
+
+### Generazione di numeri pseudocasuali
+
+<p align="justify">
+Una volta che hai seminato il generatore, ottenere numeri nella sequenza pseudocasuale è facile: estrai il numero successivo nella sequenza con ogni chiamata a rand(). E la funzione rand() è facile da usare come qualsiasi altra cosa nella libreria C: non prende parametri (quindi non devi passare nulla alla funzione) e il numero pseudocasuale viene restituito in RAX. Il programma randtest.asm (mostrato di seguito) dimostra come funzionano srand() e rand(). Mostra anche un paio di altri trucchi interessanti in assembly, e trascorrerò il resto di questa sezione a discuterne.
+</p>
+
+```asm
+;  Executable name : randtest
+;  Version         : 3.0
+;  Created date    : 11/29/2022
+;  Updated date    : 7/18/2023
+;  Author          : Jeff Duntemann
+;  Description     : A demo of Unix rand & srand using NASM 2.14.02
+;
+;  Build using these commands or the makefile:
+;    nasm -f elf64 -g -F dwarf randtest.asm
+;    gcc randtest.o -o randtest
+;
+
+section .data
+
+Pulls      dq 36 ; How many numbers do we pull? (Must be a multiple of 6!)
+Display    db 10,'Here is an array of %d %d-bit random numbners:',10,0
+ShowArray  db '%10d %10d %10d %10d %10d %10d',10,0
+NewLine    db 0		
+CharTbl    db '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-@'
+
+section .bss
+
+[SECTION .bss]          ; Section containing uninitialized data
+
+BUFSIZE  equ 70         ; # of randomly chosen chars
+RandVal  resq 1         ; Reserve an integer variable
+Stash    resq 72        ; Reserve an array of 72 integers for randoms
+RandChar resb BUFSIZE+5 ; Buffer for storing randomly chosen characters
+
+section .text
+
+extern printf	
+extern puts
+extern rand
+extern scanf	
+extern srand
+extern time	
+
+;------------------------------------------------------------------------------
+;  Random number generator procedures  --  Last update 5/13/2023
+;
+;  This routine provides 6 entry points, and returns 6 different "sizes" of
+;  pseudorandom numbers based on the value returned by rand. Note first of 
+;  all that rand pulls a 31-bit value. The high 16 bits are the most "random"
+;  so to return numbers in a smaller range, you fetch a 31-bit value and then
+;  right-shift it to zero-fill all but the number of bits you want. An 8-bit
+;  random value will range from 0-255, a 7-bit value from 0-127, and so on.
+;  Respects RBP, RSI, RDI, RBX, and RSP. Returns random value in RAX.
+;------------------------------------------------------------------------------
+pull31: mov rcx,0       ; For 31 bit random, we don't shift
+	jmp pull
+pull20: mov rcx,11      ; For 20 bit random, shift by 11 bits
+    jmp pull
+pull16: mov rcx,15      ; For 16 bit random, shift by 15 bits
+	jmp pull
+pull8:  mov rcx,23      ; For 8 bit random, shift by 23 bits
+	jmp pull
+pull7:  mov rcx,24      ; For 7 bit random, shift by 24 bits
+	jmp pull
+pull6:  mov rcx,25      ; For 6 bit random, shift by 25 bits
+	jmp pull
+pull4:  mov rcx,27      ; For 4 bit random, shift by 27 bits
+
+pull:	
+    push rcx            ; rand trashes rcx; save shift value on stack
+    call rand           ; Call rand for random value; returned in RAX
+    pop rcx             ; Pop stashed shift value back into RCX
+    shr rax,cl          ; Shift the random value in RAX by the chosen factor
+                        ;  keeping in mind that part we want is in CL
+    ret                 ; Go home with random number in RAX
+
+;; This subroutine pulls random values and stuffs them into an
+;; integer array.  Not intended to be general purpose.  Note that
+;; the address of the random number generator entry point must
+;; be loaded into r13 before this is called, or you'll seg fault!
+
+puller:
+    mov r12,[Pulls]     ; Put pull count into R12
+.grab:
+    dec r12             ; Decrement counter in RSI
+    call r13            ; Pull the value; it's returned in RAX
+    mov [Stash+r12*8],rax   ; Store random value in the array
+    cmp r12,0           ; See if we've pulled all STASH-ed numbers yet
+    jne .grab           ; Do another if R12 <> 0 
+    ret                 ; Otherwise, go home!
+
+    ;; This subroutine displays numbers six at a time
+    ;; Not intended to be general-purpose...
+shownums:	
+    mov r12,qword [Pulls]    ; Put pull count into r12
+    xor r13,r13
+.dorow:	
+    mov rdi,ShowArray        ; Pass address of base string
+    mov rsi,[Stash+r13*8+0]  ; Pass first element
+    mov rdx,[Stash+r13*8+8]  ; Pass second element
+    mov rcx,[Stash+r13*8+16] ; Pass third element
+    mov r8,[Stash+r13*8+24]  ; Pass fourth element
+    mov r9,[Stash+r13*8+32]  ; Pass fifth element
+    push qword [Stash+r13*8+40] ; Pass sixth element on the stack.
+    call printf              ; Display the random numbers
+    add rsp,8                ; Stack cleanup: 1 item X 8 bytes = 8
+	
+    add r13,6       ; Point to the next group of six randoms in Stash 
+    sub r12,6       ; Decrement pull counter
+    cmp r12,0       ; See if pull count has gone to 0
+    ja .dorow       ; If not, we go back and do another row!
+    ret             ; Done, so go home!
+
+; MAIN PROGRAM:
+					
+global main         ; Required so linker can find entry point
+	
+main:
+    push rbp        ; Set up stack frame
+	mov rbp,rsp
+	
+;;; Everything before this is boilerplate; 
+
+; Begin by seeding the random number generator with a time_t value:	
+
+Seedit:	
+    xor rdi,rdi		; Mske sure rdi starts out with a 0
+    call time	    ; Returns time_t value (64-bit integer) in rax
+    mov rdi,rax	    ; Pass srand a time_t seed in rdi
+    call srand	    ; Seed the random number generator
+
+; All of the following code blocks are identical except for the size of
+; the random value being generated:
+	
+; Create and display an array of 31-bit random values
+    mov r13,pull31  ; Copy address of random # subroutine into RDI
+    call puller     ; Pull as many numbers as called for in [Pulls]
+	
+    mov rdi,Display ; Display the base string
+    mov rsi,[Pulls] ; Display the number of randoms displayed
+    mov rdx,32      ; Display the size of the randoms displayed
+    call printf     ; Display the label
+    call shownums   ; Display the rows of random numbers
+
+; Create and display an array of 20-bit random values
+    mov r13,pull20  ; Copy address of random # subroutine into RDI
+    call puller     ; Pull as many numbers as called for in [Pulls]
+		
+    mov rdi,Display ; Display the base string
+    mov rsi,[Pulls] ; Display the number of randoms displayed
+    mov rdx,20      ; Display the size of the randoms displayed
+    call printf     ; Display the label
+    call shownums   ; Display the rows of random numbers
+
+; Create and display an array of 16-bit random values
+    mov r13,pull16  ; Copy address of random # subroutine into RDI
+    call puller     ; Pull as many numbers as called for in [Pulls]
+	
+    mov rdi,Display ; Display the base string
+    mov rsi,[Pulls] ; Display the number of randoms displayed
+    mov rdx,16      ; Display the size of the randoms displayed
+    call printf     ; Display the label
+    call shownums   ; Display the rows of random numbers
+
+; Create and display an array of 8-bit random values
+    mov r13,pull8   ; Copy address of random # subroutine into RDI
+    call puller     ; Pull as many numbers as called for in [Pulls]
+    	
+    mov rdi,Display ; Display the base string
+    mov rsi,[Pulls] ; Display the number of randoms displayed
+    mov rdx,8       ; Display the size of the randoms displayed
+    call printf     ; Display the label
+    call shownums   ; Display the rows of random numbers
+
+; Create and display an array of 7-bit random values
+    mov r13,pull7   ; Copy address of random # subroutine into RDI
+    call puller     ; Pull as many numbers as called for in [Pulls]
+	
+    mov rdi,Display ; Display the base string
+    mov rsi,[Pulls] ; Display the number of randoms displayed
+    mov rdx,7       ; Display the size of the randoms displayed
+    call printf     ; Display the label
+    call shownums   ; Display the rows of random numbers
+
+; Create and display an array of 6-bit random values
+    mov r13,pull6   ; Copy address of random # subroutine into RDI
+    call puller     ; Pull as many numbers as called for in [Pulls]
+	
+    mov rdi,Display ; Display the base string
+    mov rsi,[Pulls] ; Display the number of randoms displayed
+    mov rdx,6       ; Display the size of the randoms displayed
+    call printf     ; Display the label
+    call shownums   ; Display the rows of random numbers
+
+; Create and display an array of 4-bit random values
+    mov r13,pull4   ; Copy address of random # subroutine into RDI
+    call puller     ; Pull as many numbers as called for in [Pulls]
+	
+    mov rdi,Display ; Display the base string
+    mov rsi,[Pulls] ; Display the number of randoms displayed
+    mov rdx,4       ; Display the size of the randoms displayed
+    call printf     ; Display the label
+    call shownums   ; Display the rows of random numbers
+
+; Clear a buffer to nulls:
+Bufclr:	
+    mov rcx, BUFSIZE+5  ; Fill whole buffer plus 5 for safety
+.loop:	
+    dec rcx             ; BUFSIZE is 1-based so decrement first!
+    mov byte [RandChar+rcx],0     ; Mov null into the buffer
+    cmp rcx,0           ; Are we done yet?
+    jnz .loop           ; If not, go back and stuff another null
+
+; Create a string of random alphanumeric characters:
+Pulchr:	
+    mov rbx, BUFSIZE    ; BUFSIZE tells us how many chars to pull
+.loop:	
+    dec rbx             ; BUFSIZE is 1-based, so decrement first!
+    mov r13,pull6       ; For random in the range 0-63
+    call r13
+    mov cl,[CharTbl+rax]  ; Use random # in rax as offset into table
+                          ;  and copy character from table into CL
+    mov [RandChar+rbx],cl ; Copy char from CL to character buffer
+    cmp rbx,0           ; Are we done having fun yet?
+    jne .loop           ; If not, go back and pull another
+
+; Display the string of random characters:
+    mov rdi,NewLine     ; Output a newline
+    call puts           ;  using the newline procedure
+    mov rdi,RandChar    ; Push the address of the char buffer 
+    call puts           ; Call puts to display it
+    mov rdi,NewLine     ; Output a newline
+    call puts
+
+;;; Everything after this is boilerplate; use it for all ordinary apps!
+
+    mov rsp,rbp         ; Destroy stack frame before returning
+    pop rbp
+
+    ret                 ; Return to glibc shutdown code
+```
+
+### Alcuni bit sono più casuali di altri
+
+<p align="justify">
+Sotto Linux x64, la funzione rand() restituisce un valore senza segno a 31 bit in RAX come un intero a 64 bit. (Il bit di segno dell'intero - il più alto di tutti i 64 bit - è sempre azzerato a 0.) La documentazione Unix per rand() e srand() indica che i bit a bassa ordine di un valore generato da rand() sono meno casuali rispetto ai bit ad alta ordine. Questo significa che se stai per usare solo alcuni dei bit del valore generato da rand(), dovresti usare i bit ad alta ordine che puoi. Onestamente, non so perché dovrebbe essere così, né quanto sia grave il problema. Non sono un esperto di matematica profonda e accetterò la parola delle persone che hanno scritto la documentazione di rand(). Ma questo riguarda la questione di come limitare l'intervallo dei numeri casuali che generi. La questione è piuttosto ovvia: supponi di voler estrarre un certo numero di caratteri alfanumerici ASCII casuali. Non hai bisogno di numeri che vanno da 0 a 2 miliardi. Ci sono solo 127 caratteri ASCII e in effetti solo 62 sono lettere e numeri. (Gli altri sono segni di punteggiatura, spazi bianchi, caratteri di controllo o caratteri non stampabili come le faccine.) Quello che vuoi fare è estrarre numeri casuali tra 0 e 61. Estrarre numeri che vanno da 0 a 2 miliardi finché non ne trovi uno inferiore a 62 richiederà molto tempo. Chiaramente, hai bisogno di un approccio diverso. Quello che ho preso tratta il valore a 31 bit restituito da rand() come una collezione di bit casuali. Estraggo un sottoinsieme di quei bit appena grande abbastanza da soddisfare le mie esigenze. Sei bit possono esprimere valori da 0 a 63, quindi prendo i 6 bit ad alta ordine dal valore originale a 31 bit e li uso per specificare caratteri casuali. è facile: semplicemente sposto il valore a 31 bit verso destra finché tutti i bit tranne i 6 bit ad alta ordine non sono stati spostati via dal lato destro del valore nell'oblio. Lo stesso trucco funziona con qualsiasi numero (ragionevole) di bit. Tutto ciò che devi fare è selezionare di quanti bit spostare.
+</p>
+
+```
+pull31: mov rcx,0   ; For 31 bit random, we don't shift
+    jmp pull
+ pull20: mov rcx,11  ; For 20 bit random, shift by 11 bits
+    jmp pull
+ pull16: mov rcx,15  ; For 16 bit random, shift by 15 bits
+    jmp pull
+ pull8:  mov rcx,23  ; For 8 bit random, shift by 23 bits
+    jmp pull
+ pull7:  mov rcx,24  ; For 7 bit random, shift by 24 bits
+    jmp pull
+ pull6:  mov rcx,25  ; For 6 bit random, shift by 25 bits
+    jmp pull
+ pull4:  mov rcx,27  ; For 4 bit random, shift by 27 bits
+ 
+pull:
+    push rbp            ; Prolog: Create stack frame
+    mov rbp,rsp
+ 
+    mov r15,rcx         ; rand trashes rcx; save shift value in R15         
+    call rand           ; Call rand for random value;
+ returned in RAX
+    mov rcx,r15         ; Restore shift value back into RCX
+    shr rax,cl          ; Shift the value in RAX by the chosen factor
+                        ; keeping in mind that part we want is in CL
+    pop rbp             ; Epilog: Destroy stack frame
+    ret                 ; Go home with random number in RAX
+```
+
+<p align="justify">
+Per estrarre un numero casuale a 16 bit, chiama pull16. Per estrarre un numero casuale a 8 bit, chiama pull8, e così via. Ho scoperto che i numeri più piccoli non sono così casuali come quelli più grandi, e i numeri restituiti da pull4 probabilmente non sono abbastanza casuali da essere utili. (Ho lasciato il codice di pull4 così puoi vedere da solo eseguendo randtest.) La logica qui dovrebbe essere facile da seguire: selezioni un valore di spostamento, lo metti in RCX, copi RCX in R15, chiami rand(), copi RCX di nuovo da R15, e poi sposti il numero casuale (che rand() restituisce in RAX) per il valore in CL"che, ovviamente, è i 8 bit più bassi di RCX. Perché RCX deve essere salvato in R15? RCX non è uno dei registri preservati dal chiamato nelle convenzioni di chiamata C, e praticamente tutte le routine della libreria C usano RCX internamente e quindi ne danneggiano il valore. Se vuoi mantenere un valore in RCX attraverso una chiamata a una funzione di libreria, devi salvare il tuo valore da qualche parte prima della chiamata e ripristinarlo dopo che la chiamata è completata. C'era un solo posto per salvare un registro: lo stack. Ora, con i nuovi registri a uso generale di x64, potresti essere in grado di svolgere tutto il tuo lavoro con registri che le routine di glibc non danneggiano e quindi non devono essere salvate nello stack. Uso la routine pull6 per estrarre numeri casuali a 6 bit per selezionare caratteri da una tabella di caratteri, creando così una stringa di caratteri alfanumerici casuali. Riempio la tabella a 64 elementi con due caratteri aggiuntivi (- e @) in modo da non dover testare ogni numero estratto per vedere se è minore di 62. Se devi limitare i valori casuali a un intervallo che non è una potenza di 2, scegli la potenza di 2 più grande successiva"ma cerca di progettare il tuo programma in modo da non dover scegliere valori casuali in un intervallo come 0 a 65. Molto è stato scritto sui numeri casuali nei libri di algoritmi, quindi se il concetto ti affascina, ti indirizzo lì per ulteriori studi.
+</p>
+
+### Chiamate a indirizzi nei registri
+
+<p align="justify">
+Utilizzo una tecnica in randtest che a volte viene dimenticata dai principianti dell'assemblaggio: puoi eseguire un'istruzione CALL a un indirizzo di procedura memorizzato in un registro. Non è sempre necessario utilizzare CALL con un'etichetta immediata. In altre parole, le seguenti due istruzioni CALL sono entrambe completamente legali ed equivalenti:
+</p>
+
+```asm
+  mov r13,pull8  ; Copy the address represented by label pull8 into r13
+  call pull8     ; Call the address represented by pull8
+  call r13        ; Call the address stored in r13
+```
+
+<p align="justify">
+Perché fare questo? Troverai le tue ragioni col passare del tempo, ma in generale ti permette di trattare le chiamate di procedura come parametri. In randtest, ho estratto molto codice in una procedura chiamata puller e poi ho chiamato puller diverse volte per diverse dimensioni di numeri casuali. Ho passato a puller l'indirizzo della corretta procedura per il numero casuale da chiamare caricando l'indirizzo di quella procedura in RDI:
+</p>
+
+```asm
+ ; Create and display an array of 8-bit random values:
+ mov r13,pull8 ; Copy address of random # subroutine into r13
+ call puller   ; Pull as many numbers as called for in [pulls]
+```
+<p align="justify">
+Nella procedura di estrazione, il codice chiama la procedura di numero casuale richiesta in questo modo:
+</p>
+
+```asm
+ puller:
+ 	mov r12,[Pulls]      ; Put pull count into R12
+
+.grab:
+ 	dec r12              ; Decrement counter in RSI
+
+	call r13             ; Pull the value; it's returned in RAX
+	mov [Stash+r12*8],rax   ; Store random value in the array
+
+	cmp r12,0            ; See if we've pulled all STASH-ed numbers yet
+	jne .grab            ; Do another if R12 <> 0
+	ret                  ; Otherwise, go home!
+
+```
+
+<p align="justify">
+Vedi l'istruzione CALL R13? In questa situazione (dove R13 era precedentemente caricato con l'indirizzo della procedura pull8), ciò che viene chiamato è pull8"anche se l'etichetta pull8 non è presente nella procedura puller. Lo stesso codice in puller può essere usato per riempire un buffer con tutte le diverse dimensioni di numeri casuali, chiamando l'indirizzo della procedura passato a esso in R13. Chiamare un indirizzo in un registro ti dà molta potenza per generalizzare il codice"assicurati solo di documentare ciò che stai facendo, poiché l'etichetta che stai chiamando non è contenuta nell'istruzione CALL.
+</p>
+
+### Usare puts() per inviare una linea vuota alla console
+
+<p align="justify">
+Il programma randtest dimostra anche qualcosa di semplice ma non ovvio: come inviare una newline "nuda" alla console di Linux. Ho spiegato prima che la funzione puts() di libc termina sempre quello che visualizza con una newline, anche se preferiresti che non ne visualizzasse affatto. Per visualizzare le cose sulla console senza una newline, devi usare printf(). Quindi cosa fare se vuoi inviare un linefeed alla console, ma nient'altro? Facile: definisci una variabile (la chiamo NewLine) come un singolo byte e metti un 0 al suo interno. Poi copia l'indirizzo della variabile NewLine in RDI e poi chiama puts():
+</p>
+
+```asm
+  mov rdi,NewLine  ; Output a newline
+  call puts
+```
+
+<p align="justify">
+Ricorda che puts() visualizza tutto a partire dall'indirizzo passato ad esso in RDI fino al primo null (cioè, uno 0) che incontra. Se l'unica cosa a quell'indirizzo è un null, puts() invierà una nuova riga alla console e nient'altro.
+</p>
+
+### Come passare più di sei parametri a una funzione libc
+
+<p align="justify">
+Se ti ricordi, nella convenzione di chiamata x64, i primi sei parametri passati a una funzione vengono passati in RDI, RSI, RDX, RCX, R8 e R9. Quindi, cosa succede se vuoi passare a printf() sette parametri o più? Qualsiasi cosa oltre sei parametri deve andare nello stack. Ho progettato appositamente randtest per passare sette parametri a printf(). L'azione avviene nella procedura chiamata shownums:
+</p>
+
+```asm
+    mov r12,qword [Pulls]    ; Put pull count into r12
+    xor r13,r13
+ .dorow:
+    mov rdi,ShowArray        ; Pass address of base string
+    mov rsi,[Stash+r13*8+0]  ; Pass first element
+    mov rdx,[Stash+r13*8+8]  ; Pass second element
+    mov rcx,[Stash+r13*8+16] ; Pass third element
+    mov r8,[Stash+r13*8+24]  ; Pass fourth element
+    mov r9,[Stash+r13*8+32]  ; Pass fifth element
+    push rax                 ; To keep the stack 16 bytes
+ aligned
+    push qword [Stash+r13*8+40] ; Pass sixth element on the
+ stack.
+    xor rax,rax         ; Tell printf() no vector values
+ coming
+    call printf         ; Display the random numbers
+    add rsp,16          ; Stack cleanup: 2 item X 8 bytes = 16
+ 
+```
+
+<p align="justify">
+All'etichetta dorow: c'è una sequenza di sei istruzioni MOV, tutte le quali passano parametri da utilizzare con printf(). L'indirizzo della stringa base va prima (in RDI) seguito dai sei numeri casuali che costituiscono una riga. Una volta arrivati al sesto numero, non abbiamo più registri per passare ulteriori valori. Quindi, l'ultimo valore del parametro viene spinto nello stack, immediatamente prima di chiamare printf(). Beh, quasi immediatamente. In precedenza in questo capitolo ho trattato questo stesso codice da una direzione diversa: l'allineamento dello stack. Anche se il codice di avvio glibc allinea lo stack a un valore di 16 byte, spingere solo un elemento nello stack aggiunge solo 8 byte al puntatore dello stack, e quindi disallinea lo stack. Per risolvere questo problema, spingi RAX nello stack proprio prima di spingere quel settimo parametro nello stack. RAX aggiunge altri 8 byte allo stack, riportandolo a un allineamento di 16 byte. (Ciò che è effettivamente in RAX non importa. Sono solo 8 byte di riempimento.) Se ci fossero otto parametri, l'ottavo sarebbe spinto nello stack immediatamente dopo il settimo senza necessità di alcuna istruzione PUSH RAX. Ecco perché: L'essenza dell'allineamento dello stack è far crescere o ridurre lo stack solo in blocchi di 16 byte, anche se metà di uno di quei blocchi è un registro "ofittizio". Spingere due valori di parametro nello stack fa crescere lo stack di 16 byte, quindi non è necessario alcun valore fittizio. Infatti, se dimentichi e aggiungi comunque un PUSH RAX, disallinerai lo stack! La funzione printf() sa dove guardare e troverà e utilizzerà tutti i parametri passati ad essa. Tuttavia, printf() non pulisce dopo se stessa. Se spingi valori nello stack per una chiamata a printf(), una volta che printf() ha finito di usarli, devi pulire lo stack. Questo non viene fatto con un pop (almeno non in questo caso particolare) ma aggiungendo la dimensione dell'elemento che hai spinto nello stack a RSP. Ricorda che lo stack cresce "oin giù" (verso indirizzi più bassi). Se spingiamo qualcosa, RSP diventa più piccolo della dimensione del valore spinto, in questo caso, un intero a 64 bit. Per pulire lo stack, aggiungiamo la dimensione di ciò che abbiamo spinto di nuovo in RSP. In questo caso, abbiamo spinto un registro di 8 byte più un intero di 8 byte per un totale di 16 byte di dimensione, quindi aggiungiamo 16 a RSP. Voilà! Lo stack è ora pulito, almeno dalla chiamata a printf(). Tieni traccia del tuo stack: per pop ciò che spingi, oppure aggiungi la dimensione di un elemento spinto di nuovo in RSP. Fai attenzione: se mescoli lo stack, un errore di segmentazione è quasi inevitabile.
+</p>
+
+### Come C vede gli argomenti della riga di comando
+
+<p align="justify">
+Ho spiegato come accedere agli argomenti della riga di comando da un programma Linux come parte di una discussione più generale sui frame dello stack. Una delle cose più strane riguardo il collegamento e la chiamata alle funzioni della libreria standard C in glibc è che il modo di accedere agli argomenti della riga di comando cambia e cambia in modo significativo. Gli argomenti sono ancora sullo stack, così come la tabella degli indirizzi degli argomenti. Tuttavia, non è più necessario frugare su e giù nello stack per trovarli. La chiave è questa: main() è una funzione. è solo una parte di un programma C. Ci sono anche il codice di avvio e il codice di spegnimento. Una volta che il codice di avvio ha completato il suo lavoro, chiama main() proprio come chiamerebbe qualsiasi altra funzione. Quando main() è finita, restituisce il controllo al codice di spegnimento, che svolge il suo lavoro e poi restituisce il controllo a Linux. Ciò che rende più facile il processo di trovare gli argomenti della riga di comando è che il codice di avvio segue le convenzioni di chiamata x64 quando chiama main(). I primi sei parametri vengono passati a una funzione nei registri. Il primo registro a ricevere un parametro è RDI. Quando il codice di avvio chiama main(), pone il conteggio degli argomenti (argc nel gergo C) in RDI. L'unico altro parametro normalmente passato a main() è l'indirizzo della tabella dei puntatori nello stack, nel gergo C argv. Ogni indirizzo nella tabella argv punta al suo testo di argomento effettivo. Il puntatore alla tabella dei puntatori viene passato nel secondo registro della convenzione di chiamata, RSI. Il codice seguente è funzionalmente equivalente al programma showargs2 presentato precedentemente. Tuttavia, è significativamente più semplice. Diamo un'occhiata e lo esamineremo insieme.
+</p>
+
+```asm
+;  Executable name : showargs3
+;  Version         : 3.0
+;  Created date    : 10/1/1999
+;  Last update     : 7/18/2023
+;  Author          : Jeff Duntemann
+;  Description     : A demo that shows how to access command line arguments
+;                    stored on the stack by addressing them relative to rbp.
+;
+;  Build using these commands:
+;    nasm -f elf64 -g -F dwarf showargs3.asm
+;    gcc showargs3.o -o showargs3
+;
+
+[SECTION .data]    ; Section containing initialised data
+		
+ArgMsg db "Argument %d: %s",10,0
+
+[SECTION .bss]     ; Section containing uninitialized data
+	
+[SECTION .text]    ; Section containing code
+				
+global main        ; Required so linker can find entry point
+extern printf      ; Notify linker that we're calling printf
+
+main:
+    push rbp       ; Set up stack frame for debugger
+    mov rbp,rsp
+
+;;; Everything before this is boilerplate; use it for all ordinary apps!
+
+    mov r14,rdi    ; Get arc count (argc) from RDI
+    mov r13,rsi    ; Put the pointer to the arg table argv from RSI
+    xor r12,r12    ; Clear r12 to 0
+
+.showit:
+
+    mov rdi,ArgMsg ; Pass address of display string in rdi
+    mov rsi,r12    ; Pass argument number in rsi
+    mov rdx,qword [r13+r12*8]   ; Pass address of an argument in RDX
+    call printf    ; Display the argument # and argument
+
+    inc r12        ; Bump argument # to next argument
+    dec r14        ; Decrement argument counter by 1
+    jnz .showit    ; If argument count is 0, we're done
+
+;;; Everything after this is boilerplate; use it for all ordinary apps!
+
+    mov rsp,rbp    ; Destroy stack frame before returning
+    pop rbp
+
+	ret            ; Return to glibc shutdown code
+```
+
+<p align="justify">
+Dopo il prologo, il valore del conteggio argc è copiato in R14. L'indirizzo della tabella argv è copiato in R13. R12 è azzerato a 0. Ad ogni passaggio attraverso il ciclo .showit, i valori vengono passati alla funzione printf(), tutto secondo la convenzione di chiamata x64. L'indirizzo della stringa di visualizzazione è passato in RDI e il numero dell'argomento è passato in RSI, numerato da 0. L'indirizzo del testo di ogni argomento è passato in RDX, utilizzando un indirizzo effettivo calcolato in questo modo:
+</p>
+
+```asm
+ mov rdx,qword  [r13+r12*8]
+```
+
+<p align="justify">
+Il termine base è R13, che è l'indirizzo dell'inizio della tabella. Ogni indirizzo nella tabella occupa 8 byte, quindi si tratta la posizione ordinaria delle voci della tabella (cioè l'elemento 0, 1, 2, 3, ecc.) come l'indice e lo si moltiplica per il fattore di scala, 8 poiché gli indirizzi in x64 sono tutti di 8 byte. Quando il calcolo è completato, l'indirizzo effettivo dell'elemento scelto nella tabella viene copiato in RDX. RDX quindi porta l'indirizzo dell'elemento argv da visualizzare in printf(). (Si noti che non c'è termine di spostamento in questo particolare calcolo dell'indirizzo effettivo.) Durante il ciclo .showit, R14 conta all'indietro il numero di argomenti, mentre R12 assegna a ciascun argomento il proprio numero ordinario. In altre parole, R14 conta quanti argomenti abbiamo ancora da visualizzare e per ogni argomento R12 gli assegna un numero ordinario che aumenta, da visualizzare con printf(). Tutto ciò dovrebbe essere chiaro dalla figura seguente
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/accessing_command_line_arguments_from_main.png">
+</div>
+
+### Semplici operazioni di I/O sui file
+
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "File, Makefile, debugging e progetto" del percorso Intermedio per Terzo anno. Serve a lavorare su apertura, lettura, scrittura e chiusura dei file tramite libreria standard C. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Semplici operazioni di I/O sui file" lo studente dovrebbe aver seguito il lavoro precedente su "Protezione del contenuto dei file d'intestazione", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Semplici operazioni di I/O sui file", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Protezione del contenuto dei file d'intestazione" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Creare ed Aprire i File". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Semplici operazioni di I/O sui file", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Creare ed Aprire i File" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: ASM_PROGRAMMING.md sezione "Semplici operazioni di I/O sui file" (#semplici-operazioni-di-io-sui-file). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+
+<p align="justify">
+L'ultimo programma di esempio che presento qui è nominalmente dedicato al lavoro con file di testo su disco. Tuttavia, raccoglie molti trucchi e funzionalità di assembly che ho spiegato in precedenza e ne aggiunge alcuni altri. è il programma più grande e complesso che ti ho mostrato, e se riesci a leggerlo e seguire il flusso della logica, hai appreso tutto ciò che mi ero ripromesso di insegnarti in questo libro. è più simile a un programma 'reale' rispetto a qualsiasi altra cosa in questo libro, in quanto lavora con argomenti da riga di comando, scrive l'output in un file su disco e fa altre cose utili che qualsiasi utility che intendi costruire richiederà probabilmente. Il programma textfile.asm (mostrato di seguito) crea e riempie un file di testo con del testo. Puoi specificare il numero di righe da riempire nel file, così come il testo per le righe. Se non specifichi il testo per il file, il programma genererà una riga di caratteri scelti casualmente e userà quella al suo posto. L'invocazione del programma avviene in questo modo: 
+</p>
+
+```
+$./textfile 50 Tempo per i tacos!
+```
+
+<p align="justify">
+Questa invocazione crea un nuovo file (il cui nome è fissato nel programma come testeroo.txt) e scrive il testo "Tempo per i tacos!" nel file 50 volte prima di chiudere il file. Se il file testeroo.txt esiste già, verrà sovrascritto dall'inizio. Se non digiti nulla dopo il numero di righe, il programma riempirà il file con caratteri alfanumerici casuali. Se non digiti un intero come primo argomento (ad esempio, la lettera Q), textfile visualizzerà un messaggio di errore su una riga. Se digiti solo il nome del programma e premi Invio, textfile visualizzerà diverse righe che spiegano cos'è e come usarlo.
+</p>
+
+### Convertire le stringhe in numeri con sscanf()
+
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "File, Makefile, debugging e progetto" del percorso Intermedio per Terzo anno. Serve a lavorare su array di char terminati da carattere nullo e funzioni di libreria associate. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Convertire le stringhe in numeri con sscanf()" lo studente dovrebbe aver seguito il lavoro precedente su "Utilizzando scanf() per l'inserimento di valori numerici", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Convertire le stringhe in numeri con sscanf()", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Utilizzando scanf() per l'inserimento di valori numerici" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Testo formattato con printf()". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Convertire le stringhe in numeri con sscanf()", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Testo formattato con printf()" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: ASM_PROGRAMMING.md sezione "Convertire le stringhe in numeri con sscanf()" (#convertire-le-stringhe-in-numeri-con-sscanf). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+
+<p align="justify">
+Quando digiti un numero nella riga di comando mentre invochi un programma, puoi accedere a quel numero come uno degli argomenti della riga di comando, attraverso i meccanismi che ho descritto poco prima in questo capitolo. Tuttavia, c'è un problema: il numero è presente come testo, e non puoi semplicemente prendere la stringa testuale "o751" e caricarla in un registro o in una variabile intera. Per utilizzare gli argomenti numerici come numeri, devi prima convertire la loro espressione testuale in forma numerica. La libreria standard C ha diverse funzioni per affrontare questa sfida. Alcune di esse, come strtod(), sono abbastanza specifiche e limitate e convertono il testo solo in un tipo numerico. Tuttavia, una di esse ha la capacità di convertire quasi qualsiasi espressione testuale di un valore numerico legale in una forma numerica appropriata. Questa è sscanf(), e sarà quella che useremo nel programma seguente
+</p>
+
+<p align="justify">
+La funzione sscanf() accetta tre parametri, che è necessario caricare nei registri dei parametri standard, nel seguente ordine:
+</p>
+
+<ol>
+  <li>
+    <p align="justify">
+    Il primo parametro è l'indirizzo della stringa di testo da convertire nel valore numerico che rappresenta. In textfile.asm, carichiamo RDI con l'indirizzo di arg(1), che è il primo argomento della riga di comando che digiti quando invochi il programma.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Successivamente carichiamo RSI con l'indirizzo di una stringa di codice di formattazione che indica a sscanf() quale formato numerico desideri che il testo di input venga convertito. Qui la stringa di codice è %d, che, come potresti ricordare dalla nostra discussione su printf(), è il codice per gli interi.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Il terzo parametro è l'indirizzo di una variabile numerica che conterrà il valore numerico generato da sscanf(). Questo va in RDX. Qui stiamo generando un intero a 64 bit. Quindi, in textfile.asm, passiamo l'indirizzo della variabile IntBuffer, che è dichiarata come intero a 64 bit.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Come con printf() e scanf(), azzera RAX a 0 immediatamente prima di effettuare la chiamata a sscanf().
+    </p>
+  </li>
+</ol>
+
+<p align="justify">
+Una volta che questi tre elementi sono stati caricati nei registri appropriati e RAX è stato azzerato, chiama sscanf(). Restituisce il valore convertito nella variabile numerica il cui indirizzo hai passato come terzo parametro. Restituisce anche un codice in RAX per indicare se la conversione è stata riuscita. Se il valore restituito in RAX è 0, allora si è verificato un errore e non dovresti presumere di avere qualcosa di significativo nella tua variabile numerica. Se la conversione è andata a buon fine, vedrai il valore 1 in RAX. Questo è il modo più semplice per utilizzare sscanf(). Può convertire interi array di numeri contemporaneamente, ma questo è un uso più specializzato di cui probabilmente non hai bisogno quando stai appena iniziando. Fare queste cose specializzate richiede spesso registri vettoriali, che non sto trattando in questo libro. Tuttavia, è importante azzerare RAX a 0 prima di chiamare sscanf() nel programma di esempio per dire alla funzione che non verranno utilizzati registri vettoriali. La stringa passata a sscanf() come secondo parametro può contenere più codici di formattazione e in tal caso la stringa il cui indirizzo passi come primo parametro dovrebbe avere del testo che descrive i valori numerici per ciascun codice di formattazione presente nella stringa di formato. Nel codice seguente, il testo di formato specifica solo un valore, utilizzando il codice di formato %d. L'intero processo appare così:
+</p>
+
+```ams
+ xor rax,rax         ; Clear rax to 0
+ mov rdi,qword [r13+8] ; Pass address of an argument in rdi
+ mov rsi,IntFormat   ; Pass address of integer format code in rsi
+ mov rdx,IntBuffer   ; Pass address of integer buffer for sscanf output
+ mov rax,0           ; Tell sscanf() that there are no vector arguments
+ call sscanf         ; Convert string arg to number with sscanf()    
+ cmp rax,1           ; Return value of 1 says we got a number
+ je chkdata          ; If we got a number, go on; else abort
+
+ mov rdi,Err1        ; Pass address of error 1-line message in rdi
+ mov rax,0           ; Tell printf() that there are no vector arguments
+ call printf         ; Show the error message
+ jmp gohome          ; Exit the program
+```
+
+<p align="justify">
+Assumendo che l'utente abbia inserito almeno un argomento nella riga di comando (e il programma abbia già verificato questo prima dell'estratto sopra), un puntatore a quell'argomento iniziale si trova a un offset di 8 dall'inizio della tabella dei puntatori degli argomenti della riga di comando. (Il primo elemento della tabella, che chiamiamo arg(0), punta al nome del programma così come l'utente l'ha digitato nella riga di comando.) Ecco perché carichiamo il contenuto dell'argomento a [R13+8] nello stack; avevamo già caricato R13 con l'indirizzo della tabella dei puntatori degli argomenti. Quello che si trova a [R13+8] è il puntatore a arg(1), il primo vero argomento della riga di comando. (Il primo argomento, arg(0), è il testo con cui hai invocato il programma.) Vedi la figura precedente se questo è ancora poco chiaro.
+</p>
+
+### Creare ed Aprire i File
+
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "File, Makefile, debugging e progetto" del percorso Intermedio per Terzo anno. Serve a lavorare su apertura, lettura, scrittura e chiusura dei file tramite libreria standard C. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Creare ed Aprire i File" lo studente dovrebbe aver seguito il lavoro precedente su "Semplici operazioni di I/O sui file", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Creare ed Aprire i File", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Semplici operazioni di I/O sui file" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Leggere testo dai file con fgets()". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Creare ed Aprire i File", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Leggere testo dai file con fgets()" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: ASM_PROGRAMMING.md sezione "Creare ed Aprire i File" (#creare-ed-aprire-i-file). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+
+<p align="justify">
+A questo punto dovresti essere abbastanza a tuo agio con il meccanismo generale per effettuare chiamate alle librerie C dall'assembly. E che tu te ne renda conto o meno, sei già abbastanza a tuo agio con alcuni dei meccanismi per manipolare i file di testo. Hai già usato printf() per visualizzare testo formattato sullo schermo tramite l'output standard. Lo stesso meccanismo viene utilizzato per scrivere testo formattato nei file di testo su disco: stai praticamente sostituendo un file su disco reale con l'output standard. Quindi, capire l'I/O dei file di testo non dovrebbe essere un grande salto concettuale. Ma, a differenza dell'output standard, che è predefinito per te dalla libreria C ed è sempre disponibile, devi creare o aprire un file di testo su disco per usarlo. La funzione fopen() è quella che svolge il lavoro. Ci sono tre modi generali per aprire un file: per leggere, per scrivere e per aggiungere. Quando apri un file per la lettura, puoi leggere il testo da esso tramite funzioni come fgets(), ma non puoi scrivere nel file. Quando apri un file per scrivere, qualsiasi cosa ci fosse nel file prima viene scartata e nuovo materiale viene scritto all'inizio del file. Quando apri un file per aggiungere, puoi scrivere nel file, ma nuovo materiale viene scritto dopo qualsiasi materiale esistente e qualsiasi cosa fosse originariamente nel file viene mantenuta.
+</p>
+
+<p align="justify">
+Di solito, quando apri un file per la scrittura non puoi leggerci, ma ci sono modalità speciali che consentono sia la lettura che la scrittura su un file. Per i file di testo in particolare (di cui stiamo parlando qui) questo introduce alcune complicazioni, quindi per la maggior parte, i file di testo vengono aperti o per la lettura o per la scrittura, ma non per entrambi contemporaneamente. Nel sistema di file Unix, se apri un file per la scrittura o per l'aggiunta e il file non esiste già, il file viene creato. Se non sai se un file esiste e devi scoprirlo, prova ad aprirlo per la lettura e non per la scrittura, altrimenti otterrai un file che sia realmente esistito prima o meno! Per usare fopen(), devi impostare i seguenti parametri nei registri prima della chiamata:
+</p>
+
+<ol>
+  <li>
+    <p align="justify">
+    Inserire l'indirizzo della stringa di caratteri contenente il nome del file da aprire in RDI.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Inserire l'indirizzo di un codice che indica in quale modalità il file deve essere aperto in RSI. Le varie modalità disponibili per Linux sono elencate nella figura seguente. Quelli che userai tipicamente per i file di testo sono r, w e a. Questi dovrebbero essere definiti come brevi stringhe di caratteri, seguite da un null:
+    </p>
+  </li>
+</ol>
+
+```asm
+ WriteCode  db 'w',0
+ OpenCode   db 'r',0
+```
+
+<p align="justify">
+Con questi due elementi nei registri, fai la chiamata a fopen(). Se il file è stato aperto con successo, fopen() restituirà un handle del file in RAX. Un handle del file è un numero a 64 bit assegnato da Linux a un file durante la chiamata a fopen(). Se l'apertura non ha avuto successo, RAX conterrà il valore 0 invece di un handle del file. Ecco come appare l'apertura di un file per la lettura nel codice:
+</p>
+
+```
+mov rdi,Filename     ; Pass filename to fopen in RDI
+mov rsi,ReadCode     ; Pass pointer to write/create code ('r') in rsi
+call fopen           ; Open file for reading
+cmp rax,0            ; Test for successful file open: failed if 0
+je OpenErr           ; Jump to error handling code if open failed
+<use opened file>
+```
+
+<p align="justify">
+Il processo di creazione di un file e poi di scrittura su di esso è identico, tranne per il fatto che devi usare il codice w invece del codice r. Vedremo come funziona questo nel programma textfile.asm.
+</p>
+
+<div align=center>
+<img src="https://github.com/TheBitPoets/2cornot2c/blob/main/images/fopen_file_access_mode.png">
+</div>
+
+### Leggere testo dai file con fgets()
+
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "File, Makefile, debugging e progetto" del percorso Intermedio per Terzo anno. Serve a lavorare su apertura, lettura, scrittura e chiusura dei file tramite libreria standard C. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Leggere testo dai file con fgets()" lo studente dovrebbe aver seguito il lavoro precedente su "Creare ed Aprire i File", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Leggere testo dai file con fgets()", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Creare ed Aprire i File" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Scrivere testo su file con fprintf()". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Leggere testo dai file con fgets()", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Scrivere testo su file con fprintf()" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: ASM_PROGRAMMING.md sezione "Leggere testo dai file con fgets()" (#leggere-testo-dai-file-con-fgets). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+
+<p align="justify">
+Quando fopen() crea o apre con successo un file per te, restituisce un handle del file in RAX. Tieni al sicuro quell'handle del file da qualche parte: ti consiglio di copiarlo in una variabile di memoria allocata per questo scopo o di metterlo in un registro che sai non verrà utilizzato per nient'altro. Questo è importante: se lo memorizzi in RAX, RCX o RDX e poi chiami quasi qualsiasi funzione della libreria C, l'handle del file nel registro verrà danneggiato e lo perderai. Una volta che un file è aperto per la lettura, puoi leggere le righe di testo da esso sequenzialmente con la funzione fgets(). Ogni volta che chiami fgets() su un file di testo aperto, leggerà una riga del file, che è definita come tutti i caratteri fino al prossimo carattere EOL ("onewline") (ASCII 10), che nel mondo Unix indica sempre la fine di una riga di testo. Ora, in un dato file non c'è modo di sapere quanti caratteri ci saranno fino al prossimo newline, quindi sarebbe pericoloso lasciare semplicemente fgets() libero di riportare i caratteri fino a quando non incontra un newline. Se tenti di aprire il tipo sbagliato di file (un file di codice binario è una possibilità, o un file di dati compressi), potresti portare dentro migliaia di byte prima di imbattersi nel valore binario 10 che il file system considera un newline. Qualunque buffer tu abbia allocato per contenere il testo in arrivo traboccherà e fgets() potrebbe forse distruggere dati adiacenti e/o far crashare il tuo programma.
+</p>
+
+<p align="justify">
+Per questo motivo, devi anche passare un valore limite a fgets(). Quando fgets() inizia a leggere una riga, tiene traccia di quanti caratteri ha estratto dal file e quando arriva a uno meno del valore limite, smette di leggere i caratteri. Aggiunge quindi un carattere EOL al buffer per l'ultimo carattere e restituisce. Configura le chiamate a fgets() in questo modo:
+</p>
+
+<ol>
+  <li>
+    <p align="justify">
+    Prima, carica RDI con l'indirizzo del buffer di caratteri in cui fgets() memorizzerà i caratteri letti dal file.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Successivamente, carica RSI con il valore limite del conteggio dei caratteri. Questo deve essere il valore intero effettivo, e non un puntatore al valore!
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Infine, carica RDX con il gestore del file restituito da fopen() quando il file è stato aperto.
+    </p>
+  </li>
+</ol>
+
+<p align="justify">
+Con tutto ciò fatto, chiama fgets(). Se fgets() restituisce 0 in RAX, significa che hai raggiunto la fine del file oppure si è verificato un errore di lettura durante il caricamento. In entrambi i casi, non ci sono ulteriori dati provenienti dal file. Ma senza un 0 restituito in RAX, puoi presumere che ci sia testo valido presente nel buffer all'indirizzo che hai passato a fgets() in RDI. Ho usato fgets() per creare un sistema di aiuto molto semplice basato su disco per textfile.asm. Quando l'utente non inserisce affatto argomenti da riga di comando, il programma textfile legge un breve file di testo dal disco e lo visualizza in uscita standard. Se il file di aiuto basato su disco non può essere aperto, textfile visualizza un breve messaggio a tal riguardo. Questo è un modo comune e cortese di fare con i programmi da riga di comando, e consiglio che tutte le utility che costruisci per l'uso quotidiano funzionino in questo modo. Il codice per il sistema di aiuto è relativamente semplice e dimostra sia fopen() che fgets():
+</p>
+
+```asm
+ diskhelp:
+    mov rdi,DiskHelpNm ; Pointer to name of help file is passed in rdi
+    mov rsi,OpenCode   ; Pointer to open-for-read code "r" gpes in rsi
+    call fopen         ; Attempt to open the file for reading
+    cmp rax,0          ; fopen returns null if attempted open failed
+    jne .disk          ; Read help info from disk, else from memory
+    call memhelp
+    ret
+ 
+.disk:
+    mov rbx,rax        ; Save handle of opened file in ebx
+ .rdln:
+    mov rdi,HelpLine   ; Pass pointer to buffer in rdi
+    mov rsi,HELPLEN    ; Pass buffer size in rsi
+    mov rdx,rbx        ; Pass file handle to fgets in rdx
+    call fgets         ; Read a line of text from the file
+    cmp rax,0          ; A returned null indicates error or EOF
+    jle .done          ; If we get 0 in rax, close up &
+ return
+    mov rdi,HelpLine   ; Pass address of help line in rdi
+    mov rax,0          ; Tell printf() there are no vector
+ arguments
+    call printf        ; Call printf to display help line
+    jmp .rdln
+ 
+.done:
+    mov rdi,rbx        ; Pass the handle of the file to be
+ closed in rdi
+    call fclose        ; Close the file
+    jmp gohome         ; Go home
+```
+
+<p align="justify">
+Prima che venga chiamata la procedura diskhelp, il chiamante passa un puntatore al nome del file di aiuto da leggere in RBX. Il codice tenta poi di aprire questo file. Se il tentativo di aprire il file di aiuto fallisce, viene visualizzato un messaggio di aiuto "fail safe" molto breve, proveniente da stringhe memorizzate nella sezione .data del programma. (Questa è la chiamata a memhelp, che è un'altra breve procedura in textfile.asm.) Non lasciare mai l'utente a fissare un cursore muto, chiedendosi cosa stia succedendo! Una volta che il file di aiuto basato su disco è stato aperto, iniziamo a scorrere una sequenza che legge righe di testo dal file aperto con fgets() e poi scrive quelle righe sull'output standard con printf(). La lunghezza massima delle righe da leggere è definita dall'equazione HELPLEN. Perché un'equazione? Invece di essere specificata in diversi posti nel tuo codice sorgente, la lunghezza massima delle righe del file di aiuto è definita in un solo posto, eliminando le possibilità di posizionare accidentalmente valori multipli in diverse parti del tuo codice sorgente. Se hai bisogno di cambiarla, utilizzando un'equazione, puoi cambiare il valore ovunque venga utilizzato modificando solo quella singola equazione. Le equazioni combattono i bug. Usale ogni volta che puoi. Ogni volta che una riga viene letta dal file, l'indirizzo della riga viene passato a printf() in RDI e visualizzato. Quando non ci sono più righe disponibili da leggere nel file di aiuto, fgets() restituisce un 0 in RAX, e il programma si dirama alla chiamata della funzione che chiude il file. Nota la funzione fclose(), che in uso è piuttosto semplice: copi l'handle del file di un file aperto in RDI e chiami fclose(). è tutto ciò che serve per chiudere il file!
+</p>
+
+### Scrivere testo su file con fprintf()
+
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "File, Makefile, debugging e progetto" del percorso Intermedio per Terzo anno. Serve a lavorare su apertura, lettura, scrittura e chiusura dei file tramite libreria standard C. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Scrivere testo su file con fprintf()" lo studente dovrebbe aver seguito il lavoro precedente su "Leggere testo dai file con fgets()", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Scrivere testo su file con fprintf()", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Leggere testo dai file con fgets()" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Dati in con fgets() e scanf()". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Scrivere testo su file con fprintf()", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Dati in con fgets() e scanf()" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: ASM_PROGRAMMING.md sezione "Scrivere testo su file con fprintf()" (#scrivere-testo-su-file-con-fprintf). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+
+<p align="justify">
+In precedenza in questo capitolo, ho spiegato come scrivere testo formattato sul display tramite l'output standard, utilizzando la funzione printf(). La libreria standard C fornisce una funzione che scrive lo stesso testo formattato su qualsiasi file di testo aperto. La funzione fprintf() fa esattamente ciò che fa printf(), ma richiede un parametro aggiuntivo nello stack: il gestore del file di un file di testo aperto. Lo stesso flusso di testo che printf() invierebbe all'output standard viene inviato da fprintf() a quel file aperto. Quindi non mi prenderò la briga di riesplorare come formattare il testo per printf() utilizzando codici di formattazione e stringhe di base. Si fa nello stesso modo, con gli stessi identici codici. Invece, semplicemente riassumerò come impostare una chiamata a fprintf():
+</p>
+
+<ol>
+  <li>
+    <p align="justify">
+    Prima (e qui è dove fprintf() si differenzia da printf()), copia il gestore del file del file a cui il testo dovrebbe essere scritto in RDI.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Successivamente, copia l'indirizzo della stringa base contenente i codici di formattazione in RSI. Ancora una volta, proprio come per printf().
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Infine, passa i puntatori ai valori controllati dalla stringa base nei registri, secondo l'ordine specificato nella convenzione di chiamata C. Non c'è differenza rispetto al modo in cui viene fatto per una chiamata a printf(). Come con printf(), possono esserci più di uno. Nel file textfile.asm, il primo è il numero della riga (passato in RDX), e il secondo è la riga di testo inserita dall'utente, passata in RCX.
+    </p>
+  </li>
+  <li>
+    <p align="justify">
+    Come con printf(), azzera RAX a 0 prima di chiamare fprintf().
+    </p>
+  </li>
+</ol>
+
+<p align="justify">
+Quindi chiama fprintf(). Il tuo testo verrà scritto nel file aperto. Nota che per utilizzare fprintf(), il file di destinazione deve essere stato aperto per scrittura o appending. Se tenti di utilizzare fprintf() su un file aperto per lettura, genererai un errore e fprintf() restituirà senza scrivere alcun dato. In tal caso, verrà restituito un codice di errore in RAX. Tuttavia, a differenza delle altre funzioni di cui abbiamo parlato finora, il codice di errore è un numero negativo, non 0! Quindi, sebbene tu debba confrontare il valore restituito con 0, in realtà devi saltare su un valore inferiore a 0"anziché 0 stesso. Tipicamente, per saltare su una condizione di errore di fprintf(), utilizzeresti l'istruzione JL (Jump if Less), che salterà su un valore inferiore a 0.
+</p>
+
+<p align="justify">
+Ecco la chiamata fprintf() da textfile.asm:
+</p>
+
+```asm
+ writeline:
+    cmp qword r15,0     ; Has the line count gone to 0?
+    je closeit          ; If so, close the file and exit
+    mov rdi,rbx         ; Pass the file handle in rdi
+    mov rsi,WriteBase   ; Pass the base string in rsi
+    mov rdx,r14         ; Pass the line number in rdx
+    mov rcx,Buff        ; Pass the pointer to the text buffer in rcx
+    mov rax,0           ; Tell fprintf that there are no vector arguments     
+    call fprintf        ; Write the text line to the file
+    dec r15             ; Decrement the count of lines to be written
+    inc r14             ; Increment the line number
+    jmp writeline       ; Loop back and do it again
+ 
+    ;; We're done writing text; now let's close the file:
+ closeit:
+    mov rdi,rbx         ; Pass the handle of the file to be closed in rdi
+    call fclose         ; Closes the file
+```
+
+### Note sulla raccolta delle procedure in librerie
+
+<table align="center">
+<tr>
+<td>
+<details>
+<summary>&#129517; <strong>Orientamento della sezione</strong></summary>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128506;</span> Contesto:</strong>
+Questo argomento si colloca nell'UDA "File, Makefile, debugging e progetto" del percorso Intermedio per Terzo anno. Serve a lavorare su organizzazione del codice in moduli riusabili e collegamento con il linker. La cornice e pensata per rendere il paragrafo leggibile anche singolarmente, mantenendo pero il filo sequenziale della dispensa.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128736;</span> Prerequisiti:</strong>
+Prima di affrontare "Note sulla raccolta delle procedure in librerie" lo studente dovrebbe aver seguito il lavoro precedente su "Collegare le librerie nei tuoi programmi", saper compilare ed eseguire piccoli programmi C, leggere esempi guidati e riconoscere il lessico tecnico gia introdotto. Se il tema richiama concetti non ancora pienamente sviluppati, questi vanno trattati come anticipazioni e non come prerequisiti rigidi.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#127919;</span> Obiettivi:</strong>
+Alla fine della lezione lo studente deve saper spiegare il ruolo di "Note sulla raccolta delle procedure in librerie", riconoscere gli elementi tecnici principali, leggere un esempio minimo, modificarlo in modo controllato e collegarlo agli esercizi di laboratorio. Deve inoltre saper indicare almeno un errore tipico collegato all'argomento e descrivere come diagnosticarlo.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128257;</span> Richiamo:</strong>
+Richiama il passaggio precedente su "Collegare le librerie nei tuoi programmi" e riprendi il vocabolario gia consolidato: sorgente, compilazione, variabile, tipo, memoria, funzione, input/output o controllo del flusso, a seconda del punto del percorso. L'obiettivo e far percepire l'argomento come prosecuzione naturale, non come blocco isolato.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128064;</span> Anticipazione:</strong>
+Questo argomento prepara il lavoro successivo su "Gcc --no-pie". Durante la spiegazione conviene evidenziare quali dettagli verranno approfonditi piu avanti, cosi da non sovraccaricare la prima lettura ma lasciare gia una mappa mentale del percorso.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#10145;</span> Prossimo passo:</strong>
+Dopo la spiegazione, proponi un esempio minimo su "Note sulla raccolta delle procedure in librerie", poi un piccolo esercizio di modifica e infine una domanda di controllo. Il passo successivo nel percorso e collegare questo argomento a "Gcc --no-pie" oppure, se l'argomento ha sottoparagrafi, affrontarli in ordine.
+</p>
+
+<p align="justify">
+<strong><span style="font-size: 1.15em;">&#128279;</span> Rimando:</strong>
+Riferimento principale: ASM_PROGRAMMING.md sezione "Note sulla raccolta delle procedure in librerie" (#note-sulla-raccolta-delle-procedure-in-librerie). Usare gli eventuali laboratori collegati nel documento Assembly come esercizi di osservazione, modifica, scrittura autonoma e debug.
+</p>
+
+</details>
+</td>
+</tr>
+</table>
+
+<p align="justify">
+Ecco un riassunto su come raccogliere le procedure in librerie:
+</p>
+
+<ul>
+	<li>
+		<p align="justify">
+		Crea un nuovo file di codice sorgente e incolla il codice sorgente della procedura nel file, che deve avere un'estensione di file .ASM.
+   		</p>
+	</li>
+ 	<li>
+		<p align="justify">
+		Dichiarare i punti di ingresso chiamabili per tutte le procedure nella libreria, così come qualsiasi altro identificatore che possa essere utilizzato da altri programmi e librerie, come globale. Questo rende quegli item visibili (e quindi utilizzabili) da altri programmi o librerie collegate con la nuova libreria.
+   		</p>
+	</li>
+ 	<li>
+		<p align="justify">
+		Se le procedure richiamano funzioni della libreria C o procedure in altre librerie di tua proprietà o che hai creato, o utilizzano variabili o altri identificatori definiti al di fuori della libreria, dichiara tutti questi identificatori esterni come extern.
+   		</p>
+	</li>
+ 	<li>
+		<p align="justify">
+		Quando si chiamano le procedure della libreria da un programma, aggiorna il makefile per quel programma in modo che l'eseguibile finale abbia una dipendenza dalla libreria.
+   		</p>
+	</li>
+</ul>
+
+<p align="justify">
+Questo ultimo punto è l'unico che richiede ulteriori discussioni. Il file make mostrato di seguito costruisce il programma demo textfile.asm, che collega una libreria chiamata linlib.asm. Si noti che c'è una nuova riga che specifica come il file oggetto linlib.o venga assemblato e anche che il file binario finale textfile dipende sia da textfile.o che da linlib.o. Poiché l'eseguibile textfile dipende sia da textfile.o che da linlib.o, ogni volta che apporti modifiche a textfile.asm o linlib.asm, l'utility make ricompilerà completamente il file eseguibile tramite gcc. Tuttavia, a meno che tu non cambi entrambi i file .asm, solo il file .asm che viene modificato sarà assemblato nuovamente. La magia di make è che non fa nulla che non sia necessario.
+</p>
+
+```make
+ textfile: textfile.o linlib.o
+	 gcc textfile.o linlib.o -o textfile -no-pie
+ textfile.o: textfile.asm
+ 	nasm -f elf64 -g -F dwarf textfile.asm
+ linlib.o: linlib.asm
+	 nasm -f elf64 -g -F dwarf linlib.asm
+```
+
+<p align="justify">
+Il file completo linlib.asm è presente nell'archivio degli elenchi per questo libro. Le procedure che contiene sono state raccolte da altri programmi mostrati in questo capitolo, quindi sarebbe ripetitivo ristamparle tutte qui. Infine, segue il programma textfile.asm, nella sua interezza. Assicurati di poterlo leggere tutto - non c'è nulla qui che non abbia già trattato da qualche parte in questo libro. E se vuoi una sfida, eccone una per il tuo prossimo progetto: Adatta textfile.asm per leggere un file di testo e riscriverlo di nuovo con i numeri di linea preceduti davanti a ciascuna riga di testo. Permetti all'utente di inserire da riga di comando il nome di un nuovo file per contenere il testo modificato. Mantieni il sistema di aiuto e scrivi un nuovo file di testo di aiuto per esso. Se ci riesci, puoi inchinarti: sarai un programmatore di linguaggio assembly!
+</p>
+
+```asm
+;  Executable name : textfile
+;  Version         : 3.0
+;  Created date    : 11/21/1999
+;  Last update     : 7/18/2023
+;  Author          : Jeff Duntemann
+;  Description     : A text file I/O demo for Linux, using NASM 2.14.02
+;
+;  Build executable using these commands:
+;    nasm -f elf64 -g -F dwarf textfile.asm
+;    nasm -f elf64 -g -F dwarf linlib.asm
+;    gcc textfile.o linlib.o -o textfile -no-pie
+;
+;  Note that the textfile program requires several procedures
+;  in an external library named LINLIB.ASM.
+
+[SECTION .data]     ; Section containing initialized data
+		
+IntFormat   dq '%d',0
+WriteBase   db 'Line # %d: %s',10,0	
+NewFilename db 'testeroo.txt',0			
+DiskHelpNm  db 'helptextfile.txt',0
+WriteCode   db 'w',0
+OpenCode    db 'r',0			
+CharTbl     db '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-@'	
+Err1        db 'ERROR: The first command line argument must be an integer!',10,0
+HelpMsg     db 'TEXTTEST: Generates a test file.  Arg(1) should be the # of ',10,0
+HELPSIZE    EQU $-HelpMsg
+            db 'lines to write to the file.  All other args are concatenated',10,0
+            db 'into a single line and written to the file.  If no text args',10,0
+            db 'are entered, random text is written to the file.  This msg  ',10,0
+            db 'appears only if the file HELPTEXTFILE.TXT cannot be opened. ',10,0
+HelpEnd     dq 0
+
+[SECTION .bss]             ; Section containing uninitialized data
+
+LineCount   resq 1         ; Reserve integer to hold line count
+IntBuffer   resq 1         ; Reserve integer for sscanf's return value
+HELPLEN     EQU 72         ; Define length of a line of help text data
+HelpLine    resb HELPLEN   ; Reserve space for disk-based help text line
+BUFSIZE     EQU 64         ; Define length of text line buffer buff
+Buff        resb BUFSIZE+5 ; Reserve space for a line of text 
+		
+[SECTION .text]            ; Section containing code
+
+;; These externals are all from the glibc standard C library:	 
+extern fopen
+extern fclose
+extern fgets	
+extern fprintf
+extern printf		
+extern sscanf
+extern time
+
+;; These externals are from the associated library linlib.asm:
+extern seedit           ; Seeds the random number generator
+extern pull6            ; Generates a 6-bit random number from 0-63
+
+global main             ; Required so linker can find entry point
+	
+main:
+    push rbp            ; Prolog: Set up stack frame
+    mov rbp,rsp
+    and rsp,-16
+
+    mov r12,rdi         ; Save the argument count in r12
+    mov r13,rsi         ; Save the argument pointer table to r13
+
+    call seedit         ; Seed the random number generator
+
+    ;; First test is to see if there are command-line arguments at all.
+    ;; If there are none, we show the help info as several lines.  Don't
+    ;; forget that the first arg is always the program name, so there's
+    ;; always at least 1 command-line argument, even if we don't use it!
+
+    cmp r12,1           ; If count in r12 is 1, there are no arguments
+    ja chkarg2          ; Continue if arg count is > 1
+    mov rbx,DiskHelpNm  ; Put address of help file name in rbx 
+    call diskhelp       ; If only 1 arg, show help info...
+    jmp gohome          ; ...and exit the program
+
+    ;; Next we check for a numeric command line argument 1:
+
+chkarg2:
+    mov rdi,qword [r13+8] ; Pass address of an argument in rdi
+    mov rsi,IntFormat   ; Pass address of integer format code in rsi
+    mov rdx,IntBuffer   ; Pass address of integer buffer for sscanf output
+    xor rax,rax         ; 0 says there will be no vector parameters
+    call sscanf         ; Convert string arg to number with sscanf()    
+    cmp rax,1           ; Return value of 1 says we got a number
+    je chkdata          ; If we got a number, go on; else abort
+
+    mov rdi,Err1        ; Pass address of error 1-line message in rdi
+    xor rax,rax         ; 0 says there will be no vector parameters
+    call printf         ; Show the error message
+    jmp gohome          ; Exit the program
+
+    ;; Here we're looking to see if there are more arguments.  If there
+    ;; are, we concatenate them into a single string no more than BUFSIZE
+    ;; chars in size.  (Yes, I DO know this does what strncat does...)
+
+chkdata:
+    mov r15,[IntBuffer] ; Store the # of lines to write in r15
+    cmp r12,3           ; Is there a second argument?
+    jae getlns          ; If so, we have text to fill a file with
+    call randline       ; If not, generate a line of random text for file
+                        ; Note that randline returns ptr to line in rsi
+    jmp genfile         ; Go on to create the file
+
+    ;; Here we copy as much command line text as we have, up to BUFSIZE
+    ;; chars, into the line buffer Buff. We skip the first two args
+    ;; (which at this point we know exist) but we know we have at least
+    ;; one text arg in arg(2). Going into this section, we know that
+    ;; r13 contains the pointer to the arg table. All other bets are off.
+
+getlns:
+    mov r14,2           ; We know we have at least arg(2), start there
+    mov rdi,Buff        ; Destination pointer is start of char buffer
+    xor rax,rax         ; Clear rax to 0 for the character counter
+    cld                 ; Clear direction flag for up-memory movsb
+
+grab:
+    mov rsi,qword [r13+r14*8]   ; Copy pointer to next arg into rsi
+.copy:
+    cmp byte [rsi],0    ; Have we found the end of the arg?
+    je .next            ; If so, bounce to the next arg
+    movsb               ; Copy char from [rsi] to [rdi]; inc rdi & rsi
+    inc rax             ; Increment total character count
+    cmp rax,BUFSIZE     ; See if we've filled the buffer to max count
+    je addnul           ; If so, go add a null to Buff & we're done
+    jmp .copy
+
+.next:	
+    mov byte [rdi],' ' ; Copy space to Buff to separate the args
+    inc rdi            ; Increment destination pointer for space
+    inc rax            ; Add one to character count too
+    cmp rax,BUFSIZE    ; See if we've now filled Buff
+    je addnul          ; If so, go down to add a nul and we're done
+    inc r14            ; Otherwise, increment the arg processed count
+    cmp r14,r12        ; Compare against argument count in r12
+    jae addnul         ; If r14 = arg count in r12, we're done
+    jmp grab           ; Otherwise, go back and copy it
+
+addnul:
+    mov byte [rdi],0   ; Tack a null on the end of Buff
+    mov rsi,Buff       ; File write code expects ptr to text in rsi
+
+    ;; Now we create a file to fill with the text we have:	
+genfile:
+    mov rdi,NewFilename ; Pass filename to fopen in RDI
+    mov rsi,WriteCode   ; Pass pointer to write/create code ('w') in rsi
+    call fopen          ; Create/open file
+    mov rbx,rax         ; rax contains the file handle; save in rbx
+
+    ;; File is open.  Now let's fill it with text:
+    mov r14,1           ; R14 now holds the line # in the text file
+
+writeline:
+    cmp qword r15,0     ; Has the line count gone to 0?
+    je closeit          ; If so, close the file and exit
+    mov rdi,rbx         ; Pass the file handle in rdi
+    mov rsi,WriteBase   ; Pass the base string in rsi
+    mov rdx,r14         ; Pass the line number in rdx
+    mov rcx,Buff        ; Pass the pointer to the text buffer in rcx
+    xor rax,rax         ; 0 says there will be no vector parameters  
+    call fprintf        ; Write the text line to the file
+    dec r15             ; Decrement the count of lines to be written
+    inc r14             ; Increment the line number
+    jmp writeline       ; Loop back and do it again
+
+    ;; We're done writing text; now let's close the file:
+closeit:
+    mov rdi,rbx         ; Pass the handle of the file to be closed in rdi
+    call fclose         ; Closes the file
+
+gohome:	                ; End program execution
+	mov rsp,rbp         ; Epilog: Destroy stack frame before returning
+	pop rbp
+	ret                 ; Return control to to the C shutdown code
+
+
+;;; SUBROUTINES================================================================
+
+;------------------------------------------------------------------------------
+;  Disk-based mini-help subroutine  --  Last update 12/16/2022
+;
+;  This routine reads text from a text file, the name of which is passed by
+;  way of a pointer to the name string in ebx. The routine opens the text file,   
+;  reads the text from it, and displays it to standard output.  If the file   
+;  cannot be opened, a very short memory-based message is displayed instead.          
+;------------------------------------------------------------------------------	
+diskhelp:
+    mov rdi,DiskHelpNm  ; Pointer to name of help file is passed in rdi
+    mov rsi,OpenCode    ; Pointer to open-for-read code "r" gpes in rsi
+    call fopen          ; Attempt to open the file for reading
+    cmp rax,0           ; fopen returns null if attempted open failed
+    jne .disk           ; Read help info from disk, else from memory
+    call memhelp		
+    ret
+
+.disk:
+    mov rbx,rax         ; Save handle of opened file in ebx
+.rdln:	
+    mov rdi,HelpLine    ; Pass pointer to buffer in rdi
+    mov rsi,HELPLEN     ; Pass buffer size in rsi
+    mov rdx,rbx         ; Pass file handle to fgets in rdx
+    call fgets          ; Read a line of text from the file
+    cmp rax,0           ; A returned null indicates error or EOF
+    jle .done           ; If we get 0 in rax, close up & return
+    mov rdi,HelpLine    ; Pass address of help line in rdi
+    xor rax,rax         ; Pass 0 to show there will be no fp registers    
+    call printf         ; Call printf to display help line
+    jmp .rdln
+
+.done:	
+    mov rdi,rbx         ; Pass the handle of the file to be closed in rdi
+    call fclose         ; Close the file 
+    jmp gohome          ; Go home
+
+memhelp:
+    mov rax,5           ; rax contains the number of newlines we want 
+    mov rbx,HelpMsg     ; Load address of help text into rbx
+.chkln:	
+    cmp qword [rbx],0   ; Does help msg pointer point to a null?
+    jne .show           ; If not, show the help lines
+    ret                 ; If yes, go home
+.show:
+    mov rdi,rbx         ; Pass address of help line in rdi
+    xor rax,rax         ; 0 in RAX says there will be no vector parameters
+    call printf         ; Display the line
+    add rbx,HELPSIZE    ; Increment address by length of help line
+    jmp .chkln          ; Loop back and check to see if we're done yet
+
+showerr:
+    mov rdi,rax         ; On entry, rax contains address of error message
+    xor rax,rax         ; 0 in RAX says there will be no vector parameters
+    call printf         ; Show the error message
+    ret                 ; Pass control to shutdown code; no returned values
+
+randline:
+    mov rbx,BUFSIZE     ; BUFSIZE tells us how many chars to pull
+    mov byte [Buff+BUFSIZE+1],0 ; Put a null at the end of the buffer first
+.loopback:
+    dec rbx             ; BUFSIZE is 1-based, so decrement
+    call pull6          ; Go get a random number from 0-63
+    mov cl,[CharTbl+rax]  ; Use random # in rax as offset into char table
+                          ;  and copy character from table into cl
+    mov [Buff+rbx],cl   ; Copy char from cl to character buffer
+    cmp rbx,0           ; Are we done having fun yet?
+    jne .loopback       ; If not, go back and pull another
+    mov rsi,Buff        ; Copy address of the buffer into rsi
+    ret                 ;   and go home
+```
+
+## Controllo dei processi
+
+![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.01.png)
+
+![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.02.png)
+
+![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.03.png)
+
+![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.04.png)
+
+![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.05.png)
+
+![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.06.png)
+
+![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.07.png)
+
+![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.08.png)
+
+![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.09.png)
+
+![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.10.png)
+
+![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.11.png)
+
+![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.12.png)
+
+![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.13.png)
+
+![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.14.png)
+
+![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.15.png)
+
+![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.16.png)
+
+![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.17.png)
+
+![](https://github.com/kinderp/2cornot2c/blob/main/images/controllo_dei_processi/controllo_dei_processi.18.png)

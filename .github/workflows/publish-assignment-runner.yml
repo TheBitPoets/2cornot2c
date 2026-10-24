@@ -5,15 +5,52 @@ permissions:
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
+  pull_request:
     paths:
+      - ".dockerignore"
       - ".github/workflows/publish-assignment-runner.yml"
       - "docker/assignment-runner/**"
       - "scripts/build_assignment_runner.py"
       - "scripts/publish_assignment_runner.py"
+      - "scripts/toolchain_lock.py"
       - "scripts/grade_activity.py"
+      - "scripts/python_function_profile.py"
+      - "scripts/python_function_worker.py"
+      - "scripts/grade_python_function_activity.py"
+      - "scripts/python_object_profile.py"
+      - "scripts/python_object_worker.py"
+      - "scripts/grade_python_object_activity.py"
+      - "scripts/python_filesystem_profile.py"
+      - "scripts/python_filesystem_worker.py"
+      - "scripts/grade_python_filesystem_activity.py"
+      - "scripts/thebitlab_technical_services.py"
+      - "scripts/validate_activity.py"
+      - "scripts/create_submission_scaffold.py"
+      - "scripts/student_lab_runner.py"
+      - "tests/test_grading_workflows.py"
+      - "tests/test_toolchain_lock.py"
+      - "tests/test_python_grading_profiles_integration.py"
+      - "tests/test_python_function_profile.py"
+      - "tests/test_python_function_worker.py"
+      - "tests/test_python_function_profile_dispatch.py"
+      - "tests/test_python_function_student_lab_docker.py"
+      - "tests/test_validate_activity_function_profile.py"
+      - "tests/test_python_object_profile.py"
+      - "tests/test_python_object_worker.py"
+      - "tests/test_python_object_profile_dispatch.py"
+      - "tests/test_python_object_student_lab_docker.py"
+      - "tests/test_validate_activity_object_profile.py"
+      - "tests/test_python_filesystem_profile.py"
+      - "tests/test_python_filesystem_worker.py"
+      - "tests/test_python_filesystem_profile_dispatch.py"
+      - "tests/test_python_filesystem_student_lab_docker.py"
+      - "tests/test_validate_activity_filesystem_profile.py"
+      - "tests/test_p2_release_candidate.py"
+  push:
+    branches:
+      - main
+    paths:
+      - "docker/assignment-runner/toolchain.json"
 
 concurrency:
   group: assignment-runner-toolchain
@@ -22,7 +59,7 @@ concurrency:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     outputs:
       image_id: ${{ steps.image-digest.outputs.image_id }}
     steps:
@@ -31,7 +68,31 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Build pinned runner
+      - name: Install validation dependencies
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Validate combined P2 P3 P4 contracts dispatch release identity and publish guards
+        run: >-
+          python -m pytest -q
+          tests/test_build_assignment_runner.py
+          tests/test_p2_release_candidate.py
+          tests/test_toolchain_lock.py
+          tests/test_grading_workflows.py
+          tests/test_python_grading_profiles_integration.py
+          tests/test_python_function_profile.py
+          tests/test_python_function_worker.py
+          tests/test_python_function_profile_dispatch.py
+          tests/test_validate_activity_function_profile.py
+          tests/test_python_object_profile.py
+          tests/test_python_object_worker.py
+          tests/test_python_object_profile_dispatch.py
+          tests/test_validate_activity_object_profile.py
+          tests/test_python_filesystem_profile.py
+          tests/test_python_filesystem_worker.py
+          tests/test_python_filesystem_profile_dispatch.py
+          tests/test_validate_activity_filesystem_profile.py
+
+      - name: Build pinned combined runner
         run: >-
           python scripts/build_assignment_runner.py
           --source-revision "$GITHUB_SHA"
@@ -48,10 +109,12 @@ jobs:
           metadata = json.loads(
               Path(os.environ["RUNNER_TEMP"], "toolchain-build.json").read_text(encoding="utf-8")
           )
+          assert metadata["version"] == "2026.08.3"
+          assert metadata["source_revision"] == os.environ["GITHUB_SHA"]
           print(f"image_id={metadata['local_image_id']}")
           PY
 
-      - name: Stage validated runner toolchain
+      - name: Stage validated combined runner toolchain
         run: |
           mkdir -p "$RUNNER_TEMP/runner-toolchain"
           docker save thebitlab-assignment-runner \
@@ -66,13 +129,28 @@ jobs:
           path: ${{ runner.temp }}/runner-toolchain
           if-no-files-found: error
 
-      - name: Install smoke test dependencies
-        run: python -m pip install -r requirements-dev.txt
-
-      - name: Exercise isolated runner
+      - name: Exercise legacy Docker runner regressions
         env:
           THEBITLAB_RUN_DOCKER_TESTS: "1"
         run: python -m pytest -q tests/test_student_lab_runner_docker.py
+
+      - name: Exercise P2 through normal Student Lab Docker dispatch
+        env:
+          THEBITLAB_RUN_DOCKER_TESTS: "1"
+          THEBITLAB_P2_DOCKER_IMAGE: "thebitlab-assignment-runner"
+        run: python -m pytest -q tests/test_python_function_student_lab_docker.py
+
+      - name: Exercise P3 through normal Student Lab Docker dispatch
+        env:
+          THEBITLAB_RUN_DOCKER_TESTS: "1"
+          THEBITLAB_P3_DOCKER_IMAGE: "thebitlab-assignment-runner"
+        run: python -m pytest -q tests/test_python_object_student_lab_docker.py
+
+      - name: Exercise P4 through normal Student Lab Docker dispatch
+        env:
+          THEBITLAB_RUN_DOCKER_TESTS: "1"
+          THEBITLAB_P4_DOCKER_IMAGE: "thebitlab-assignment-runner"
+        run: python -m pytest -q tests/test_python_filesystem_student_lab_docker.py
 
   publish:
     needs: validate

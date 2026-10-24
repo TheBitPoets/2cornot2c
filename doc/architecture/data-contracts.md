@@ -81,11 +81,20 @@ Campi minimi:
 | Campo | Tipo | Note |
 |---|---|---|
 | `schema_version` | string | Versione del contratto dati. |
-| `id` | string | Identificativo stabile, per esempio `rossi-mario`. |
+| `subject_id` | string | Identificativo didattico canonico opaco `subject:<uuid-hex>`; assegnato server-side. |
+| `id` | string | Alias `student_id` legacy (per esempio `rossi-mario`), non autorita per auth/authz. |
 | `display_name` | string | Nome leggibile. |
-| `class_ids` | array | Classi associate. |
+| `class_ids` | array | Proiezione didattica/legacy delle classi; non sostituisce le membership auth autorevoli. |
 | `provider_accounts` | object | Account per GitHub/GitLab/local. |
 | `repo_refs` | array | Repository collegati. |
+
+Il collegamento con auth non viene serializzato o inferito dal roster. La source-of-truth e il binding SQLite `user_id <-> subject_id`; le classi derivano dalle membership auth. Vedi [`adr-authoritative-student-identity-binding.md`](adr-authoritative-student-identity-binding.md).
+
+Compatibilita attuale:
+
+- roster e registri possono contenere soltanto `id`/`student_id`;
+- un record legacy diventa utilizzabile da un consumer studente solo tramite alias esplicito `(class_id, legacy_student_id) -> subject_id`;
+- email, username, repository e path non sono alias impliciti.
 
 ### Activity
 
@@ -130,6 +139,28 @@ Fase di transizione:
 - I lettori operativi devono usare `scripts/thebitlab_contracts.py` per normalizzare verso i campi canonici senza rompere i dati esistenti.
 - Scaffold, assegnazione, tracking e storage consegne usano gia helper condivisi per activity canoniche/legacy.
 - Gli asset con visibilita studente entrano nello scaffold; asset nascosti, runner e `teacher_only` restano riservati a docente/grader.
+
+### Assignment
+
+Rappresenta una activity assegnata a una classe o a un insieme di soggetti didattici.
+
+Campi minimi:
+
+| Campo | Tipo | Note |
+|---|---|---|
+| `schema_version` | string | Versione contratto assignment. |
+| `id` | string | `assignment_id` stabile del record caricato dal server. |
+| `activity_id` | string | Activity collegata. |
+| `class_id` | string | Classe interna dell'assignment. |
+| `assigned_at` | string | Istante ISO di assegnazione. |
+| `due_at` | string | Scadenza ISO. |
+| `targets` | array | Destinatari; il riferimento canonico e `subject_id`. |
+
+Compatibilita attuale:
+
+- lo schema `1.0` accetta `targets[].subject_id` come campo additivo e preserva ancora `student_id`, `repo_ref`, `path` e `target`;
+- per una decisione studente il server ricarica il record tramite storage e risolve `subject_id` dal binding auth; nessun ID nella request prova classe o ownership;
+- target senza `subject_id` richiedono migrazione o alias legacy esplicito e univoco; missing, duplicate o ambiguous falliscono chiusi.
 
 ### AssignmentRegister
 

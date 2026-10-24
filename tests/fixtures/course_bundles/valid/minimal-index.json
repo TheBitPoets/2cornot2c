@@ -1,0 +1,21 @@
+{
+  "units": [
+    {
+      "id": "u01-intro-c",
+      "title": "Introduzione al C",
+      "order": 1,
+      "items": [
+        {"type": "activity", "path": "activities/01-intro/activity.json"},
+        {"type": "material", "path": "materials/01-intro.md"}
+      ]
+    },
+    {
+      "id": "u02-funzioni",
+      "title": "Funzioni in C",
+      "order": 5,
+      "items": [
+        {"type": "handout", "path": "handouts/funzioni.pdf"}
+      ]
+    }
+  ]
+}

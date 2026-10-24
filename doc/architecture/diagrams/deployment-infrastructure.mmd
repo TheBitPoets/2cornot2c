@@ -1,0 +1,49 @@
+flowchart TB
+    subgraph DNS["Registro / DNS"]
+        OVH["OVH — registrar<br/>thebitpoets.com / .net<br/>record DS DNSSEC"]
+        CF_DNS["Cloudflare DNS autoritativo"]
+        DNSSEC["DNSSEC firma zona"]
+    end
+
+    subgraph Edge["Cloudflare edge"]
+        Redirect["Redirect Rules 301"]
+        TLS["TLS edge / WAF / DDoS"]
+        Static["Worker statico<br/>www.thebitpoets.com"]
+    end
+
+    subgraph Hetzner["Hetzner VPS thebitlab-prod-1"]
+        UFW["ufw firewall"]
+        Fail2ban["fail2ban"]
+        Nginx["nginx 443/80"]
+        AppPy["TheBitLab Python<br/>127.0.0.1:8000"]
+        Docker["Docker grading"]
+        UK["Uptime Kuma<br/>127.0.0.1:3001"]
+        Backup["backup.sh + repo GPG"]
+    end
+
+    subgraph Data["Dati persistenti"]
+        SQLite[(auth.sqlite3)]
+        JSON[(JSON didattici e report)]
+    end
+
+    subgraph Secrets["Segreti (server)"]
+        Env["file env del servizio"]
+        SSL["certificati TLS origine"]
+        BackupKey["passphrase backup"]
+        GHAppKey["chiave GitHub App"]
+    end
+
+    OVH -->|delega NS| CF_DNS
+    CF_DNS --> DNSSEC
+    CF_DNS -->|A/AAAA proxied| Edge
+    Edge -->|app.thebitpoets.com| Hetzner
+    Edge -->|status.thebitpoets.com| Hetzner
+    Edge -->|www / .net → 301| Static
+    Nginx -->|proxy_pass| AppPy
+    Nginx -->|proxy_pass| UK
+    AppPy -->|avvia sandbox| Docker
+    AppPy --> Data
+    Backup -.->|copia dati| Data
+    AppPy -.->|usa| Secrets
+    UFW --> Nginx
+    Fail2ban --> UFW

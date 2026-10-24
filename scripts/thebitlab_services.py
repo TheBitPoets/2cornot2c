@@ -1,3 +1,5 @@
+"""Provider-independent application services for course, class, and assignment data."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -37,6 +39,16 @@ class CourseService:
 
         self.storage.write_design(payload)
 
+    def write_design_cas(
+        self,
+        payload: dict[str, Any],
+        expected_revision: str,
+        preserve_actual: bool,
+    ) -> tuple[dict[str, Any], str]:
+        """Persist the current design with optimistic concurrency."""
+
+        return self.storage.write_design_cas(payload, expected_revision, preserve_actual)
+
     def list_saved_designs(self) -> list[dict[str, str]]:
         """List saved course designs."""
 
@@ -56,6 +68,31 @@ class CourseService:
         """Persist a named course design."""
 
         return self.storage.write_saved_design(name, payload, overwrite=overwrite)
+
+    def write_saved_design_cas(
+        self,
+        name: str,
+        payload: dict[str, Any],
+        expected_revision: str,
+        preserve_actual: bool,
+    ) -> tuple[dict[str, Any], dict[str, str], str]:
+        """Persist an archived design with optimistic concurrency."""
+
+        return self.storage.write_saved_design_cas(name, payload, expected_revision, preserve_actual)
+
+    def update_uda_actual(
+        self,
+        name: str,
+        year_id: str,
+        uda_id: str,
+        actual: dict[str, Any],
+        expected_actual_revision: str,
+    ) -> tuple[dict[str, Any], str]:
+        """Update one UDA actual-progress record with record-level CAS."""
+
+        return self.storage.update_uda_actual(
+            name, year_id, uda_id, actual, expected_actual_revision
+        )
 
     def delete_saved_design(
         self,
@@ -81,6 +118,16 @@ class CourseService:
         """Persist a named school calendar."""
 
         return self.storage.write_school_calendar(name, payload)
+
+    def write_school_calendar_cas(
+        self,
+        name: str,
+        payload: dict[str, Any],
+        expected_revision: str,
+    ) -> tuple[dict[str, Any], dict[str, str], str]:
+        """Persist a calendar with optimistic concurrency."""
+
+        return self.storage.write_school_calendar_cas(name, payload, expected_revision)
 
 
 class AssignmentService:
@@ -170,6 +217,7 @@ class AssignmentOverviewService:
                         "source_path": submission.get("source_path"),
                         "attempt_id": submission.get("attempt_id"),
                         "report_selection": submission.get("report_selection"),
+                        "report_authority": submission.get("report_authority"),
                         "final_selected": bool(submission.get("final_selected", False)),
                         "grading_provisional": bool(grading.get("provisional", False)),
                         "grading_status": grading.get("status", ""),

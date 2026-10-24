@@ -1,6 +1,6 @@
 # Servizi tecnici per grading, AI e runner
 
-Questa nota copre il primo passo di #289. L'obiettivo non e integrare subito Docker o provider AI reali, ma fissare i confini tra servizi tecnici e dominio didattico.
+Questa nota descrive il confine completato da #289 tra runner, grading deterministico, feedback AI e dominio didattico. Docker e gli adapter AI restano sostituibili: UI, registri e policy non dipendono dal processo tecnico concreto.
 
 ## Confini
 
@@ -97,20 +97,30 @@ Le prossime implementazioni concrete devono preservare questi casi:
 | Test falliti | grading `graded_failed` con nomi test visibili |
 | Test superati | grading `graded_passed` con conteggio test |
 
-## Evoluzione prevista
+## Stato completato
 
-1. [x] Collegare il runner Docker reale a `ExecutionService`.
-2. [ ] Spostare la logica di `grade_activity.py` dietro `GradingService`.
-3. [x] Aggiungere un `AiFeedbackService` mockabile per feedback docente/studente.
-4. [ ] Salvare i risultati nei registri e, in futuro, nell'indice SQLite senza cambiare la GUI.
+1. [x] Runner Docker reale dietro `DockerGradeActivityExecutionService`.
+2. [x] Output `grade_activity.py` normalizzato dietro `ExecutionService` e `DeterministicGradingService`.
+3. [x] `AiFeedbackService` mockabile, workflow manuale validato e adapter Codex per l'aiuto studente.
+4. [x] Risultati tecnici consumati da tracking, registri e dashboard senza duplicare la logica di grading nella GUI.
+5. [x] Errori runner assente, timeout, payload/JSON non valido e test falliti coperti da contratti e regressioni.
+
+L'indice SQLite analitico e provider AI aggiuntivi restano evoluzioni, non requisiti del confine MVP: i report persistiti sono già la fonte letta dai servizi applicativi e dalle viste.
 
 ## Bridge con i report esistenti
 
-Durante la transizione, i report prodotti da `scripts/grade_activity.py` vengono convertiti nel contratto tecnico con `grading_dict_from_grade_activity_report()`. Questo permette al tracking delle consegne di usare `GradingService` senza cambiare subito il formato dei report gia prodotti.
+I report prodotti da `scripts/grade_activity.py` vengono convertiti nel contratto tecnico con `grading_dict_from_grade_activity_report()`. Questo permette al tracking delle consegne di usare `GradingService` senza cambiare subito il formato dei report gia prodotti.
 
 `GradeActivityExecutionService` espone inoltre `grade_activity.py` dietro la porta `ExecutionService`: i chiamanti passano `activity_path` e `source_path` nei metadati della richiesta e ricevono un `ExecutionResult`, senza dipendere dal formato legacy del report.
 
 `DockerGradeActivityExecutionService` implementa la stessa porta sopra il runner Docker autorevole. Normalizza runner assente, timeout e errori di protocollo, mentre `student_lab_runner.py` si limita a costruire la richiesta tecnica e serializzare il risultato nel contratto pubblico `student_lab_run.v1`. Durante la transizione, `ExecutionResult.metadata.runner_report` conserva una copia difensiva del report del runner per non perdere campi di toolchain o dettagli gia consumati dalle dashboard.
+
+Le Activity runtime usano il port specializzato `RuntimeSandboxExecutionService`, definito in
+`scripts/thebitlab_runtime_sandbox.py`. Il plugin trusted prepara un piano dichiarativo, il
+servizio applica lo stesso boundary Docker di `grade_activity.py`, quindi il plugin trusted
+ricostruisce `ExecutionResult`. Questa specializzazione e necessaria per lasciare semantica,
+simulatore e grader nel package runtime senza permettere al plugin di modificare i controlli
+host del container. Non introduce un secondo profilo sandbox.
 
 `DeterministicAiFeedbackService` fornisce una prima implementazione mockabile di `AiFeedbackService`: genera bozze di feedback a partire dal `GradingResult` senza chiamare provider esterni. Serve per stabilizzare flussi, test e dashboard prima di collegare un adapter AI reale.
 

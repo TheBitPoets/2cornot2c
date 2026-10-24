@@ -1,15 +1,28 @@
 from __future__ import annotations
 
+import sys
+
 import pytest
 
+from installer import plans
+from installer.classroom_release_lock import ClassroomReleaseLockError
 from installer.diagnostics import CheckResult, run_check
 from installer.executor import execute_plan
 from installer.model import Check
 from installer.model import Host, Provider
 from installer.platforms import detect_host
-from installer.plans import install_plan, supported_providers
+from installer.plans import (
+    classroom_images_active as read_classroom_images_active,
+    install_plan,
+    supported_providers,
+)
 from installer.resources import LOW_MEMORY_LIMIT_BYTES, order_by_recommendation
 from installer.student_dev import immutable_reference, load_lock
+
+
+@pytest.fixture(autouse=True)
+def active_classroom_images(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(plans, "classroom_images_active", lambda *args: True)
 
 
 def test_detects_supported_hosts() -> None:
@@ -22,10 +35,34 @@ def test_rejects_unsupported_host() -> None:
         detect_host("Linux", "x86_64")
 
 
+def test_invalid_packer_activation_state_fails_closed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def invalid_target(*args):
+        raise ClassroomReleaseLockError("Stato non valido per target.")
+
+    monkeypatch.setattr(plans, "target_release", invalid_target)
+    with pytest.raises(RuntimeError, match="Stato non valido"):
+        read_classroom_images_active(Host.WINDOWS_AMD64, Provider.VIRTUALBOX)
+
+
+def test_pending_packer_release_keeps_vm_image_steps_dormant(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(plans, "classroom_images_active", lambda *args: False)
+
+    windows = install_plan(Host.WINDOWS_AMD64, Provider.VIRTUALBOX)
+    macos = install_plan(Host.MACOS_ARM64, Provider.VMWARE)
+
+    assert all(step.key != "classroom-image" for step in windows.steps)
+    assert all(step.key != "classroom-image" for step in macos.steps)
+    assert all(check.key != "classroom-image" for check in windows.checks)
+    assert all(check.key != "classroom-image" for check in macos.checks)
+
+
 def test_hosts_support_vm_and_lightweight_docker_paths() -> None:
     assert supported_providers(Host.MACOS_ARM64) == (
         Provider.VMWARE,
-        Provider.VIRTUALBOX,
         Provider.DOCKER,
     )
     assert supported_providers(Host.WINDOWS_AMD64) == (
@@ -41,11 +78,13 @@ def test_windows_rejects_vmware() -> None:
 
 def test_plans_are_provider_specific() -> None:
     vmware = install_plan(Host.MACOS_ARM64, Provider.VMWARE)
-    virtualbox = install_plan(Host.MACOS_ARM64, Provider.VIRTUALBOX)
+    windows = install_plan(Host.WINDOWS_AMD64, Provider.VIRTUALBOX)
 
     assert any(step.key == "fusion" for step in vmware.steps)
     assert not any(step.key == "virtualbox" for step in vmware.steps)
-    assert any(step.key == "virtualbox" for step in virtualbox.steps)
+    assert any(step.key == "virtualbox" for step in windows.steps)
+    assert any(step.key == "classroom-image" for step in vmware.steps)
+    assert any(step.key == "classroom-image" for step in windows.steps)
 
 
 def test_low_memory_recommends_docker_without_removing_vm_choices() -> None:
@@ -91,7 +130,7 @@ def test_check_can_require_semantic_output() -> None:
         Check(
             "python",
             "Python",
-            ("python3", "-c", "print('installed plugins')"),
+            (sys.executable, "-c", "print('installed plugins')"),
             "vagrant-vmware-desktop",
         )
     )
@@ -158,7 +197,7 @@ def test_tui_home_exposes_the_complete_lifecycle() -> None:
     assert "Avvia l'ambiente" in rendered
     assert "Installa, completa o ripara" in rendered
     assert "Aggiorna l'ambiente" in rendered
-    assert "Disinstalla l'ambiente" in rendered
+    assert "Disinstalla - scegli i componenti" in rendered
     assert "Ripristina il PC - elimina anche la VM" in rendered
 
 
@@ -189,7 +228,7 @@ def test_tui_uninstall_requires_confirmation_and_launches_separately(
     assert "backup" in " ".join(state.report)
 
     confirm_home_action(state)
-    assert launched == ["uninstall"]
+    assert launched == ["select-uninstall"]
     assert state.running is False
 
 
@@ -215,6 +254,10 @@ def test_windows_lifecycle_uses_only_persistent_known_scripts(
         str(launcher / "uninstall-classroom-windows.ps1"),
     )
     assert command[-1] == "-ConfirmedFromTui"
+
+    selective_command = powershell_action_command("select-uninstall")
+    assert selective_command[-1] == "-SelectComponents"
+    assert "-ConfirmedFromTui" not in selective_command
 
     reset_command = powershell_action_command("reset")
     assert reset_command[-2:] == (
@@ -255,12 +298,17 @@ def test_tui_launches_environment_without_showing_python_commands(
     monkeypatch,
 ) -> None:
     pytest.importorskip("utui")
-    from installer.tui import State, open_home_action
+    from installer.tui import State, open_home_action, launch_selected_environment
+    from installer.environments import Environment
 
     launched = []
     monkeypatch.setattr(
         "installer.tui.launch_windows_action",
-        lambda action: launched.append(action),
+        lambda action, **kwargs: launched.append((action, kwargs["provider"])),
+    )
+    monkeypatch.setattr(
+        "installer.tui.detect_windows_environments",
+        lambda: (Environment(Provider.DOCKER, "Installato", "Apri Docker", True),),
     )
     state = State(
         Host.WINDOWS_AMD64,
@@ -271,8 +319,11 @@ def test_tui_launches_environment_without_showing_python_commands(
 
     open_home_action(state)
 
-    assert launched == ["launch"]
-    assert state.running is False
+    assert launched == []
+    assert state.screen == "launch"
+    launch_selected_environment(state)
+    assert launched == [("launch", Provider.DOCKER)]
+    assert state.running is True
 
 
 def test_successful_installation_remembers_provider(monkeypatch, tmp_path) -> None:
@@ -492,7 +543,12 @@ def test_low_memory_vm_warning_is_visible_but_does_not_block(
 
 def check_results(plan, *, missing: set[str] = set()):
     return tuple(
-        CheckResult(check, check.key not in missing, "manca")
+        CheckResult(
+            check,
+            check.key not in missing,
+            "manca",
+            check.key not in missing,
+        )
         for check in plan.checks
     )
 
@@ -508,12 +564,17 @@ def test_executor_skips_present_steps_and_applies_only_missing(tmp_path) -> None
         log_path=tmp_path / "installer.jsonl",
     )
 
-    assert [result.status for result in results] == ["skipped", "skipped", "succeeded"]
-    assert len(calls) == 1
+    assert [result.status for result in results] == [
+        "skipped",
+        "skipped",
+        "succeeded",
+        "updated",
+    ]
+    assert len(calls) == 2
     assert "Oracle.VirtualBox" in calls[0][-1]
     assert "winget upgrade" in calls[0][-1]
     assert "winget install" in calls[0][-1]
-    assert (tmp_path / "installer.jsonl").read_text(encoding="utf-8").count("\n") == 3
+    assert (tmp_path / "installer.jsonl").read_text(encoding="utf-8").count("\n") == 4
 
 
 def test_executor_reports_step_progress_without_inventing_percentages() -> None:
@@ -528,12 +589,14 @@ def test_executor_reports_step_progress_without_inventing_percentages() -> None:
     )
 
     assert events == [
-        ("started", 1, 3, "Installa o aggiorna Git"),
-        ("skipped", 1, 3, "Installa o aggiorna Git"),
-        ("started", 2, 3, "Installa o aggiorna Vagrant"),
-        ("skipped", 2, 3, "Installa o aggiorna Vagrant"),
-        ("started", 3, 3, "Installa o aggiorna VirtualBox"),
-        ("succeeded", 3, 3, "Installa o aggiorna VirtualBox"),
+        ("started", 1, 4, "Installa o aggiorna Git"),
+        ("skipped", 1, 4, "Installa o aggiorna Git"),
+        ("started", 2, 4, "Installa o aggiorna Vagrant"),
+        ("skipped", 2, 4, "Installa o aggiorna Vagrant"),
+        ("started", 3, 4, "Installa o aggiorna VirtualBox"),
+        ("succeeded", 3, 4, "Installa o aggiorna VirtualBox"),
+        ("started", 4, 4, "Verifica e reimporta la box Packer"),
+        ("updated", 4, 4, "Verifica e reimporta la box Packer"),
     ]
 
 
@@ -544,7 +607,7 @@ def test_executor_marks_preexisting_old_software_as_updated(tmp_path) -> None:
             check,
             check.key != "vagrant",
             "versione 2.3.7; serve almeno 2.4.0",
-            check.key == "vagrant",
+            True,
         )
         for check in plan.checks
     )
@@ -560,6 +623,7 @@ def test_executor_marks_preexisting_old_software_as_updated(tmp_path) -> None:
         "skipped",
         "updated",
         "skipped",
+        "updated",
     ]
     assert '"status": "updated"' in (
         tmp_path / "installer.jsonl"
@@ -836,3 +900,20 @@ def test_executor_stops_on_first_failed_command() -> None:
     assert len(results) == 1
     assert results[0].status == "failed"
     assert len(calls) == 1
+
+
+def test_uninstall_script_recognizes_micro_package() -> None:
+    import re
+    from pathlib import Path
+
+    script = Path(__file__).resolve().parents[1] / "scripts" / "uninstall-classroom-windows.ps1"
+    text = script.read_text(encoding="utf-8")
+    assert '"zyedidia.micro"' in text
+
+    match = re.search(r'"zyedidia\.micro"\s*\{\s*"([^"]+)"\s*\}', text)
+    assert match is not None, "Pattern per micro non trovato nello switch"
+    pattern = match.group(1)
+    assert re.search(pattern, "micro")
+    assert re.search(pattern, "micro 2.0.14")
+    assert not re.search(pattern, "Microsoft Edge")
+    assert not re.search(pattern, "micromax")

@@ -41,6 +41,8 @@ Un successo produce soltanto nomi check, status numerici e booleani:
 
 Location completa, query OIDC, cookie, body remoti e credenziali non vengono emessi. Redirect non vengono seguiti. Header/body oversized, contratti inattesi e timeout falliscono chiusi con exit code 1.
 
+Il framing della risposta deve essere non ambiguo: è ammesso un solo `Content-Length` canonico coerente con il body oppure un solo `Transfer-Encoding: chunked` senza `Content-Length`. Il secondo caso copre intermediary HTTPS, inclusi tunnel e CDN, che ricodificano una risposta originariamente length-delimited; il trasporto effettua il dechunking mantenendo il limite body di 32 KiB. CL+TE, codifiche composte o non supportate e header duplicati restano rifiutati.
+
 ## Workflow manuale
 
 Da GitHub Actions eseguire **Auth staging smoke** (`.github/workflows/auth-staging-smoke.yml`) e inserire soltanto origin, client ID pubblico atteso e timeout. Gli input vengono passati al comando via environment quotato, non interpolati nello script shell.

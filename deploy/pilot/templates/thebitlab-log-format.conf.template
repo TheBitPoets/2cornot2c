@@ -1,0 +1,5 @@
+# Query-bearing request fields are deliberately excluded because OAuth
+# callbacks and other URLs may carry credentials.
+log_format thebitlab '$remote_addr - $remote_user [$time_local] '
+                     '"$request_method $uri $server_protocol" $status $body_bytes_sent '
+                     '"$http_user_agent" request_id=$request_id';

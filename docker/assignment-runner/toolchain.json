@@ -1,6 +1,6 @@
 {
   "schema_version": "thebitlab.grading-toolchain-build.v1",
-  "version": "2026.07.1",
+  "version": "2026.08.3",
   "platform": "linux/amd64",
   "image_repository": "ghcr.io/thebitpoets/2cornot2c-assignment-runner",
   "worker_schema_version": "thebitlab.grading-worker.v1",

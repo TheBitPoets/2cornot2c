@@ -8,17 +8,20 @@ import pytest
 from scripts import toolchain_lock
 
 
+PUBLISHED_VERSION = "2026.08.3"
+PUBLISHED_SOURCE = "23bc1d36c7eb8c1b10a11cbde5f226ce7554f85e"
+PUBLISHED_DIGEST = "sha256:c0594df833925044831463a9ee631aba2688929951a7dbcb53612b86d221ed51"
+IMAGE_REPOSITORY = "ghcr.io/thebitpoets/2cornot2c-assignment-runner"
+
+
 def lock_payload() -> dict:
     return {
         "schema_version": "thebitlab.grading-toolchain-lock.v1",
-        "version": "2026.07.1",
+        "version": PUBLISHED_VERSION,
         "platform": "linux/amd64",
-        "image_repository": "ghcr.io/thebitpoets/2cornot2c-assignment-runner",
-        "source_revision": "bd102146a684a9b06835204ec1b7f668f7655a03",
-        "immutable_reference": (
-            "ghcr.io/thebitpoets/2cornot2c-assignment-runner"
-            "@sha256:62f0f7b7bc1d48d01b7f8e5fa765e0b43be3622e70a614033b1bb4a4e522e159"
-        ),
+        "image_repository": IMAGE_REPOSITORY,
+        "source_revision": PUBLISHED_SOURCE,
+        "immutable_reference": f"{IMAGE_REPOSITORY}@{PUBLISHED_DIGEST}",
     }
 
 
@@ -28,17 +31,14 @@ def write_lock(tmp_path: Path, payload: dict) -> Path:
     return path
 
 
-def test_load_lock_accepts_checked_in_reference(tmp_path: Path) -> None:
-    lock = toolchain_lock.load_lock(
-        write_lock(tmp_path, lock_payload())
-    )
+def test_load_lock_accepts_checked_in_published_reference(tmp_path: Path) -> None:
+    lock = toolchain_lock.load_lock(write_lock(tmp_path, lock_payload()))
 
-    assert lock["version"] == "2026.07.1"
+    assert lock["version"] == PUBLISHED_VERSION
     assert lock["platform"] == "linux/amd64"
-    assert lock["image_repository"] == "ghcr.io/thebitpoets/2cornot2c-assignment-runner"
-    assert lock["digest"] == (
-        "sha256:62f0f7b7bc1d48d01b7f8e5fa765e0b43be3622e70a614033b1bb4a4e522e159"
-    )
+    assert lock["image_repository"] == IMAGE_REPOSITORY
+    assert lock["source_revision"] == PUBLISHED_SOURCE
+    assert lock["digest"] == PUBLISHED_DIGEST
     assert toolchain_lock.immutable_reference(lock) == lock_payload()["immutable_reference"]
 
 
@@ -48,17 +48,14 @@ def test_load_lock_accepts_checked_in_reference(tmp_path: Path) -> None:
         ({"schema_version": "other"}, "Schema"),
         ({"version": "latest"}, "Versione"),
         ({"platform": "linux/arm64"}, "Piattaforma"),
-        (
-            {"image_repository": "ghcr.io/thebitpoets/other-runner"},
-            "Repository",
-        ),
+        ({"image_repository": "ghcr.io/thebitpoets/other-runner"}, "Repository"),
         ({"source_revision": "short"}, "Revisione"),
         ({"immutable_reference": "missing-digest"}, "digest"),
         (
             {
                 "immutable_reference": (
                     "ghcr.io/thebitpoets/other-runner"
-                    "@sha256:62f0f7b7bc1d48d01b7f8e5fa765e0b43be3622e70a614033b1bb4a4e522e159"
+                    "@sha256:c0594df833925044831463a9ee631aba2688929951a7dbcb53612b86d221ed51"
                 )
             },
             "coerenti",

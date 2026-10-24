@@ -216,6 +216,9 @@ class PendingGitHubLinkFlow:
     session_id: str
     session_token_digest: str
     session_created_at: datetime
+    session_expires_at: datetime
+    session_audience: str
+    session_source_pairing_id: str | None
     user_updated_at: datetime
     created_at: datetime
     expires_at: datetime
@@ -625,6 +628,9 @@ class InMemoryGitHubLinkFlowStore:
                 and context.session.session_id == flow.session_id
                 and hmac.compare_digest(context.session.token_digest, flow.session_token_digest)
                 and context.session.created_at == flow.session_created_at
+                and context.session.expires_at == flow.session_expires_at
+                and context.session.audience == flow.session_audience
+                and context.session.source_pairing_id == flow.session_source_pairing_id
                 and context.session.user_id == flow.user_id
                 and context.session.revoked_at is None
                 and context.session.created_at <= now
@@ -716,6 +722,9 @@ class GitHubAccountLinkService:
             session_id=context.session.session_id,
             session_token_digest=context.session.token_digest,
             session_created_at=context.session.created_at,
+            session_expires_at=context.session.expires_at,
+            session_audience=context.session.audience,
+            session_source_pairing_id=context.session.source_pairing_id,
             user_updated_at=context.user.updated_at,
             created_at=now,
             expires_at=now + self.config.flow_ttl,

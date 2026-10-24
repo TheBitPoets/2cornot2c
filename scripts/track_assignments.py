@@ -17,6 +17,7 @@ from scripts import (
     thebitlab_tracking_reports,
 )
 from scripts import student_identity
+from scripts.thebitlab_identity_binding import LegacySubjectAlias
 from scripts.thebitlab_contracts import (
     legacy_activity_validation_payload,
     normalize_activity,
@@ -521,6 +522,8 @@ def track_assignments(
     assignment_id: str | None = None,
     server_root: Path | None = None,
     report_source: thebitlab_tracking_reports.TrackingReportSource | None = None,
+    help_subject_aliases: tuple[LegacySubjectAlias, ...] | None = None,
+    student_delivery_enabled: bool = False,
 ) -> dict[str, Any]:
     """Build a teacher-facing tracking index for one activity."""
     activity = create_submission_scaffold.load_activity(activity_path)
@@ -539,6 +542,8 @@ def track_assignments(
     normalized_github_team = clean_metadata(github_team) or clean_metadata(normalized_activity.get("github_team"))
     assignment = None
     same_activity_assignments: list[dict[str, Any]] = []
+    if student_delivery_enabled and (not assignment_id or server_root is None or help_subject_aliases is None):
+        raise ValueError("Il registro consegne richiede un'assegnazione e identita federate.")
     if assignment_id and server_root is None:
         raise ValueError("server_root obbligatorio quando assignment_id e specificato.")
     if assignment_id:
@@ -563,7 +568,13 @@ def track_assignments(
         if assignment_id and server_root is not None:
             stable_student_id = assignment_student_id(target, assignment, server_root)
             repository_ref = assignment_repository_ref(target, assignment, server_root)
-            help_log_path = student_help_service.server_help_log_path(server_root, stable_student_id, assignment_id)
+            help_student_key = student_identity.target_help_student_key(
+                assignment_target_record(target, assignment, server_root) or {},
+                stable_student_id,
+                class_id=clean_metadata(assignment.get("class_id")),
+                legacy_aliases=help_subject_aliases,
+            )
+            help_log_path = student_help_service.server_help_log_path(server_root, help_student_key, assignment_id)
         else:
             legacy_help_path = student_help_service.help_log_path(target.path, activity_id)
             help_log_path = student_identity.confined_regular_file(target.path, legacy_help_path)
@@ -573,7 +584,7 @@ def track_assignments(
         report = None
         report_selection = None
         remote_report_result = None
-        if assignment_id:
+        if assignment_id and not student_delivery_enabled:
             if report_source is not None:
                 remote_report_result = (
                     thebitlab_tracking_reports.canonical_tracking_report_result(
@@ -623,7 +634,7 @@ def track_assignments(
                         assignment_report_path,
                     )
                     uses_assignment_report = safe_report_path is not None
-        if report is None and report_selection not in {"invalid_final", "remote_error"}:
+        if not student_delivery_enabled and report is None and report_selection not in {"invalid_final", "remote_error"}:
             if safe_report_path is None:
                 safe_report_path = student_identity.confined_regular_file(target.path, report_path)
             report = load_report(safe_report_path) if safe_report_path is not None else None
@@ -668,6 +679,9 @@ def track_assignments(
         else:
             help["path"] = relative_to_root_or_repo(help_log_path, target.path) if help_log_path else ""
         help["activity_id"] = activity_id
+        if assignment_id and help_subject_aliases is not None:
+            # Teacher-owned metadata preserves the channel when reopening a report.
+            help["subject_id"] = help_student_key
         grading = grading_summary(report)
         if remote_report_result is not None and remote_report_result.configured and report is not None:
             grading["provisional"] = remote_report_result.provisional
@@ -678,7 +692,7 @@ def track_assignments(
             and remote_report_result.configured
             and report is not None
         )
-        local_preview_allowed = not remote_report
+        local_preview_allowed = not remote_report and not student_delivery_enabled
         source_file_path = (
             report_source_path(target, report.get("source"))
             if report and local_preview_allowed
@@ -756,6 +770,26 @@ def track_assignments(
                 "report_path": relative_report_path,
             }
         )
+
+    if student_delivery_enabled:
+        from scripts import student_delivery_service, student_delivery_store, student_delivery_grading
+
+        deliveries = student_delivery_store.JsonStudentDeliveryStore(server_root)
+        grading_store = student_delivery_grading.JsonDeliveryGradingStore(server_root)
+        for student in students:
+            subject_id = student.get("help", {}).get("subject_id")
+            if not subject_id:
+                raise ValueError("Identita consegna federata non disponibile.")
+            context = student_delivery_service.archive_context(assignment, subject_id)
+            history = deliveries.history(context_loader=lambda: context)
+            receipt = None
+            if history["items"]:
+                selected = history["final"] or history["items"][-1]
+                receipt = deliveries.read(selected["attempt_id"], context_loader=lambda: context)
+            student_delivery_service.apply_delivery_to_student(
+                student, receipt, history["final"], context, now=normalized_now)
+            if receipt is not None:
+                student_delivery_grading.project(student, receipt, grading_store.lookup(receipt))
 
     result = {
         "activity_id": activity_id,

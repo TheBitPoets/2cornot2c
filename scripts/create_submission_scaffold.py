@@ -7,6 +7,7 @@ import os
 import re
 import shutil
 import tempfile
+import unicodedata
 from pathlib import Path
 from typing import Any
 
@@ -46,8 +47,16 @@ WINDOWS_RESERVED_NAMES = {
     "lpt7",
     "lpt8",
     "lpt9",
+    "conin$",
+    "conout$",
+    "com¹",
+    "com²",
+    "com³",
+    "lpt¹",
+    "lpt²",
+    "lpt³",
 }
-WINDOWS_INVALID_PATH_CHARACTERS = frozenset('<>:"|?*')
+WINDOWS_INVALID_PATH_CHARACTERS = frozenset('<>:"|?*~')
 DEFAULT_SOURCE_NAMES = {
     "assembly": "main.asm",
     "c": "main.c",
@@ -155,7 +164,10 @@ STUDENT_ACTIVITY_FIELDS = {
 
 def portable_path_key(path: Path) -> tuple[str, ...]:
     """Return a conservative path identity compatible with Windows."""
-    return tuple(part.rstrip(" .").casefold() for part in path.parts)
+    return tuple(
+        unicodedata.normalize("NFC", unicodedata.normalize("NFC", part.rstrip(" .")).casefold())
+        for part in path.parts
+    )
 
 
 def portable_paths_overlap(left: Path, right: Path) -> bool:
@@ -170,8 +182,7 @@ def portable_paths_overlap(left: Path, right: Path) -> bool:
 
 def is_reserved_scaffold_target(path: Path) -> bool:
     """Return whether a path aliases a scaffold-owned top-level file."""
-    key = portable_path_key(path)
-    return any(key == portable_path_key(Path(value)) for value in RESERVED_SCAFFOLD_TARGETS)
+    return any(portable_paths_overlap(path, Path(value)) for value in RESERVED_SCAFFOLD_TARGETS)
 
 
 def is_safe_slug(value: str) -> bool:
@@ -257,11 +268,12 @@ def default_source_name_for(language: str) -> str:
 
 def validate_portable_path_component(component: str, field_name: str) -> None:
     """Reject a path component that cannot be represented portably."""
-    basename = component.split(".", 1)[0].casefold()
+    basename = component.split(".", 1)[0].rstrip(" .").casefold()
     if (
         not component
         or component in {".", ".."}
         or component != component.rstrip(" .")
+        or component != unicodedata.normalize("NFC", component)
         or basename in WINDOWS_RESERVED_NAMES
         or any(character in WINDOWS_INVALID_PATH_CHARACTERS for character in component)
         or any(ord(character) < 32 for character in component)
@@ -491,12 +503,22 @@ def student_asset_copy_plan(activity_path: Path, activity: dict[str, Any]) -> li
         ):
             raise ValueError(f"Target asset duplicato, equivalente o sovrapposto: {target_rel}.")
         target_keys.add(target_key)
-        source_path = activity_root / source_rel
         current = activity_root
         for part in source_rel.parts:
-            current = current / part
+            try:
+                names = {entry.name for entry in current.iterdir()}
+            except OSError as error:
+                raise ValueError(f"Asset non trovato: {source_rel}") from error
+            part_key = portable_path_key(Path(part))
+            matches = [name for name in names if portable_path_key(Path(name)) == part_key]
+            if not matches:
+                raise ValueError(f"Asset non trovato: {source_rel}")
+            if len(matches) != 1 or unicodedata.normalize("NFC", matches[0]) != part:
+                raise ValueError(f"Asset non portabile: {source_rel}")
+            current = current / matches[0]
             if current.is_symlink():
                 raise ValueError(f"L'asset non puo attraversare link simbolici: {source_rel}")
+        source_path = current
         if not source_path.is_file():
             raise ValueError(f"Asset non trovato: {source_path}")
         try:
@@ -506,6 +528,30 @@ def student_asset_copy_plan(activity_path: Path, activity: dict[str, Any]) -> li
 
         planned_assets.append((source_path, target_rel))
     return planned_assets
+
+
+def validate_student_asset_targets(asset_plan: list[tuple[Path, Path]], source_name: str) -> None:
+    """Check a student asset copy plan against the selected scaffold source."""
+    for _, target_rel in asset_plan:
+        for reserved_target in RESERVED_SCAFFOLD_TARGETS:
+            if portable_paths_overlap(target_rel, Path(reserved_target)):
+                raise ValueError(
+                    f"Target asset sovrapposto a un file riservato allo scaffold: {target_rel}."
+                )
+        if (
+            portable_path_key(target_rel) != portable_path_key(Path(source_name))
+            and portable_paths_overlap(target_rel, Path(source_name))
+        ):
+            raise ValueError(
+                f"Target asset sovrapposto al file sorgente dello scaffold: {target_rel}."
+            )
+        if (
+            portable_path_key(target_rel) == portable_path_key(Path(source_name))
+            and target_rel.as_posix() != Path(source_name).as_posix()
+        ):
+            raise ValueError(
+                f"Il target del sorgente deve usare il nome canonico {source_name}: {target_rel}."
+            )
 
 
 def file_sha256(path: Path) -> str:
@@ -1034,26 +1080,7 @@ def create_scaffold(
     destination = scaffold_dir(target_dir, identifier)
     manifest_path = managed_assets_path(target_dir, identifier, state_dir)
     asset_plan = student_asset_copy_plan(activity_path, activity)
-    for _, target_rel in asset_plan:
-        for reserved_target in RESERVED_SCAFFOLD_TARGETS:
-            if portable_paths_overlap(target_rel, Path(reserved_target)):
-                raise ValueError(
-                    f"Target asset sovrapposto a un file riservato allo scaffold: {target_rel}."
-                )
-        if (
-            portable_path_key(target_rel) != portable_path_key(Path(source_name))
-            and portable_paths_overlap(target_rel, Path(source_name))
-        ):
-            raise ValueError(
-                f"Target asset sovrapposto al file sorgente dello scaffold: {target_rel}."
-            )
-        if (
-            portable_path_key(target_rel) == portable_path_key(Path(source_name))
-            and target_rel.as_posix() != Path(source_name).as_posix()
-        ):
-            raise ValueError(
-                f"Il target del sorgente deve usare il nome canonico {source_name}: {target_rel}."
-            )
+    validate_student_asset_targets(asset_plan, source_name)
     current_asset_targets = {target_rel for _, target_rel in asset_plan}
     current_asset_target_keys = {
         portable_path_key(target_rel)

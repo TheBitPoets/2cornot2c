@@ -11,8 +11,11 @@ from types import SimpleNamespace
 
 import pytest
 
+from scripts.thebitlab_identity_sqlite import SqliteIdentityStorage
 from scripts.thebitlab_auth_runtime import (
     AuthRuntimeConfigurationError,
+    GoogleOidcRuntime,
+    _windows_acl_tools,
     compose_google_oidc_runtime as _compose_google_oidc_runtime,
 )
 
@@ -81,6 +84,12 @@ def test_composition_adds_github_routes_only_with_complete_configuration(tmp_pat
     )
     assert environment["THEBITLAB_GITHUB_CLIENT_SECRET"] not in repr(runtime)
 
+    environment["THEBITLAB_GITHUB_POST_LINK_PATH"] = "/tools/course_board.html"
+    with pytest.raises(AuthRuntimeConfigurationError) as captured:
+        compose_google_oidc_runtime(environment, data_root=tmp_path / "rejected")
+    assert "landing account canonica" in str(captured.value)
+    assert "/tools/course_board.html" not in str(captured.value)
+
 
 def test_partial_github_runtime_configuration_fails_closed(tmp_path: Path) -> None:
     environment = valid_environment()
@@ -109,7 +118,7 @@ def test_composition_builds_one_coherent_production_graph(tmp_path: Path) -> Non
     assert login.config.redirect_uri == (
         "https://lab.example.edu/auth/google/callback"
     )
-    assert login.config.post_login_path == "/tools/course_board.html"
+    assert login.config.post_login_path == "/auth/account"
     assert repr(runtime) == "GoogleOidcRuntime(configured=True)"
 
     database = _test_data_root(tmp_path) / ".thebitlab-auth" / "auth.sqlite3"
@@ -125,14 +134,31 @@ def test_composition_builds_one_coherent_production_graph(tmp_path: Path) -> Non
         assert database.stat().st_mode & 0o777 == 0o600
 
 
-def test_composition_accepts_relative_database_and_local_post_login(tmp_path: Path) -> None:
+def test_runtime_rejects_admin_service_backed_by_another_storage(tmp_path: Path) -> None:
+    runtime = compose_google_oidc_runtime(valid_environment(), data_root=tmp_path)
+    runtime.session_routes.admin_provisioning.storage = SqliteIdentityStorage(
+        tmp_path / "rogue.sqlite3"
+    )
+
+    with pytest.raises(AuthRuntimeConfigurationError, match="Grafo autenticazione"):
+        GoogleOidcRuntime(
+            runtime.routes,
+            runtime.session_routes,
+            runtime.tui_pairing_routes,
+            runtime.github_routes,
+        )
+
+
+def test_composition_accepts_relative_database_and_canonical_account_landing(
+    tmp_path: Path,
+) -> None:
     environment = valid_environment()
     environment["THEBITLAB_AUTH_DB_PATH"] = "state/auth.sqlite3"
-    environment["THEBITLAB_GOOGLE_POST_LOGIN_PATH"] = "/welcome/%E2%9C%93"
+    environment["THEBITLAB_GOOGLE_POST_LOGIN_PATH"] = "/auth/account"
 
     runtime = compose_google_oidc_runtime(environment, data_root=tmp_path)
 
-    assert runtime.routes.callback.config.post_login_path == "/welcome/%E2%9C%93"
+    assert runtime.routes.callback.config.post_login_path == "/auth/account"
     assert (_test_data_root(tmp_path) / "state" / "auth.sqlite3").is_file()
 
 
@@ -157,6 +183,7 @@ def test_composition_accepts_relative_database_and_local_post_login(tmp_path: Pa
             "callback canonico",
         ),
         ("THEBITLAB_GOOGLE_POST_LOGIN_PATH", "/welcome?next=x", "POST_LOGIN"),
+        ("THEBITLAB_GOOGLE_POST_LOGIN_PATH", "/tools/course_board.html", "landing account canonica"),
         ("THEBITLAB_AUTH_DB_PATH", ":memory:", "AUTH_DB_PATH"),
     ),
 )
@@ -180,6 +207,20 @@ def test_composition_rejects_unsafe_configuration_without_echoing_values(
         "THEBITLAB_TUI_PAIRING_PEPPER_B64",
     ):
         assert environment[secret_name] not in serialized
+
+
+def test_windows_acl_tools_ignore_untrusted_systemroot_environment(monkeypatch) -> None:
+    if os.name != "nt":
+        pytest.skip("ACL Windows non disponibili")
+    monkeypatch.setenv("SystemRoot", r"C:\attacker-controlled")
+
+    powershell, icacls, environment = _windows_acl_tools()
+
+    assert "attacker-controlled" not in powershell.lower()
+    assert "attacker-controlled" not in icacls.lower()
+    assert "attacker-controlled" not in environment["SystemRoot"].lower()
+    assert Path(powershell).is_file()
+    assert Path(icacls).is_file()
 
 
 def test_windows_composition_rejects_preexisting_everyone_acl_without_repair(tmp_path: Path) -> None:

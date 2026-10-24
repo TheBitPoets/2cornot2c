@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from scripts import create_activity, student_help_auth
+from scripts.thebitlab_identity_binding import LegacySubjectAlias, SUBJECT_ID_PATTERN
 
 
 LEGACY_STUDENT_ID_RE = re.compile(r"^legacy-[a-z0-9-]+-[0-9a-f]{10}$")
@@ -100,6 +101,33 @@ def target_student_id(target: dict[str, Any]) -> str:
     return target_candidate_student_id(target.get("display_name"))
 
 
+def target_help_student_key(
+    target: dict[str, Any],
+    fallback: str,
+    *,
+    class_id: str = "",
+    legacy_aliases: tuple[LegacySubjectAlias, ...] | None = None,
+) -> str:
+    """Resolve the local key, or a federated key when an alias snapshot is supplied."""
+
+    if legacy_aliases is None:
+        return fallback
+    subject_id = target.get("subject_id")
+    if subject_id not in (None, ""):
+        if not isinstance(subject_id, str) or SUBJECT_ID_PATTERN.fullmatch(subject_id) is None:
+            raise ValueError("Identita del registro aiuti non valida.")
+        return subject_id
+    matches = [
+        alias.subject_id
+        for alias in legacy_aliases
+        if alias.class_id == class_id
+        and alias.legacy_student_id == clean_text(target.get("student_id"))
+    ]
+    if len(matches) != 1:
+        raise ValueError("Identita del registro aiuti non risolvibile.")
+    return matches[0]
+
+
 def target_student_aliases(target: dict[str, Any]) -> set[str]:
     """Return canonical identities accepted for one target."""
 
@@ -127,11 +155,20 @@ def target_legacy_student_aliases(target: dict[str, Any]) -> set[str]:
     return {candidate for candidate in candidates if candidate}
 
 
-def target_cleanup_student_ids(target: dict[str, Any]) -> set[str]:
+def target_cleanup_student_ids(
+    target: dict[str, Any],
+    *,
+    class_id: str = "",
+    legacy_aliases: tuple[LegacySubjectAlias, ...] | None = None,
+) -> set[str]:
     """Return canonical and historical storage keys to remove for one target."""
 
     identities = target_legacy_student_aliases(target)
     canonical_student_id = target_student_id(target)
     if canonical_student_id:
         identities.add(canonical_student_id)
+    if target.get("subject_id") not in (None, "") or legacy_aliases is not None:
+        identities.add(target_help_student_key(
+            target, "", class_id=class_id, legacy_aliases=legacy_aliases or (),
+        ))
     return identities

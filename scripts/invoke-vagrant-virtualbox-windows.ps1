@@ -1,7 +1,9 @@
 param(
     [ValidateSet("up", "reload")]
     [string]$Action = "up",
-    [int]$RecoveryAfterSeconds = 75
+    [int]$RecoveryAfterSeconds = 75,
+    [string]$VagrantCommand,
+    [string]$VBoxManageCommand
 )
 
 $ErrorActionPreference = "Stop"
@@ -54,11 +56,28 @@ function Test-GuestAdditionsActive {
     )
 }
 
-$Vagrant = Get-Command vagrant -ErrorAction Stop
-$VBoxManageCommand = Get-Command VBoxManage -ErrorAction SilentlyContinue
+if (-not $VagrantCommand) {
+    $VagrantLookup = Get-Command vagrant -ErrorAction SilentlyContinue
+    $VagrantCommand = if ($VagrantLookup) {
+        $VagrantLookup.Source
+    } else {
+        Join-Path $env:ProgramFiles "Vagrant\bin\vagrant.exe"
+    }
+}
+if (-not (Test-Path $VagrantCommand)) {
+    throw "Vagrant non è installato."
+}
+
 if (-not $VBoxManageCommand) {
-    $VBoxManageCommand = Get-Command VBoxManage.exe `
-        -ErrorAction SilentlyContinue
+    $VBoxLookup = Get-Command VBoxManage -ErrorAction SilentlyContinue
+    $VBoxManageCommand = if ($VBoxLookup) {
+        $VBoxLookup.Source
+    } else {
+        Join-Path $env:ProgramFiles "Oracle\VirtualBox\VBoxManage.exe"
+    }
+}
+if (-not (Test-Path $VBoxManageCommand)) {
+    $VBoxManageCommand = $null
 }
 
 Write-Host "Avvio della macchina virtuale..." -ForegroundColor Cyan
@@ -66,7 +85,7 @@ $VagrantArguments = @($Action)
 if ($Action -eq "up") {
     $VagrantArguments += "--provider=virtualbox"
 }
-$Process = Start-Process -FilePath $Vagrant.Source `
+$Process = Start-Process -FilePath $VagrantCommand `
     -ArgumentList $VagrantArguments `
     -NoNewWindow -PassThru
 
@@ -90,14 +109,14 @@ try {
         }
 
         $State = Get-VirtualBoxState `
-            -VBoxManage $VBoxManageCommand.Source `
+            -VBoxManage $VBoxManageCommand `
             -MachineId $MachineId
         if ($State -ne "running") {
             $RunningSince = $null
             continue
         }
         if (Test-GuestAdditionsActive `
-            -VBoxManage $VBoxManageCommand.Source `
+            -VBoxManage $VBoxManageCommand `
             -MachineId $MachineId) {
             $RecoveryAttempted = $true
             continue
@@ -119,7 +138,7 @@ try {
             "Provo a sbloccarlo automaticamente: non devi fare nulla."
         ) -ForegroundColor Yellow
 
-        & $VBoxManageCommand.Source controlvm $MachineId pause
+        & $VBoxManageCommand controlvm $MachineId pause
         if ($LASTEXITCODE -ne 0) {
             Write-Host (
                 "Il tentativo automatico non è riuscito; " +
@@ -131,7 +150,7 @@ try {
         $PausedByUs = $true
         Start-Sleep -Seconds 2
         foreach ($Attempt in 1..3) {
-            & $VBoxManageCommand.Source controlvm $MachineId resume
+            & $VBoxManageCommand controlvm $MachineId resume
             if ($LASTEXITCODE -eq 0) {
                 $PausedByUs = $false
                 Write-Host (
@@ -157,7 +176,7 @@ catch {
 }
 finally {
     if ($PausedByUs -and $VBoxManageCommand) {
-        & $VBoxManageCommand.Source controlvm $MachineId resume `
+        & $VBoxManageCommand controlvm $MachineId resume `
             2>$null
     }
 }

@@ -397,6 +397,8 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         reportSelectionState,
         reportSelectionBadge,
         reportSelectionCompactBadge,
+        gradeReviewBadge,
+        renderOverview,
         aiFeedbackState,
         aiFeedbackDetails,
         aiFeedbackReviewDetails,
@@ -497,6 +499,12 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
         generateReport,
         loadSelectedReport,
         loadAssignments,
+        courseImport,
+        importEls,
+        loadCourseImport,
+        previewCourseImport,
+        publishCourseImport,
+        invalidateCourseImport,
         renderAssignmentSelect,
         clearSelectedAssignment,
         applyAssignmentToGenerateForm,
@@ -529,6 +537,107 @@ const assignmentStepNames = ["activity", "ai", "review", "targets", "dates", "pr
             f"Node dashboard test failed with exit code {result.returncode}\n"
             f"STDOUT:\n{result.stdout}\n"
             f"STDERR:\n{result.stderr}"
+    )
+
+
+def test_course_import_flow_pins_preview_and_refreshes_catalog_without_assignment() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          const ui = tested.importEls;
+          ui.Repository.value = "https://github.com/School/course";
+          ui.Ref.value = "main";
+          tested.fetchResponses["/api/activity-import/catalog"] = {json: {
+            repository: "School/course", commit: "a".repeat(40),
+            activities: ["activities/intro/activity.json"], max_selection: 10,
+          }};
+          await tested.loadCourseImport();
+          assert.equal(ui.Choices.children.length, 1);
+          assert.equal(ui.Preview.disabled, false);
+          ui.Choices.querySelectorAll = () => [{value: "activities/intro/activity.json"}];
+          tested.fetchResponses["/api/activity-import/preview"] = {json: {
+            preview_token: "token", bytes: 300, activities: [{
+              id: "intro", title: "<img onerror=evil()>", language: "html",
+              student_assets: 2, reserved_assets: 1, warnings: ["Valutazione manuale"],
+            }],
+          }};
+          await tested.previewCourseImport();
+          assert.equal(ui.Publish.disabled, false);
+          assert.equal(ui.Summary.children[0].children[0].textContent, "<img onerror=evil()>");
+          const previewCall = tested.fetchCalls.find(call => call.path === "/api/activity-import/preview");
+          assert.equal(JSON.parse(previewCall.options.body).commit, "a".repeat(40));
+          tested.DashboardDialogs.confirm = async () => true;
+          tested.fetchResponses["/api/activity-import/publish"] = {json: {imported: [{id: "intro"}]}};
+          await tested.publishCourseImport();
+          assert.equal(ui.Publish.disabled, true);
+          assert.equal(tested.courseImport.preview, null);
+          assert.ok(ui.Status.textContent.includes("1 activity importate"));
+          assert.equal(tested.fetchCalls.filter(call => call.path === "/api/activity-import/discard").length, 0);
+          assert.equal(tested.fetchCalls.filter(call => call.path === "/api/assignments/save").length, 0);
+          assert.equal(ui.Fields.disabled, false);
+        })().catch(error => { console.error(error); process.exitCode = 1; });
+        """
+    )
+
+
+def test_course_import_invalidation_cancellation_and_errors() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          const ui = tested.importEls;
+          tested.courseImport.preview = {preview_token: "old", activities: [{id: "intro"}]};
+          ui.Publish.disabled = false;
+          tested.DashboardDialogs.confirm = async () => false;
+          await tested.publishCourseImport();
+          assert.equal(tested.courseImport.preview.preview_token, "old");
+          assert.equal(tested.fetchCalls.filter(call => call.path === "/api/activity-import/publish").length, 0);
+          tested.invalidateCourseImport(true);
+          assert.equal(ui.Publish.disabled, true);
+          assert.equal(ui.Preview.disabled, true);
+          assert.equal(tested.courseImport.catalog, null);
+          assert.equal(tested.fetchCalls.filter(call => call.path === "/api/activity-import/discard").length, 1);
+          tested.fetchResponses["/api/activity-import/catalog"] = {ok: false, status: 502, text: "GitHub non disponibile"};
+          await tested.loadCourseImport();
+          assert.ok(ui.Status.textContent.includes("GitHub non disponibile"));
+          assert.equal(ui.Fields.disabled, false);
+          assert.equal(ui.Publish.disabled, true);
+        })().catch(error => { console.error(error); process.exitCode = 1; });
+        """
+    )
+
+
+def test_course_update_conflicts_changes_and_lost_response_retry() -> None:
+    run_dashboard_js(
+        """
+        (async () => {
+          const ui = tested.importEls;
+          tested.courseImport.catalog = {repository: "School/course", commit: "a".repeat(40), ref: "release", max_selection: 10};
+          ui.Choices.querySelectorAll = () => [{value: "activities/a.json"}];
+          const activity = {id: "a", title: "A", status: "conflict", conflict: "File locale modificato", warnings: [], changes: []};
+          tested.fetchResponses["/api/activity-import/preview"] = {json: {preview_token: "p", activities: [activity], can_apply: false}};
+          await tested.previewCourseImport();
+          assert.equal(ui.Publish.disabled, true);
+          assert.ok(ui.Summary.children[0].children.some(item => item.textContent === "Conflitto"));
+          assert.ok(ui.Summary.children[0].children.some(item => item.textContent === activity.conflict));
+          activity.status = "update";
+          activity.conflict = "";
+          activity.changes = [{path: "private/test.py", change: "removed", audience: "teacher"}];
+          tested.fetchResponses["/api/activity-import/preview"].json.can_apply = true;
+          await tested.previewCourseImport();
+          assert.ok(ui.Summary.children.at(-1).children.some(item => item.textContent.includes("Rimosso: private/test.py (riservato)")));
+          tested.DashboardDialogs.confirm = async options => {
+            assert.ok(options.message.includes("conservano la versione assegnata"));
+            return true;
+          };
+          tested.fetchResponses["/api/activity-import/publish"] = {ok: false, status: 502, text: "Risposta persa"};
+          await tested.publishCourseImport();
+          assert.equal(tested.courseImport.preview.preview_token, "p");
+          assert.equal(ui.Publish.disabled, false);
+          tested.fetchResponses["/api/activity-import/publish"] = {json: {already_applied: true, imported: [{id: "a"}]}};
+          await tested.publishCourseImport();
+          assert.equal(tested.courseImport.preview, null);
+        })().catch(error => { console.error(error); process.exitCode = 1; });
+        """
     )
 
 
@@ -614,6 +723,61 @@ def test_report_selection_badges_distinguish_final_provisional_and_invalid() -> 
         assert.match(compactInvalid, />ERR</);
         assert.match(compactInvalid, /tabindex="0"/);
         assert.match(compactInvalid, /aria-label="Finale non valido[.]/);
+        """
+    )
+
+
+def test_delivery_attempt_and_grade_review_are_separate_in_all_teacher_views() -> None:
+    run_dashboard_js(
+        """
+        for (const selection of ["final", "latest"]) {
+          // Include confirmation at zero and revocation after confirmation.
+          for (const teacherGrade of [null, 8, 0, null]) {
+            const provisional = teacherGrade === null;
+            const student = {
+              student: "student-one", submitted: true, status: "submitted_on_time",
+              submission: { report_authority: "verified_delivery", report_selection: selection,
+                final_selected: selection === "final" },
+              grading: { status: "graded_passed", score: 10, teacher_grade: teacherGrade, provisional },
+            };
+            const row = {
+              student: student.student, submitted: true, status: student.status,
+              activity_id: "demo", report_name: "demo.json", ...student.submission,
+              grading_status: "graded_passed", grading_provisional: provisional,
+              score: 10, teacher_grade: teacherGrade,
+            };
+            const attemptLabel = selection === "final" ? "Tentativo definitivo" : "Ultimo tentativo";
+            const gradeLabel = provisional ? "Voto da revisionare" : "Voto confermato";
+            for (const value of [student, row]) {
+              assert.equal(tested.reportSelectionState(value).label, attemptLabel);
+              const badge = tested.gradeReviewBadge(value);
+              assert.ok(badge.includes(gradeLabel));
+              assert.match(badge, provisional ? /badgeWarn/ : /badgeOk/);
+              assert.match(badge, /tabindex="0"/);
+            }
+            tested.state.report = { activity_id: "demo", students: [student] };
+            tested.els.studentsBody.children = [];
+            tested.renderStudents([student]);
+            const register = tested.els.studentsBody.children[0].innerHTML;
+            assert.ok(register.includes(attemptLabel));
+            assert.match(register, new RegExp(`<code>${teacherGrade ?? 10}</code>.*${gradeLabel}`));
+
+            tested.state.overviewRows = [row];
+            tested.els.overviewBody.children = [];
+            tested.els.overviewMatrixBody.children = [];
+            tested.renderOverview();
+            const table = tested.els.overviewBody.children[0].innerHTML;
+            const matrix = tested.els.overviewMatrixBody.children[0].innerHTML;
+            assert.ok(table.includes(attemptLabel));
+            assert.match(table, new RegExp(`<code>${teacherGrade ?? 10}</code>.*${gradeLabel}`));
+            assert.ok(matrix.includes(attemptLabel));
+            assert.ok(matrix.includes(gradeLabel));
+            assert.match(matrix, provisional ? />REV</ : />CONF</);
+          }
+        }
+        for (const authority of [undefined, "ungraded", "verified_remote"]) {
+          assert.equal(tested.gradeReviewBadge({ report_authority: authority, score: 10 }), "");
+        }
         """
     )
 
@@ -885,7 +1049,7 @@ def test_activity_editor_modal_is_shared_by_panel_and_wizard() -> None:
 
     assert 'id="activityEditorDialog"' in html
     assert 'id="openActivityEditorBtn"' in html
-    assert 'id="wizardOpenActivityEditorBtn"' in html
+    assert 'data-assignment-step-tab="review"' in html
     assert 'id="activityAuthorTitle"' in html.split('id="activityEditorDialog"', 1)[1]
 
 

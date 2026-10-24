@@ -4,6 +4,35 @@ Questa cartella raccoglie la documentazione tecnica di supporto alla manutenzion
 
 Usa questo file come punto di partenza per capire quale documento leggere in base al lavoro che devi fare.
 
+## Percorso MVP 2026/2027
+
+| Tipo | Documento | Destinatari |
+|---|---|---|
+| Cornice didattica | [`CORNICE_DIDATTICA.md`](CORNICE_DIDATTICA.md) | docenti, coordinatori, sviluppatori |
+| Guida operativa pilot | [`MVP_2026_2027.md`](MVP_2026_2027.md) | docenti e gestori dell'installazione |
+| Import activity da GitHub | [`COURSE_ACTIVITY_IMPORT.md`](COURSE_ACTIVITY_IMPORT.md) | docenti e gestori TheBitLab |
+| Pilot rehearsal e go/no-go | [`PILOT_REHEARSAL.md`](PILOT_REHEARSAL.md) | docenti, gestori e decision owner |
+| Deployment pilot versionato | [`PILOT_DEPLOYMENT.md`](PILOT_DEPLOYMENT.md) | gestori tecnici e reviewer |
+| Architettura | [`ARCHITETTURA_MVP.md`](ARCHITETTURA_MVP.md) | sviluppatori e gestori tecnici |
+| Diagrammi d'architettura | [`architecture/architecture-diagrams.md`](architecture/architecture-diagrams.md) | sviluppatori e gestori tecnici |
+| Bundle corsi (ADR) | [`architecture/adr-course-bundle-format.md`](architecture/adr-course-bundle-format.md) | docenti autori, sviluppatori |
+| Sicurezza bundle (guida) | [`architecture/bundle-implementation-security.md`](architecture/bundle-implementation-security.md) | sviluppatori fetcher/loader |
+| Frontend | [`FRONTEND_ARCHITECTURE.md`](FRONTEND_ARCHITECTURE.md) | sviluppatori GUI |
+| API/moduli Sphinx | [`sphinx/index.rst`](sphinx/index.rst) | sviluppatori backend |
+
+La documentazione utente descrive cosa fare; la cornice didattica spiega perche; l'architettura e gli ADR descrivono confini e decisioni; la documentazione Sphinx espone API e docstring dei moduli principali.
+
+## Standard feature documentation
+
+TheBitLab usa uno standard canonico per separare descrizione funzionale, architettura, guide operative e roadmap:
+
+- [`FEATURE_DOCUMENTATION_STANDARD.md`](FEATURE_DOCUMENTATION_STANDARD.md) — regole dello standard;
+- [`features/README.md`](features/README.md) — catalogo delle feature e relativo stato;
+- [`features/_template/README.md`](features/_template/README.md) — template funzionale;
+- [`features/_template/architecture.md`](features/_template/architecture.md) — template tecnico.
+
+Le feature devono essere collegate da roadmap ed epic quando vengono citate, evitando duplicazioni con ADR e documenti specialistici esistenti.
+
 ## Percorso consigliato
 
 Se devi lavorare sui blocchi lab nel README, leggi i documenti in questo ordine:
@@ -65,6 +94,7 @@ Se devi lavorare su esercizi, compiti a casa, verifiche, correzione automatica o
 | [`ROADMAP.md`](ROADMAP.md) | Quando devi decidere priorita, prossime PR o lavori ancora aperti |
 | [`ideas/federated-knowledge-plan.md`](ideas/federated-knowledge-plan.md) | Visione lunga per evolvere verso una piattaforma di conoscenza federata |
 | [`COURSE_BOARD.md`](COURSE_BOARD.md) | Quando devi usare la board dei progetti didattici, il calendario scolastico o le funzioni AI assisted |
+| [`THEBITLAB_SECRETS.md`](THEBITLAB_SECRETS.md) | Quando devi configurare i file AI, capire il ruolo di thebitlab-secrets o ripristinare le credenziali su un PC |
 | [`ASSIGNMENTS.md`](ASSIGNMENTS.md) | Quando devi progettare esercizi, compiti, verifiche, correzioni automatiche o metriche di classe |
 | [`ACTIVITIES_SCHEMA.md`](ACTIVITIES_SCHEMA.md) | Quando devi creare o validare schede JSON di attivita TheBitLab |
 | [`DATA_MODEL_MVP.md`](DATA_MODEL_MVP.md) | Quando devi lavorare su dati JSON, storage, classi, assegnazioni, registri o compatibilita schema |
@@ -81,6 +111,14 @@ Se devi lavorare su esercizi, compiti a casa, verifiche, correzione automatica o
 | [`ASSIGNMENT_GRADING.md`](ASSIGNMENT_GRADING.md) | Quando devi correggere in modo deterministico una consegna TheBitLab |
 | [`ASSIGNMENT_SANDBOX.md`](ASSIGNMENT_SANDBOX.md) | Quando devi eseguire il grading in una sandbox Docker |
 | [`TESTING.md`](TESTING.md) | Quando devi lanciare test locali o capire quali GitHub Actions sono attive |
+| [`CORNICE_DIDATTICA.md`](CORNICE_DIDATTICA.md) | Quando devi comprendere obiettivi, UDA, aiuti, feedback e ruolo docente |
+| [`MVP_2026_2027.md`](MVP_2026_2027.md) | Quando devi preparare o usare il pilot scolastico |
+| [`PILOT_REHEARSAL.md`](PILOT_REHEARSAL.md) | Quando devi eseguire la prova generale e decidere go/no-go |
+| [`PILOT_DEPLOYMENT.md`](PILOT_DEPLOYMENT.md) | Quando devi validare, renderizzare o fare rollback di nginx/systemd/root/origin |
+| [`ARCHITETTURA_MVP.md`](ARCHITETTURA_MVP.md) | Quando devi capire GUI, API, service, storage, provider, AI e Docker |
+| [`architecture/architecture-diagrams.md`](architecture/architecture-diagrams.md) | Quando vuoi una vista visuale di deployment, componenti e flussi HTTP |
+| [`FRONTEND_ARCHITECTURE.md`](FRONTEND_ARCHITECTURE.md) | Quando devi modificare stato UI, endpoint o flussi asincroni |
+| [`packer/README.md`](../packer/README.md) | Quando devi modificare, costruire, collaudare o pubblicare le box classroom Packer |
 
 ## Script collegati
 
@@ -89,6 +127,10 @@ Se devi lavorare su esercizi, compiti a casa, verifiche, correzione automatica o
 | `scripts/update_lab_snippets.py` | Aggiorna nel README/template il codice dei lab e gli output generati | [`LAB_SNIPPETS.md`](LAB_SNIPPETS.md) |
 | `scripts/update_lab_outputs.py` | Compila/esegue i lab configurati e aggiorna `lab/**/output/*.txt` | [`LAB_OUTPUTS.md`](LAB_OUTPUTS.md) |
 | `scripts/course_board_server.py` | Avvia il server locale della board e del calendario | [`COURSE_BOARD.md`](COURSE_BOARD.md) |
+| `scripts/github_app_token_runtime.py` | Genera e rinnova installation token GitHub App protetti | [`COURSE_SOURCE_CATALOG.md`](COURSE_SOURCE_CATALOG.md) |
+| `scripts/validate_pilot_deployment.py` | Valida e renderizza la baseline deployment senza incorporare segreti | [`PILOT_DEPLOYMENT.md`](PILOT_DEPLOYMENT.md) |
+| `scripts/pilot_service_launcher.py` | Importa solo i secret consentiti e avvia il pilot con topologia autorevole | [`PILOT_DEPLOYMENT.md`](PILOT_DEPLOYMENT.md) |
+| `scripts/pilot_deployment_smoke.py` | Esegue lint nginx/systemd non distruttivo su fixture sintetiche | [`PILOT_DEPLOYMENT.md`](PILOT_DEPLOYMENT.md) |
 | `scripts/generate_course_plan.py` | Rigenera `doc/PERCORSO_DIDATTICO.md` dal progetto didattico corrente | [`COURSE_BOARD.md`](COURSE_BOARD.md) |
 | `scripts/update_course_frames.py` | Inserisce nel README le cornici didattiche presenti nel progetto | [`COURSE_BOARD.md`](COURSE_BOARD.md) |
 | `scripts/create_activity.py` | Crea una scheda JSON di attivita TheBitLab da prompt guidato o argomenti CLI | [`ACTIVITIES_SCHEMA.md`](ACTIVITIES_SCHEMA.md) |

@@ -1,8 +1,10 @@
 # Guida operativa vista studente
 
-Questa guida descrive come usare la vista studente MVP per leggere consegne, stato, grading e feedback approvato dal docente.
+Questa guida descrive la vista web locale che il docente usa per controllare come consegne, grading e feedback approvato vengono rappresentati per uno studente selezionato.
 
-Stato attuale: guida scheletro MVP. Gli screenshot saranno aggiunti in `doc/images/dashboard-guides/` quando la UI sara stabile.
+> **Confine di sicurezza attuale:** `student_dashboard.html` non è un self-service studente. Usa API protette dalla Basic authentication docente, permette di selezionare studenti differenti e deve restare su un dispositivo docente/demo. Non condividere la credenziale Basic con gli studenti e non pubblicare questa pagina come dashboard federata. Il self-service autenticato dell'MVP è la CLI/TUI descritta in `STUDENT_LAB.md`.
+
+Stato attuale: guida scheletro MVP docente/demo. Gli screenshot saranno aggiunti in `doc/images/dashboard-guides/` quando la UI sara stabile.
 
 ## Avvio
 
@@ -22,7 +24,7 @@ La pagina deve essere aperta tramite il server locale. Se viene aperta direttame
 
 ## Cosa serve
 
-La vista studente serve a mostrare allo studente una lettura semplificata del proprio stato.
+La vista serve al docente per verificare una lettura semplificata dello stato di uno studente selezionato e per collaudare la futura esperienza web.
 
 Mostra:
 
@@ -39,14 +41,15 @@ Non mostra:
 - feedback respinti;
 - pannelli docente;
 - azioni di gestione registro;
-- altri studenti della classe;
 - funzioni di modifica o cancellazione.
+
+La pagina può però selezionare altri studenti della classe perché l'utente autorizzato è il docente: questo è il motivo per cui non può essere esposta direttamente agli studenti.
 
 Screenshot previsto: `doc/images/dashboard-guides/studente-panoramica.png`.
 
 ## Selezione classe e studente
 
-Nell'MVP la vista non ha ancora login. Per provare il flusso:
+Nell'MVP la vista non ha una sessione studente: il server richiede la Basic docente. Per provare il flusso su un dispositivo controllato dal docente:
 
 1. scegli una classe dalla select **Classe**;
 2. scegli uno studente dalla select **Studente**;
@@ -56,7 +59,7 @@ La lista studenti arriva prima dai roster locali in `doc/classes/*.json`. Se i r
 
 Screenshot previsto: `doc/images/dashboard-guides/studente-selezione.png`.
 
-Con dati reali, la selezione manuale sara sostituita o limitata da login, profilo studente o provider classe.
+Una futura dashboard self-service dovrà eliminare la selezione arbitraria e derivare lo studente dalla sessione federata autorizzata. Fino ad allora, con dati reali questa pagina resta esclusivamente docente.
 
 ## Nomenclatura: attivita e consegna
 

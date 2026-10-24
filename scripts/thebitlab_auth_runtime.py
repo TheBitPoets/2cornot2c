@@ -14,6 +14,7 @@ import urllib.parse
 from collections.abc import Mapping
 from pathlib import Path
 
+from scripts.thebitlab_admin_provisioning import AdminProvisioningService
 from scripts.thebitlab_auth_services import (
     ExternalIdentityLinkService,
     FederatedIdentityService,
@@ -90,6 +91,9 @@ class GoogleOidcRuntime:
             or type(session_routes) is not SessionHttpRoutes
             or session_routes.sessions is not routes.session_discarder
             or session_routes.proxy_resolver is not routes.proxy_resolver
+            or session_routes.admin_provisioning is None
+            or session_routes.admin_provisioning.storage
+            is not routes.session_discarder.sessions.storage
             or type(tui_pairing_routes) is not TuiPairingHttpRoutes
             or tui_pairing_routes.proxy_resolver is not routes.proxy_resolver
             or tui_pairing_routes.boundary.http_sessions is not routes.session_discarder
@@ -181,9 +185,13 @@ def compose_google_oidc_runtime(
             )
         trusted_proxy_cidrs = _trusted_proxy_cidrs(environment)
         post_login_path = environment.get(
-            "THEBITLAB_GOOGLE_POST_LOGIN_PATH", "/tools/course_board.html"
+            "THEBITLAB_GOOGLE_POST_LOGIN_PATH", "/auth/account"
         )
         _validate_post_login_path(post_login_path)
+        if post_login_path != "/auth/account":
+            raise AuthRuntimeConfigurationError(
+                "THEBITLAB_GOOGLE_POST_LOGIN_PATH deve usare la landing account canonica."
+            )
         database_path = _database_path(environment, data_root)
         _prepare_database_file(database_path)
         _require_auth_dependencies()
@@ -234,7 +242,11 @@ def compose_google_oidc_runtime(
             http_sessions,
             session_cookie_policy=cookie_policy,
         )
-        session_routes = SessionHttpRoutes(http_sessions, proxy_resolver)
+        session_routes = SessionHttpRoutes(
+            http_sessions,
+            proxy_resolver,
+            AdminProvisioningService(storage),
+        )
         pairing_service = PairingService(storage, pepper=pairing_pepper)
         pairing_sessions = TuiPairingSessionService(pairing_service)
         tui_sessions = SessionService(storage, audience="tui")
@@ -274,9 +286,13 @@ def compose_google_oidc_runtime(
                     "THEBITLAB_GITHUB_REDIRECT_URI deve terminare con il path callback canonico."
                 )
             github_post_link_path = environment.get(
-                "THEBITLAB_GITHUB_POST_LINK_PATH", "/tools/course_board.html"
+                "THEBITLAB_GITHUB_POST_LINK_PATH", "/auth/account"
             )
             _validate_post_login_path(github_post_link_path)
+            if github_post_link_path != "/auth/account":
+                raise AuthRuntimeConfigurationError(
+                    "THEBITLAB_GITHUB_POST_LINK_PATH deve usare la landing account canonica."
+                )
             github_config = GitHubOAuthConfig(
                 github_client_id,
                 github_client_secret,
@@ -753,13 +769,21 @@ def _verify_windows_ancestor_chain(path: Path, sid: str) -> None:
 def _windows_acl_tools(
     *, acl_path: Path | None = None, acl_sid: str | None = None
 ) -> tuple[str, str, dict[str, str]]:
-    system_root = os.environ.get("SystemRoot", "")
-    if not system_root or "\x00" in system_root:
-        raise OSError("SystemRoot Windows non valido")
+    try:
+        import ctypes
+
+        buffer = ctypes.create_unicode_buffer(32_768)
+        length = ctypes.windll.kernel32.GetSystemDirectoryW(buffer, len(buffer))
+        if not 0 < length < len(buffer):
+            raise OSError("Directory sistema Windows non disponibile")
+        system_directory = Path(buffer.value)
+        system_root = str(system_directory.parent)
+    except (AttributeError, OSError, ValueError):
+        raise OSError("Directory sistema Windows non disponibile") from None
     powershell = str(
-        Path(system_root) / "System32" / "WindowsPowerShell" / "v1.0" / "powershell.exe"
+        system_directory / "WindowsPowerShell" / "v1.0" / "powershell.exe"
     )
-    icacls = str(Path(system_root) / "System32" / "icacls.exe")
+    icacls = str(system_directory / "icacls.exe")
     environment = {"SystemRoot": system_root, "WINDIR": system_root}
     if acl_path is not None and acl_sid is not None:
         environment["THEBITLAB_ACL_PATH"] = str(acl_path)

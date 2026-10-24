@@ -1,0 +1,23 @@
+{
+  "schema_version": "2cornot2c.packer-toolchain.v1",
+  "packer_version": "1.16.0",
+  "packer_archives": {
+    "darwin_arm64": "6530042cf8f8a1f96b6607cb22b5be298be53b400cd4a2c81ab8b946964fccda",
+    "windows_amd64": "91a378d4e7f9c5363caa196e23fd78717da31d12fc6069c8bb892cdacceb2eb8"
+  },
+  "plugins": {
+    "github.com/hashicorp/vagrant": {
+      "version": "1.1.5",
+      "archives": {
+        "darwin_arm64": "b2df6c1da9b4cf62052d1ab3651bc10e011a155d70cf2803e608b3244a586b89",
+        "windows_amd64": "49e5394b7d3ebabf07bab1658cdb7f3f8dc312978efb0b0814ce304947e5b228"
+      }
+    }
+  },
+  "vagrant_plugins": {
+    "vagrant-vmware-desktop": {
+      "version": "3.0.5",
+      "sha256": "a023783e85163c041bb767160b924ee036b1e07bf787e957450209fd7e18dc66"
+    }
+  }
+}
