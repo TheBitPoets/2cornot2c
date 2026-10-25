@@ -29,7 +29,9 @@
 
 ## File della PR modificati
 
+- `.gitignore`.
 - `README.md`, `installer/README.md`.
+- `release/manual/README.md`, `release/manual/SHA256SUMS`.
 - `scripts/invoke-vagrant-virtualbox-windows.ps1`.
 - `scripts/setup-vm.ps1`.
 - `tests/test_classroom_preflight.py`.
@@ -58,6 +60,24 @@
   `discussion_r4367375430` per la documentazione.
 - Nessun processo temporaneo lasciato attivo. Il venv di test usa
   `/tmp/pr863-review` e non appartiene al repository.
+
+## Self-review completa 2026-10-25 — non indipendente
+
+- SHA esaminato: `6dbc338da39b387ca22a6ab8dc25a09318fabe58`; base
+  `444bc0cdc2313d37142333858ccb1531908f1da0`.
+- Esaminato l'intero diff dei 10 file, i chiamanti del flusso Windows, lo stato
+  delle check e tutte le discussioni GitHub: nessun nuovo finding concreto.
+- Test mirati: **49 passed, 61 skipped**; gli skip sono casi Windows non
+  applicabili all'host macOS. `git diff --check`: PASS.
+- Checksum del file locale
+  `2cornot2c-Ubuntu-24.04-ARM64.vmwarevm.zip`: PASS rispetto a
+  `release/manual/SHA256SUMS`.
+- La KB ufficiale Broadcom 368734, verificata il 2026-10-25, conferma ancora
+  account Basic, Export Compliance, area Free Software Downloads e ricerca di
+  Fusion descritti nella guida.
+- Questo controllo è stato svolto nella stessa sessione che ha prodotto la
+  remediation: è una self-review utile ma **non incrementa** il gate
+  indipendente, che resta `0/2`.
 
 ## Prossimo passo
 
