@@ -158,6 +158,36 @@ def test_windows_launcher_hides_technical_start_commands() -> None:
     assert "Ambiente precedente riconosciuto" in launcher
 
 
+def test_windows_virtualbox_boot_has_bounded_automatic_recovery() -> None:
+    recovery = (
+        ROOT / "scripts" / "invoke-vagrant-virtualbox-windows.ps1"
+    ).read_text(encoding="utf-8")
+    setup = (ROOT / "scripts" / "setup-vm.ps1").read_text(encoding="utf-8")
+
+    assert '[ValidateSet("up", "reload")]' in recovery
+    assert "$RecoveryAfterSeconds = 75" in recovery
+    assert ".vagrant\\machines\\default\\virtualbox\\id" in recovery
+    assert "controlvm $MachineId pause" in recovery
+    assert "controlvm $MachineId resume" in recovery
+    assert '"/VirtualBox/GuestAdd/Version"' in recovery
+    assert "$RecoveryAttempted = $true" in recovery
+    assert "finally" in recovery
+    assert '[string]$VagrantCommand' in recovery
+    assert '[string]$VBoxManageCommand' in recovery
+    assert '"Vagrant\\bin\\vagrant.exe"' in recovery
+    assert '"Oracle\\VirtualBox\\VBoxManage.exe"' in recovery
+    assert recovery.count("controlvm $MachineId pause") == 1
+    additions_branch = recovery.split(
+        "if (Test-GuestAdditionsActive", maxsplit=1
+    )[1].split("if (-not $RunningSince)", maxsplit=1)[0]
+    assert "$RunningSince = $null" in additions_branch
+    assert 'if ($Action -eq "up")' in additions_branch
+    assert "$RecoveryAttempted = $true" in additions_branch
+    assert setup.count("invoke-vagrant-virtualbox-windows.ps1") == 1
+    assert setup.count('"-VagrantCommand", $VagrantCommand') == 2
+    assert setup.count('"-VBoxManageCommand", $VBoxManageCommand') == 2
+
+
 def test_wsl_preparation_is_elevated_and_resumes_after_restart() -> None:
     source = (ROOT / "scripts" / "prepare-wsl-windows.ps1").read_text(
         encoding="utf-8"
