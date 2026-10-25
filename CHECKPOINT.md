@@ -1,4 +1,4 @@
-> Unita corrente 2026-09-15: vedere [CHECKPOINT-installer-e09.md](CHECKPOINT-installer-e09.md), correzione locale del rilevamento VirtualBox su Windows. Il contenuto storico seguente resta conservato.
+> Unità corrente 2026-10-24: vedere [CHECKPOINT-pr-863.md](CHECKPOINT-pr-863.md), risoluzione dei finding e dei conflitti della PR #863. Il contenuto storico seguente resta conservato.
 
 # Checkpoint operativo — AUTH-CLOCK-R1-001
 

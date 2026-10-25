@@ -454,6 +454,16 @@ git clone https://github.com/TheBitPoets/2cornot2c.git
 cd 2cornot2c
 ```
 
+### Procedura manuale con VM già pronta
+
+Se il percorso automatico non completa il download o l'avvio, il docente può
+distribuire separatamente la VM Fusion già preparata.
+
+Per installare Fusion, verificare lo ZIP e aprire la macchina senza Vagrant,
+segui [la guida manuale](release/manual/README.md). La VM manuale attuale è
+ARM64 e funziona soltanto sui Mac Apple Silicon; non è compatibile con Mac
+Intel o Windows.
+
 ### Primo avvio
 
 Esegui **un solo avvio guidato**:
@@ -470,6 +480,11 @@ Durante l'installazione guidata il download della macchina può richiedere
 alcuni minuti. Lo script di avvio controlla i prerequisiti, avvia la VM e
 verifica gli strumenti didattici, i Guest Tools del provider e le cartelle
 condivise. Se il primo controllo fallisce, prova automaticamente un riavvio.
+
+Su Windows l'avvio sorveglia anche l'arresto apparente di VirtualBox su
+`Begin: Loading essential drivers...`: dopo un'attesa controllata mette in
+pausa per due secondi e riprende automaticamente soltanto la VM 2cornot2c.
+Non è necessario intervenire dalla finestra di VirtualBox.
 
 La sessione grafica accede automaticamente con l'utente `vagrant`; la password,
 se richiesta, è `vagrant`.

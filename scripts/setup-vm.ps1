@@ -48,7 +48,13 @@ try {
 
     Write-Host ""
     Write-Host "Avvio dell'ambiente didattico (il primo avvio può richiedere alcuni minuti)..."
-    Invoke-Checked $VagrantCommand @("up", "--provider=virtualbox")
+    $RecoveryScript = Join-Path $PSScriptRoot `
+        "invoke-vagrant-virtualbox-windows.ps1"
+    Invoke-Checked $RecoveryScript @(
+        "-Action", "up",
+        "-VagrantCommand", $VagrantCommand,
+        "-VBoxManageCommand", $VBoxManageCommand
+    )
 
     $HealthCheck = @'
 set -eu
@@ -65,7 +71,11 @@ findmnt -rn /lab2 >/dev/null
     & $VagrantCommand ssh -c $HealthCheck
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Primo controllo non riuscito: provo un riavvio automatico..."
-        Invoke-Checked $VagrantCommand @("reload")
+        Invoke-Checked $RecoveryScript @(
+            "-Action", "reload",
+            "-VagrantCommand", $VagrantCommand,
+            "-VBoxManageCommand", $VBoxManageCommand
+        )
         & $VagrantCommand ssh -c $HealthCheck
         if ($LASTEXITCODE -ne 0) {
             Stop-WithMessage "La macchina è avviata, ma il controllo finale non è riuscito. Comunica questo messaggio al docente."

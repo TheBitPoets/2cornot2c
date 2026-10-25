@@ -187,6 +187,15 @@ continuare. Lo studente deve chiudere Docker Desktop, browser e programmi
 pesanti; Windows e la VM possono risultare lenti. Lo spazio disco minimo resta
 invece bloccante.
 
+Durante l'avvio VirtualBox su Windows il launcher sorveglia soltanto la VM
+2cornot2c. Se Linux non raggiunge le Guest Additions entro 75 secondi, esegue
+una sola pausa di due secondi e riprende automaticamente la macchina. Questo
+recupera il blocco osservato su `Begin: Loading essential drivers...` senza
+chiedere allo studente di usare i controlli di VirtualBox. Se la pausa non può
+essere applicata, Vagrant continua normalmente; se VirtualBox non riesce
+neppure a riprendere la VM, il launcher termina con una spiegazione invece di
+rimanere bloccato.
+
 ## Diagnosi
 
 La prima fetta implementa rilevamento, scelta provider e diagnosi read-only:
@@ -421,6 +430,11 @@ lock, la release o la combinazione richiesta non è valida, l'installazione si
 ferma con E25. L'override `CLASSROOM_RELEASE_MANIFEST` è riservato a test
 isolati e viene rifiutato senza il secondo opt-in esplicito
 `CLASSROOM_ALLOW_UNTRUSTED_MANIFEST=1`; non va usato nel pilot.
+
+Come procedura di riserva per macOS Apple Silicon è disponibile una VM Fusion
+manuale, indipendente da Vagrant. Le istruzioni per scaricare Fusion, verificare
+il pacchetto e aprire la macchina sono in `release/manual/README.md`. Il file
+ZIP della VM è un artefatto esterno e non viene salvato nel repository Git.
 
 `installer/vagrant_box.py` completa il flusso locale:
 

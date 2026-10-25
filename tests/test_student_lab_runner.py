@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+from datetime import datetime
 
 import pytest
 
@@ -154,7 +155,14 @@ def test_run_student_assignment_passes_python_pytest(tmp_path) -> None:
         ]
 
 
-def test_write_student_report_persists_latest_json_and_service_reads_it(tmp_path) -> None:
+def test_write_student_report_persists_latest_json_and_service_reads_it(tmp_path, monkeypatch) -> None:
+    class FixedDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            fixed = cls.fromisoformat("2026-10-18T12:00:00+02:00")
+            return fixed if tz is None else fixed.astimezone(tz)
+
+    monkeypatch.setattr(student_lab_runner, "datetime", FixedDateTime)
     write_assignment(tmp_path, write_activity(tmp_path))
     write_python_workspace(
         tmp_path,
