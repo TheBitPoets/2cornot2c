@@ -261,7 +261,8 @@ def test_student_and_admin_frontend_boundaries_are_explicit() -> None:
     assert "vista locale docente/demo" in frontend
     assert "SessionHttpRoutes" in frontend
     assert "non è un pannello della dashboard docente" in frontend
-    assert "CLI/TUI role-aware è il canale studente reale" in roadmap
+    assert "Il self-service autenticato dell'MVP è la CLI/TUI" in frontend
+    assert "API bearer role-aware" in frontend
     assert "autenticazione e permessi reali" not in roadmap
     assert "non è un self-service studente" in student_guide
     assert "Non condividere la credenziale Basic" in student_guide
