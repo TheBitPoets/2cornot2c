@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>TheBitLab Flowchart Lab</title>
+  <link rel="stylesheet" href="/flowchart-lab/style.css">
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <p class="eyebrow">TheBitLab · strumento didattico gestito</p>
+      <h1>Flowchart Lab</h1>
+      <p class="subtitle">Costruisci l'algoritmo, eseguilo, osserva il trace. Il diagramma non esegue Python arbitrario.</p>
+    </div>
+    <div class="header-actions">
+      <button id="newBtn" type="button">Nuovo</button>
+      <button id="exampleBtn" type="button">Esempio somma</button>
+      <button id="workspaceLoadBtn" type="button" disabled>Apri workspace</button>
+      <button id="workspaceSaveBtn" type="button" disabled>Salva workspace</button>
+      <label class="file-button" for="loadFile">Apri JSON locale</label>
+      <input id="loadFile" type="file" accept="application/json,.json">
+      <button id="exportBtn" type="button">Esporta JSON locale</button>
+      <button id="exportSvgBtn" type="button">Esporta SVG evidence</button>
+    </div>
+  </header>
+
+  <main class="app-grid">
+    <aside class="panel palette" aria-label="Palette nodi">
+      <h2>Nodi</h2>
+      <p class="panel-help">Aggiungi una forma, poi selezionala per modificarla.</p>
+      <div class="palette-grid">
+        <button type="button" data-node-type="start">Inizio</button>
+        <button type="button" data-node-type="end">Fine</button>
+        <button type="button" data-node-type="input">Input</button>
+        <button type="button" data-node-type="assign">Assegna</button>
+        <button type="button" data-node-type="output">Output</button>
+        <button type="button" data-node-type="decision">Decisione</button>
+        <button type="button" data-node-type="loop">Ciclo</button>
+        <button type="button" data-node-type="comment">Commento</button>
+      </div>
+
+      <section class="validation-box" aria-labelledby="validationTitle">
+        <h2 id="validationTitle">Validazione</h2>
+        <div id="validationStatus" class="status neutral">Non ancora validato</div>
+        <ul id="validationErrors" class="errors"></ul>
+      </section>
+    </aside>
+
+    <section class="canvas-panel" aria-label="Area diagramma">
+      <div class="canvas-toolbar">
+        <strong>Diagramma</strong>
+        <span id="selectionLabel">Nessun nodo selezionato</span>
+      </div>
+      <svg id="diagram" viewBox="0 0 1200 720" role="img" aria-label="Editor visuale del flow chart">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z"></path>
+          </marker>
+        </defs>
+        <g id="edgesLayer"></g>
+        <g id="nodesLayer"></g>
+      </svg>
+      <p class="canvas-hint">Trascina i nodi per disporli. Le coordinate appartengono al layout, non cambiano il risultato dell'algoritmo.</p>
+    </section>
+
+    <aside class="panel inspector" aria-label="Proprietà nodo">
+      <h2>Proprietà</h2>
+      <div id="emptyInspector" class="empty-state">Seleziona un nodo.</div>
+      <form id="nodeForm" hidden>
+        <label>
+          ID nodo
+          <input id="nodeId" name="nodeId" autocomplete="off">
+        </label>
+        <p><strong>Tipo:</strong> <span id="nodeTypeLabel"></span></p>
+
+        <label id="targetField" hidden>
+          Variabile
+          <input id="nodeTarget" autocomplete="off">
+        </label>
+        <label id="dataTypeField" hidden>
+          Tipo input
+          <select id="nodeDataType">
+            <option value="str">testo</option>
+            <option value="int">intero</option>
+            <option value="float">decimale</option>
+            <option value="bool">booleano</option>
+          </select>
+        </label>
+        <label id="expressionField" hidden>
+          Espressione
+          <input id="nodeExpression" autocomplete="off">
+        </label>
+        <label id="textField" hidden>
+          Commento
+          <textarea id="nodeText" rows="3"></textarea>
+        </label>
+
+        <button id="deleteNodeBtn" class="danger" type="button">Elimina nodo</button>
+      </form>
+
+      <section class="edge-editor" aria-labelledby="edgeTitle">
+        <h2 id="edgeTitle">Collegamenti</h2>
+        <p class="panel-help">Seleziona il nodo sorgente nel diagramma.</p>
+        <label>
+          Destinazione
+          <select id="edgeTarget"></select>
+        </label>
+        <label>
+          Ramo
+          <select id="edgeLabel">
+            <option value="next">next</option>
+            <option value="true">true</option>
+            <option value="false">false</option>
+          </select>
+        </label>
+        <button id="addEdgeBtn" type="button">Aggiungi collegamento</button>
+        <ul id="edgeList" class="edge-list"></ul>
+      </section>
+    </aside>
+  </main>
+
+  <section class="execution" aria-labelledby="executionTitle">
+    <div class="execution-head">
+      <div>
+        <p class="eyebrow">Trace deterministico</p>
+        <h2 id="executionTitle">Esecuzione</h2>
+      </div>
+      <div class="run-actions">
+        <button id="runBtn" class="primary" type="button">Run</button>
+        <button id="stepBtn" type="button">Step</button>
+        <button id="resetBtn" type="button">Reset</button>
+      </div>
+    </div>
+
+    <div class="execution-grid">
+      <label>
+        Input, uno per riga
+        <textarea id="inputs" rows="5" placeholder="2&#10;3"></textarea>
+      </label>
+      <div>
+        <h3>Output</h3>
+        <pre id="outputs">—</pre>
+      </div>
+      <div>
+        <h3>Variabili</h3>
+        <table>
+          <thead><tr><th>Nome</th><th>Valore</th></tr></thead>
+          <tbody id="variablesBody"></tbody>
+        </table>
+      </div>
+      <div>
+        <h3>Step corrente</h3>
+        <pre id="stepInfo">—</pre>
+      </div>
+    </div>
+    <div id="appStatus" class="app-status" role="status" aria-live="polite">Flowchart Lab pronto.</div>
+  </section>
+
+  <script src="/flowchart-lab/app.js" defer></script>
+</body>
+</html>

@@ -2,14 +2,34 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import sys
+import time
 import webbrowser
 from pathlib import Path
 from urllib.parse import urlparse
 
-from scripts import student_lab_runner, student_runtime
-
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+
+def _trace(stage: str) -> None:
+    """Emit CI-only startup milestones without changing the normal CLI payload."""
+
+    if os.environ.get("CI", "").casefold() == "true":
+        print(f"thebitlab-runtime-cli:{stage}", file=sys.stderr, flush=True)
+
+
+def positive_int(value: str) -> int:
+    """Parse one strictly positive integer without importing the grading runner."""
+
+    try:
+        parsed = int(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError("deve essere un intero positivo") from error
+    if parsed <= 0:
+        raise argparse.ArgumentTypeError("deve essere un intero positivo")
+    return parsed
 
 
 def add_assignment_selection(parser: argparse.ArgumentParser) -> None:
@@ -21,7 +41,7 @@ def add_assignment_selection(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--now")
     parser.add_argument(
         "--timeout",
-        type=student_lab_runner.positive_int,
+        type=positive_int,
         default=30,
         help="Timeout operativo passato al runtime, in secondi.",
     )
@@ -32,6 +52,22 @@ def safe_browser_endpoint(endpoint: str) -> bool:
 
     parsed = urlparse(str(endpoint or "").strip())
     return parsed.scheme in {"http", "https"} and bool(parsed.hostname)
+
+
+def keep_interactive_runtime_alive(*, poll_seconds: float = 0.25) -> None:
+    """Keep the CLI process alive while an in-process interactive runtime is serving.
+
+    Built-in interactive runtimes such as Flowchart Lab host their loopback HTTP
+    service in daemon threads owned by this process. Returning from the CLI would
+    immediately destroy that service and leave the printed endpoint unusable.
+    The launcher therefore remains attached until the operator interrupts it.
+    """
+
+    try:
+        while True:
+            time.sleep(poll_seconds)
+    except KeyboardInterrupt:
+        return
 
 
 def parse_args() -> argparse.Namespace:
@@ -51,27 +87,77 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def select_assignment(
+    assignments: list[dict],
+    *,
+    assignment_id: str | None = None,
+    activity_id: str | None = None,
+) -> dict:
+    """Select one assignment without importing the grading-oriented runner module."""
+
+    if assignment_id:
+        for assignment in assignments:
+            if assignment.get("assignment_id") == assignment_id:
+                return assignment
+        raise ValueError(f"Consegna non trovata: {assignment_id}")
+    if activity_id:
+        matches = [assignment for assignment in assignments if assignment.get("activity_id") == activity_id]
+        if len(matches) == 1:
+            return matches[0]
+        if len(matches) > 1:
+            raise ValueError(
+                f"Activity {activity_id} presente in piu consegne. "
+                "Usa --assignment-id per scegliere quella corretta."
+            )
+        raise ValueError(f"Activity non trovata: {activity_id}")
+    if len(assignments) == 1:
+        return assignments[0]
+    raise ValueError("Nessuna consegna selezionata. Usa --assignment-id o --activity-id.")
+
+
 def load_assignment(args: argparse.Namespace) -> dict:
-    return student_lab_runner.load_student_assignment(
-        root=args.root.resolve(strict=False),
+    """Load an interactive assignment through the Student Lab service path."""
+
+    _trace("before-student-lab-service-import")
+    from scripts import student_lab_service
+
+    _trace("after-student-lab-service-import")
+    root = args.root.resolve(strict=False)
+    _trace("before-student-lab-payload")
+    payload = student_lab_service.student_lab_payload(
+        root=root,
         student_id=args.student_id,
+        now=args.now,
+        expose_external_paths=True,
+    )
+    _trace("after-student-lab-payload")
+    assignments = payload.get("assignments") if isinstance(payload.get("assignments"), list) else []
+    return select_assignment(
+        assignments,
         assignment_id=args.assignment_id,
         activity_id=args.activity_id,
-        now=args.now,
     )
 
 
 def main() -> int:
+    _trace("main-start")
     args = parse_args()
+    _trace(f"args-{args.command}")
     root = args.root.resolve(strict=False)
     try:
         assignment = load_assignment(args)
+        _trace("assignment-loaded")
         if args.command == "launch":
+            _trace("before-student-runtime-import")
+            from scripts import student_runtime
+
+            _trace("after-student-runtime-import")
             result = student_runtime.launch_runtime_assignment(
                 assignment,
                 root=root,
                 timeout_seconds=args.timeout,
             )
+            _trace(f"launch-{result.status}")
             payload = {
                 "status": result.status,
                 "session_id": result.session_id,
@@ -79,7 +165,7 @@ def main() -> int:
                 "detail": result.detail,
                 "metadata": result.metadata,
             }
-            print(json.dumps(payload, ensure_ascii=False, indent=2))
+            print(json.dumps(payload, ensure_ascii=False, indent=2), flush=True)
             if result.endpoint and not args.no_open_browser:
                 if not safe_browser_endpoint(result.endpoint):
                     raise ValueError(
@@ -87,8 +173,14 @@ def main() -> int:
                         "l'apertura automatica e stata bloccata."
                     )
                 webbrowser.open(result.endpoint)
+            if result.status in {"started", "already_running"} and result.endpoint:
+                keep_interactive_runtime_alive()
             return 0 if result.status in {"started", "already_running"} else 1
 
+        _trace("before-student-lab-runner-import")
+        from scripts import student_lab_runner
+
+        _trace("after-student-lab-runner-import")
         if args.final and not args.write_report:
             raise ValueError("--final richiede --write-report")
         report = student_lab_runner.run_assignment(
