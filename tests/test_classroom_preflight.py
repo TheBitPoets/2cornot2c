@@ -177,6 +177,12 @@ def test_windows_virtualbox_boot_has_bounded_automatic_recovery() -> None:
     assert '"Vagrant\\bin\\vagrant.exe"' in recovery
     assert '"Oracle\\VirtualBox\\VBoxManage.exe"' in recovery
     assert recovery.count("controlvm $MachineId pause") == 1
+    additions_branch = recovery.split(
+        "if (Test-GuestAdditionsActive", maxsplit=1
+    )[1].split("if (-not $RunningSince)", maxsplit=1)[0]
+    assert "$RunningSince = $null" in additions_branch
+    assert 'if ($Action -eq "up")' in additions_branch
+    assert "$RecoveryAttempted = $true" in additions_branch
     assert setup.count("invoke-vagrant-virtualbox-windows.ps1") == 1
     assert setup.count('"-VagrantCommand", $VagrantCommand') == 2
     assert setup.count('"-VBoxManageCommand", $VBoxManageCommand') == 2

@@ -118,7 +118,10 @@ try {
         if (Test-GuestAdditionsActive `
             -VBoxManage $VBoxManageCommand `
             -MachineId $MachineId) {
-            $RecoveryAttempted = $true
+            $RunningSince = $null
+            if ($Action -eq "up") {
+                $RecoveryAttempted = $true
+            }
             continue
         }
 
