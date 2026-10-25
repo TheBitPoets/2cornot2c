@@ -321,7 +321,7 @@ def test_ai_usage_distinguishes_reported_missing_local_and_blocked_requests(tmp_
     assert summary["events"][0]["response"]["usage"]["total_tokens"] == 15
 
 
-def test_teacher_help_summary_exposes_only_known_provider_states(tmp_path) -> None:
+def test_teacher_help_summary_exposes_only_known_provider_states(tmp_path, monkeypatch) -> None:
     log_path = tmp_path / "teacher-help-events" / "student" / "assignment" / "events.json"
     student_help_service.write_help_events(
         log_path,
@@ -351,6 +351,11 @@ def test_teacher_help_summary_exposes_only_known_provider_states(tmp_path) -> No
                 "provider_status": "dettaglio-interno-non-previsto",
             },
         ],
+    )
+    monkeypatch.setattr(
+        student_help_service,
+        "reconciliation_now",
+        lambda: "2026-10-20T08:02:00+02:00",
     )
 
     summary = student_help_service.teacher_help_summary(log_path)
