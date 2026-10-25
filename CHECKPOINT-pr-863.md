@@ -3,9 +3,9 @@
 - Data: 2026-10-24, Europe/Rome.
 - Obiettivo: risolvere i finding della review della PR #863, integrare `main`,
   pubblicare la soluzione e documentarla con commenti inline.
-- Stato: soluzione implementata e verificata; il commit contenente questo
-  checkpoint è il candidato pubblicato sul branch
-  `agent/windows-vbox-boot-recovery`.
+- Stato: primo round indipendente completo eseguito; un finding P1 è stato
+  corretto e pubblicato nel commit funzionale `126ba40`. Il round non è pulito
+  e il gate resta `0/2` perché il candidato è cambiato.
 - Base integrata: `origin/main` a
   `444bc0cdc2313d37142333858ccb1531908f1da0`.
 - Gate indipendente: `0/2`; questa remediation modifica il candidato e azzera
@@ -79,12 +79,37 @@
   remediation: è una self-review utile ma **non incrementa** il gate
   indipendente, che resta `0/2`.
 
+## Round indipendente 1 — 2026-10-25 — finding corretto
+
+- SHA esaminato integralmente: `4f306eff76a0d2409b381cfa6e767f72db9e1397`;
+  base `444bc0cdc2313d37142333858ccb1531908f1da0`.
+- Esaminati tutti i 10 file del diff, il flusso di invocazione Windows, il
+  contratto dell'identità VirtualBox, la documentazione Fusion, le review e i
+  check GitHub correnti.
+- Finding P1 pubblicato inline in `discussion_r4369783223`: durante `reload`,
+  le Guest Additions della VM precedente potevano impostare prematuramente
+  `RecoveryAttempted`, disabilitando il recovery per il nuovo boot. La
+  discussione è stata aggiornata con commit e test, quindi risolta.
+- Correzione pubblicata in `126ba40`: `up` conserva il fast-path, mentre
+  `reload` azzera il timer quando vede le Guest Additions e continua a
+  sorvegliare fino al riavvio effettivo. Aggiunta regressione statica mirata.
+- Verifiche dopo la correzione: **49 passed, 61 skipped** nelle cinque suite
+  classroom mirate; `git diff --check`: PASS; checksum dello ZIP Fusion:
+  PASS. Runtime PowerShell non eseguito localmente perché `pwsh`/Windows non
+  sono disponibili sull'host macOS.
+- Sul vecchio HEAD `4f306ef`, CI confermava verdi uTUI, Docker, snippet e
+  Mermaid. I tre failure Quality restavano nei test estranei al diff già
+  documentati (`documentation_closeout`, stato help scaduto e submission
+  tardiva).
+- Il round è completo ma non pulito. Il fix modifica HEAD e azzera la sequenza:
+  gate indipendente `0/2`.
+
 ## Prossimo passo
 
-1. Correggere su `main`, in un'unità separata, i tre test Quality estranei a
-   questa PR oppure integrare il commit che li corregge; poi attendere CI verde.
+1. Verificare l'esito CI sul nuovo candidato e mantenere distinto l'eventuale
+   blocco dei tre test Quality estranei alla PR.
 2. Eseguire in una nuova sessione un round indipendente completo sull'intero
-   diff rispetto a `main`; se pulito, registrare `1/2`.
+   diff aggiornato rispetto a `main`; se pulito, registrare `1/2`.
 3. Eseguire un secondo round indipendente sullo stesso HEAD; soltanto a `2/2`,
    con CI verde e nessuna discussione aperta, la PR può essere unita.
 
