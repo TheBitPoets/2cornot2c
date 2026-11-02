@@ -31,6 +31,8 @@ teacher-reports/**/*.json
 
 # Local lab/dashboard demo data generated while testing.
 tmp/
+# Appliance VirtualBox locali da distribuire separatamente dal repository.
+exports/
 activities/drafts/*.json
 teacher-assignments/*.json
 teacher-grading-bindings.json
@@ -60,6 +62,7 @@ public/videos/
 *.pdf
 # Eccezione per i diagrammi d'architettura versionati come immagini.
 !doc/architecture/diagrams/*.svg
+!doc/images/virtualbox-ova/*.png
 
 # Database locali e file di storage
 *.db
